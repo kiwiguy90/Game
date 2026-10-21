@@ -1,0 +1,20 @@
+; Engine configuration file.
+; Open this folder in Godot 4.3+ (Project Manager -> Import) to play or edit.
+
+config_version=5
+
+[application]
+
+config/name="Crystal Isles"
+config/description="A small third-person 3D adventure: explore floating islands, collect crystals, escape through the portal."
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.3", "Forward Plus")
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+
+[physics]
+
+common/physics_ticks_per_second=60

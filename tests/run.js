@@ -107,6 +107,7 @@ suite('builds', () => {
 suite('circuits', () => {
   const env = H.load({ quiet: true });
   const { game, BM } = env, g = game.grid;
+  g.failureRate = 0; // deterministic model checks; failures are tested on their own below
   const house = g.lights.filter(l => g.isHouseCircuit(l.circuit));
   const lit = (id) => g.light(id).powered && g.light(id).intensity > 0;
   // nothing works until the lodge
@@ -118,22 +119,26 @@ suite('circuits', () => {
   for (const id of game.hallLights) g.light(id).on = false;
   // street lights are council supply: on from the start, one faulty
   const street = g.lights.filter(l => l.circuit === 'street');
-  assert(street.length === 3 && street.every(l => l.powered) && street.filter(l => l.flicker > 0).length === 1, 'three street lights, one faulty');
+  assert(street.length === 3 && street.every(l => !l.powered && !l.on) && street.filter(l => l.flicker > 0).length === 1, 'three street lights, off at the start, one faulty');
+  settle(env, 1);
+  assert(g.lights.filter(l => l.circuit !== 'battery').every(l => !l.powered), 'the whole estate starts dark');
   // lodge on: hall is live immediately, everything else waits for MAIN
   g.setLodge(true);
   assert(g.live('hall') && !g.live('main') && ['ground', 'east', 'west', 'attic', 'cellar'].every(c => !g.live(c)), 'hall live, rest waiting for main');
   assert(lit('lodge-lamp') || (settle(env, 3), lit('lodge-lamp')), 'lodge lamp on lodge supply');
   // the estate lighting panel in the lodge: every outdoor group
   const est = game.estateLights;
+  g.setLodge(true);
   const groups = ['street', 'gate', 'flood', 'drive', 'garden', 'pool', 'pond', 'garage', 'shed', 'cemetery'];
   assert(groups.every(k => est[k] && est[k].length >= 2), 'every estate group has lamps');
   const all = groups.flatMap(k => est[k]).map(id => g.light(id));
-  assert(all.filter(l => l.circuit !== 'street').every(l => !l.on && l.circuit === 'lodge'), 'estate lights start off on the lodge supply');
+  assert(all.every(l => !l.on), 'every estate light starts off');
+  assert(all.filter(l => l.circuit !== 'street').every(l => l.circuit === 'lodge'), 'estate lights on the lodge supply');
   game.standAt(game.byId['lodge-lighting']); assert(game.pick() === game.byId['lodge-lighting'], 'lighting panel selectable');
   game.interact(); assert(game.ui.mode === 'estate', 'lighting panel opens');
   game.keyDown('Digit1'); settle(env, 0.5);
-  assert(est.street.every(id => !g.light(id).powered), 'street lighting switched off from the lodge');
-  game.keyDown('Digit1'); game.keyDown('Digit3');
+  assert(est.street.every(id => g.light(id).powered), 'street lighting switched on from the lodge');
+  game.keyDown('Digit3');
   assert(est.street.every(id => g.light(id).on) && est.flood.every(id => g.light(id).on) && !game.estateGroupOn('pool'), 'groups switch independently');
   game.keyDown('KeyA'); game.keyDown('KeyE');
   settle(env, 3);
@@ -149,6 +154,11 @@ suite('circuits', () => {
   for (let i = 0; i < 120; i++) { g.update(1 / 60); trace.push(chand.fraction > 0.3 ? 1 : 0); }
   let onRuns = 0; for (let i = 0; i < trace.length; i++) if (trace[i] && !trace[i - 1]) onRuns++;
   assert(onRuns === 3 && trace[trace.length - 1] === 1, `incandescent: two false starts then hold (saw ${onRuns} on-runs)`);
+  // ...and it warms up slowly and unsteadily rather than snapping on
+  const lvl = []; for (let i = 0; i < 60; i++) { g.update(1 / 30); lvl.push(chand.intensity / chand.target); }
+  const warm = lvl.slice(0, 20);
+  assert(chand.fraction < 1 || warm.some(v => v < 0.8), 'incandescent warms up slowly');
+  assert(Math.max(...warm) - Math.min(...warm) > 0.1, 'the warm-up flickers');
   // one hall sconce flares, bangs and dies permanently with a scorch mark
   const bang = g.light('hall-sconce-e1');
   assert(bang.dead && bang.scorched, 'the bang sconce died with a scorch');
@@ -213,6 +223,22 @@ suite('circuits', () => {
   assert(g.coreDoorUnsealed && g.lasersLive, 'security unseals the door and powers the lasers');
   g.route('security', false);
   assert(g.coreDoorUnsealed && !g.lasersLive, 'door stays open, lasers die when security is cut');
+  // old fittings fail: some blow (and stay dead), some lights stay flickering
+  {
+    const env2 = H.load({ quiet: true }), g2 = env2.game.grid;
+    g2.failureRate = 0.35;
+    const fails = { exploded: 0, faulty: 0 };
+    env2.game.events.on('light:fail', e => fails[e.mode]++);
+    g2.setLodge(true); g2.throwMain(); env2.game.setEstateAll(true);
+    for (let i = 0; i < 300; i++) g2.update(1 / 30);
+    for (let cycle = 0; cycle < 4; cycle++) { g2.setLodge(false); g2.update(1 / 30); g2.setLodge(true); for (let i = 0; i < 300; i++) g2.update(1 / 30); }
+    const blown = g2.lights.filter(l => l.failed === 'exploded'), faulty = g2.lights.filter(l => l.failed === 'faulty');
+    assert(fails.exploded > 3 && fails.faulty > 3, `failures happen (${fails.exploded} blown, ${fails.faulty} faulty)`);
+    assert(blown.every(l => l.dead && !l.powered && l.intensity === 0), 'blown bulbs stay dead after re-powering');
+    assert(faulty.every(l => l.flicker > 0.4 && l.powered), 'faulty fittings stay lit but flickering');
+    assert(g2.lights.filter(l => l.circuit === 'battery').every(l => !l.failed), 'battery emergency lamps never fail');
+    assert(new Set(g2.lights.map(l => l.failed).filter(Boolean)).size === 2, 'both failure modes');
+  }
   // light types all exist
   for (const t of ['steady', 'pulse', 'subtlePulse', 'blink', 'flicker', 'strobe', 'shock', 'interference', 'rotor']) assert(typeof BM.LIGHT_TYPES[t] === 'function', 'light type ' + t);
   const kinds = new Set(g.lights.map(l => l.lightType));

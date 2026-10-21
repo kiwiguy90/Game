@@ -140,6 +140,9 @@ class LightRecord {
     this.seq = null;      // [{d, v, ramp}]
     this.seqIndex = 0; this.seqT = 0;
     this.buzzing = false;
+    this.warming = false;
+    this.failed = null;   // null | 'exploded' | 'faulty' — old fittings fail when switched on
+    this.noFail = !!o.noFail;
     this.intensity = 0;
     this.scorched = false;
     this.bulb = null;     // optional mesh for emissive feedback
@@ -152,18 +155,19 @@ class LightRecord {
       // two false starts, then holds
       s.push({ d: 0.06 + rng() * 0.05, v: 0.9 }, { d: 0.18 + rng() * 0.2, v: 0 });
       s.push({ d: 0.04 + rng() * 0.05, v: 0.7 }, { d: 0.3 + rng() * 0.3, v: 0 });
-      s.push({ d: 0.25, v: 1, ramp: true });
+      // then an old filament warms up slowly, unsteadily
+      s.push({ d: 0.05, v: 0.35 }, { d: 1.2 + rng() * 1.8, v: 1, ramp: true, warm: true });
     } else if (this.kind === 'fluorescent') {
       const n = 9 + Math.floor(rng() * 5); // 9..13 strobes
       for (let i = 0; i < n; i++) {
         s.push({ d: 0.03 + rng() * 0.06, v: 0.8 + rng() * 0.2 });
         s.push({ d: 0.05 + rng() * 0.22, v: i % 3 === 0 ? 0.08 : 0 });
       }
-      s.push({ d: 0.01, v: 1, buzz: true });
+      s.push({ d: 0.01, v: 0.7, buzz: true }, { d: 0.8 + rng() * 0.8, v: 1, ramp: true, warm: true });
     } else if (this.kind === 'bang') {
       s.push({ d: 0.12, v: 1 }, { d: 0.18, v: 3.2, ramp: true }, { d: 0.01, v: 0, bang: true });
     } else if (this.kind === 'sodium') {
-      s.push({ d: 0.01, v: 0.12 }, { d: 3.5, v: 1, ramp: true });
+      s.push({ d: 0.01, v: 0.1 }, { d: 4 + rng() * 3, v: 1, ramp: true, warm: true });
     } else {
       s.push({ d: 0.01, v: 1 });
     }
@@ -214,6 +218,8 @@ class PowerGrid {
     this.appliances = [];
     this.time = 0;
     this._lastLive = {};
+    this.failureRate = 0.07; // chance an old fitting fails each time it powers up
+
   }
 
   addLight(o) { const l = o instanceof LightRecord ? o : new LightRecord(o); this.lights.push(l); return l; }
@@ -315,6 +321,22 @@ class PowerGrid {
   toggleRoute(sector) { return this.route(sector, !this.routed.has(sector)); }
   get lasersLive() { return this.live('hive:security'); }
 
+  /* Old fittings: each power-up may blow the bulb or leave it flickering for good. */
+  rollFailure(l, rng) {
+    if (l.noFail || l.failed || l.kind === 'bang' || l.kind === 'emergency' || l.kind === 'fire') return;
+    if (l.circuit === 'battery' || l.circuit === 'fire' || l.circuit === 'generator') return;
+    if (rng() >= this.failureRate) return;
+    if (rng() < 0.5) {
+      // flares, pops and dies: keep the first sputters, then blow
+      l.failed = 'exploded';
+      l.seq = l.seq.slice(0, 2).concat([{ d: 0.1 + rng() * 0.3, v: 0.9 }, { d: 0.12, v: 3.4, ramp: true }, { d: 0.01, v: 0, bang: true }]);
+    } else {
+      // lights, but never settles
+      l.failed = 'faulty';
+      l.seq.push({ d: 0.01, v: 1, fault: 0.45 + rng() * 0.4 });
+    }
+  }
+
   /* Advance start-up envelopes, fault modulation and appliances. */
   update(dt) {
     this.time += dt;
@@ -323,6 +345,7 @@ class PowerGrid {
       const powered = !l.dead && l.on && this.live(l.circuit);
       if (powered && !l.powered) {
         l.seq = l.startSequence(rng); l.seqIndex = 0; l.seqT = 0; l.fraction = 0; l.buzzing = false;
+        this.rollFailure(l, rng);
         this.events.emit('light:start', l);
       } else if (!powered && l.powered) {
         l.seq = null; l.fraction = 0; l.buzzing = false;
@@ -337,15 +360,18 @@ class PowerGrid {
           l.seqT -= step.d;
           l.fraction = step.v;
           if (step.buzz) { l.buzzing = true; this.events.emit('light:buzz', l); }
+          if (step.fault) { l.flicker = Math.max(l.flicker, step.fault); l.lightType = 'flicker'; this.events.emit('light:fail', { light: l, mode: 'faulty' }); }
           if (step.bang) {
             // flares, bangs and dies permanently with a scorch mark
-            l.dead = true; l.scorched = true; l.powered = false; l.fraction = 0; l.seq = null;
+            l.dead = true; l.scorched = true; l.powered = false; l.fraction = 0; l.seq = null; l.warming = false;
             this.events.emit('light:bang', l);
+            if (l.failed === 'exploded') this.events.emit('light:fail', { light: l, mode: 'exploded' });
             break;
           }
           l.seqIndex++;
           if (l.seqIndex >= l.seq.length) { l.seq = null; }
         }
+        l.warming = !!(l.seq && l.seq[l.seqIndex].warm);
         if (l.seq) {
           const step = l.seq[l.seqIndex];
           if (step.ramp) {
@@ -357,6 +383,7 @@ class PowerGrid {
       let k = l.powered ? l.fraction : 0;
       if (k > 0) {
         k *= (LIGHT_TYPES[l.lightType] || LIGHT_TYPES.steady)(t, l.phase);
+        if (l.warming) k *= 0.62 + 0.38 * noise1(t * 13 + l.phase * 40);
         if (l.flicker > 0) { const n = noise1(t * 9 + l.phase * 77); if (n < l.flicker * 0.5) k *= 0.1 + n; }
         if (l.blink > 0) { if (((t * l.blink + l.phase) % 1) > 0.55) k *= 0.03; }
       }
@@ -1224,7 +1251,7 @@ BM.buildGrounds = function (B, game) {
   const street = [[-30, 97.8, false], [8, 97.8, false], [40, 97.8, true]];
   for (const [x, z, faulty] of street) {
     B.fixture({
-      id: 'street' + x, name: 'Street light', circuit: 'street', kind: 'sodium', style: 'street', pos: [x, 5.2, z],
+      id: 'street' + x, name: 'Street light', circuit: 'street', on: false, kind: 'sodium', style: 'street', pos: [x, 5.2, z],
       colour: 0xffa04a, target: 2.4, range: 16, spot: true, dir: [0, -1, -0.2], flicker: faulty ? 0.7 : 0, blink: faulty ? 0.35 : 0,
       lightType: faulty ? 'flicker' : 'steady',
     });
@@ -2958,7 +2985,7 @@ class Synth {
   clunk() { this.tone('sine', 90, 40, 0.5, 0.005, 0.18); this.burst(this.white, 'lowpass', 900, 1, 0.3, 0.002, 0.08); }
   click() { this.burst(this.white, 'highpass', 3000, 1, 0.25, 0.001, 0.03); }
   lever() { this.clunk(); this.burst(this.white, 'bandpass', 500, 2, 0.4, 0.01, 0.35, 0.05); this.tone('sine', 60, 50, 0.3, 0.2, 1.6, 0.1); }
-  bang() { this.burst(this.white, 'highpass', 900, 0.6, 1.2, 0.001, 0.12); this.burst(this.brown, 'lowpass', 600, 1, 0.8, 0.002, 0.5); this.tone('square', 2400, 300, 0.2, 0.001, 0.08); }
+  bang(v) { v = v === undefined ? 1 : v; this.burst(this.white, 'highpass', 900, 0.6, 1.2 * v, 0.001, 0.12); this.burst(this.brown, 'lowpass', 600, 1, 0.8 * v, 0.002, 0.5); this.tone('square', 2400, 300, 0.2 * v, 0.001, 0.08); for (let i = 0; i < 4; i++) this.tone('sine', 3200 + i * 700, 3000 + i * 600, 0.05 * v, 0.001, 0.06, 0.08 + i * 0.07); }
   tink() { this.tone('sine', 2600, 2400, 0.06, 0.001, 0.05); }
   zap() { this.tone('sawtooth', 1200, 80, 0.4, 0.002, 0.3); this.burst(this.white, 'bandpass', 2400, 3, 0.5, 0.001, 0.2); }
   denied() { this.tone('square', 220, 200, 0.2, 0.01, 0.18); this.tone('square', 165, 150, 0.2, 0.01, 0.25, 0.2); }
@@ -3217,7 +3244,16 @@ class Game {
 
   wireEvents() {
     const ev = this.events;
-    ev.on('light:bang', l => { this.audio.bang(); if (l.scorch) l.scorch.visible = true; });
+    ev.on('light:bang', l => {
+      const p = this.player, d = Math.hypot(l.pos.x - p.x, l.pos.y - p.y - 1.6, l.pos.z - p.z);
+      this.audio.bang(Math.max(0.08, 1 - d / 45)); if (l.scorch) l.scorch.visible = true;
+    });
+    ev.on('light:fail', e => {
+      const l = e.light, p = this.player, d = Math.hypot(l.pos.x - p.x, l.pos.y - p.y - 1.6, l.pos.z - p.z);
+      if (d > 18 || this.time - (this.lastFailSay || -9) < 4) return;
+      this.lastFailSay = this.time;
+      this.ui.say(e.mode === 'exploded' ? `Pop — the ${l.name.toLowerCase()} flares and blows. Glass tinkles down.` : `The ${l.name.toLowerCase()} won't settle. It just keeps flickering.`, 4);
+    });
     ev.on('appliance:start', () => this.audio.clunk());
     ev.on('power:trip', () => { this.fx.strike(true); this.audio.clunk(); this.ui.say('A white crack of lightning, right overhead — and every light in the house goes out.', 6); });
     ev.on('power:main', e => { this.audio.lever(); this.ui.say(e.reset ? 'MAIN goes back up with a clunk. The house comes back on around you.' : 'MAIN. A deep clunk through the walls, then fittings all over the house begin to stutter into life.', 6); });

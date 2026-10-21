@@ -697,6 +697,19 @@ const G = BM.G = {
   ring: new THREE.RingGeometry(0.42, 0.5, 32),
 };
 G.ground = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+/* A wedge (triangular prism): length along x, base width along z, apex at the
+   top. Base sits at y = 0. Gables, steep roofs and pointed arches. */
+G.wedge = (function () {
+  const A = [-0.5, 0, -0.5], B = [-0.5, 0, 0.5], C = [-0.5, 1, 0], D = [0.5, 0, -0.5], E = [0.5, 0, 0.5], F = [0.5, 1, 0];
+  const tris = [A, B, C, D, F, E, B, E, F, B, F, C, A, C, F, A, F, D, A, D, E, A, E, B];
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute([].concat(...tris), 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(new Array(tris.length * 2).fill(0), 2));
+  g.computeVertexNormals();
+  return g;
+})();
+G.pyramid = new THREE.ConeGeometry(0.5, 1, 4).rotateY(Math.PI / 4);   // square spires, pinnacles
+G.spire = new THREE.ConeGeometry(0.5, 1, 8).rotateY(Math.PI / 8);     // octagonal tower spires
 for (const k in G) G[k].userData.canonical = k;
 
 /* ---------------- procedural textures ---------------- */
@@ -785,6 +798,46 @@ function tex(name) {
       g.fillStyle = '#2c2e33'; g.fillRect(0, 0, s, s);
       for (let y = 0; y < s; y += 12) for (let x = (y / 12 % 2) * 10; x < s; x += 20) { const v = 40 + r() * 20; g.fillStyle = 'rgb(' + (v | 0) + ',' + (v | 0) + ',' + (v + 6 | 0) + ')'; g.fillRect(x + 1, y + 1, 18, 10); }
     }); break;
+    case 'ashlar': t = canvasTex(256, (g, s, r) => {
+      // coursed gothic stonework: uneven blocks, chipped arrises, lichen, soot
+      g.fillStyle = '#3e3c38'; g.fillRect(0, 0, s, s);
+      for (let y = 0, row = 0; y < s; y += 32, row++) {
+        let x = -(row % 2) * 30;
+        while (x < s) {
+          const w = 44 + Math.floor(r() * 36), v = 92 + r() * 38, tint = r() * 10;
+          g.fillStyle = 'rgb(' + (v + tint | 0) + ',' + (v + 2 | 0) + ',' + (v - 6 | 0) + ')';
+          g.fillRect(x + 2, y + 2, w - 3, 29);
+          for (let k = 0; k < 40; k++) { g.fillStyle = 'rgba(' + (r() < 0.5 ? '255,255,255' : '0,0,0') + ',' + (r() * 0.12) + ')'; g.fillRect(x + 2 + r() * (w - 4), y + 2 + r() * 28, 1 + r() * 3, 1 + r() * 3); }
+          if (r() < 0.35) { g.fillStyle = 'rgba(90,110,60,' + (0.15 + r() * 0.25) + ')'; g.beginPath(); g.arc(x + r() * w, y + r() * 30, 3 + r() * 9, 0, 7); g.fill(); }
+          if (r() < 0.2) { g.fillStyle = 'rgba(20,18,16,0.35)'; g.fillRect(x + r() * w, y + 2, 1 + r() * 2, 28); }
+          x += w;
+        }
+      }
+    }); break;
+    case 'slate': t = canvasTex(128, (g, s, r) => {
+      g.fillStyle = '#16181c'; g.fillRect(0, 0, s, s);
+      for (let y = 0; y < s; y += 10) for (let x = (y / 10 % 2) * 8; x < s; x += 16) {
+        if (r() < 0.04) continue; // a missing slate
+        const v = 44 + r() * 26; g.fillStyle = 'rgb(' + (v | 0) + ',' + (v + 3 | 0) + ',' + (v + 10 | 0) + ')'; g.fillRect(x + 1, y + 1, 14, 9);
+        if (r() < 0.12) { g.fillStyle = 'rgba(70,90,50,0.4)'; g.fillRect(x + 1, y + 6, 14, 4); }
+      }
+    }); break;
+    case 'oldwood': t = canvasTex(128, (g, s, r) => {
+      speckle(g, s, r, '#2a2018', 0.15, 500, 2);
+      g.fillStyle = 'rgba(0,0,0,0.5)'; for (let x = 0; x < s; x += 16) g.fillRect(x, 0, 2, s);
+      for (let i = 0; i < 60; i++) { g.fillStyle = 'rgba(120,110,90,' + r() * 0.15 + ')'; g.fillRect(r() * s, r() * s, 1, 10 + r() * 30); }
+    }); break;
+    case 'cobweb': {
+      t = canvasTex(128, (g, s, r) => {
+        g.clearRect(0, 0, s, s);
+        g.strokeStyle = 'rgba(230,230,225,0.55)'; g.lineWidth = 1;
+        const cx = 6, cy = 6;
+        for (let i = 0; i < 9; i++) { const a = i / 8 * Math.PI / 2; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(a) * 140, cy + Math.sin(a) * 140); g.stroke(); }
+        for (let k = 1; k < 12; k++) { g.beginPath(); for (let i = 0; i <= 8; i++) { const a = i / 8 * Math.PI / 2, rr = k * 11 + (r() - 0.5) * 6; g.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); } g.stroke(); }
+        g.fillStyle = 'rgba(220,220,215,0.12)'; g.beginPath(); g.moveTo(0, 0); g.lineTo(80, 0); g.lineTo(0, 80); g.fill();
+      });
+      t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+    } break;
     default: t = canvasTex(16, (g, s) => { g.fillStyle = '#888'; g.fillRect(0, 0, s, s); });
   }
   t.name = name;
@@ -792,11 +845,40 @@ function tex(name) {
 }
 BM.tex = tex;
 
+/* A normal map from a texture's own luminance (Sobel), for surface relief. */
+const NTEX = {};
+function normalTex(name, strength) {
+  const k = name + strength;
+  if (NTEX[k]) return NTEX[k];
+  const src = tex(name).image, s = src.width;
+  const c = document.createElement('canvas'); c.width = c.height = s;
+  const g = c.getContext('2d');
+  const srcData = src.getContext('2d').getImageData(0, 0, s, s).data;
+  const out = g.createImageData(s, s);
+  if (srcData && out && out.data) {
+    const h = (x, y) => { const i = (((y + s) % s) * s + ((x + s) % s)) * 4; return (srcData[i] + srcData[i + 1] + srcData[i + 2]) / 765; };
+    for (let y = 0; y < s; y++) for (let x = 0; x < s; x++) {
+      const dx = (h(x + 1, y - 1) + 2 * h(x + 1, y) + h(x + 1, y + 1)) - (h(x - 1, y - 1) + 2 * h(x - 1, y) + h(x - 1, y + 1));
+      const dy = (h(x - 1, y + 1) + 2 * h(x, y + 1) + h(x + 1, y + 1)) - (h(x - 1, y - 1) + 2 * h(x, y - 1) + h(x + 1, y - 1));
+      let nx = -dx * strength, ny = -dy * strength, nz = 1; const l = Math.hypot(nx, ny, nz); nx /= l; ny /= l; nz /= l;
+      const i = (y * s + x) * 4;
+      out.data[i] = (nx * 0.5 + 0.5) * 255; out.data[i + 1] = (ny * 0.5 + 0.5) * 255; out.data[i + 2] = (nz * 0.5 + 0.5) * 255; out.data[i + 3] = 255;
+    }
+    g.putImageData(out, 0, 0);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = 4;
+  return NTEX[k] = t;
+}
+BM.normalTex = normalTex;
+
 /* World-space (box-projected) texturing for scaled canonical geometry. */
 BM.wind = { value: 0 }; // shared time uniform for everything that sways in the storm
-function worldMapped(mat, scale, sway) {
+function worldMapped(mat, scale, sway, weather) {
   mat.userData.texScale = scale;
   mat.userData.sway = !!sway;
+  mat.userData.weather = !!weather;
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.bmTexScale = { value: scale };
     if (sway) {
@@ -839,10 +921,37 @@ function worldMapped(mat, scale, sway) {
         'vec4 texelColor = texture2D(map, bmUV * bmTexScale);',
         'texelColor = mapTexelToLinear(texelColor);',
         'diffuseColor *= texelColor;',
+        weather ? [
+          // damp rising at the base, moss green; soot and rain streaks running down
+          'float bmDamp = 1.0 - smoothstep(0.0, 2.4, bmWP.y);',
+          'diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.5, 0.6, 0.42), bmDamp * 0.75);',
+          'float bmStreak = texture2D(map, vec2((bmWP.x + bmWP.z) * 0.173, 0.41)).g;',
+          'float bmStreak2 = texture2D(map, vec2((bmWP.x - bmWP.z) * 0.61, 0.77)).r;',
+          'diffuseColor.rgb *= 0.62 + 0.38 * smoothstep(0.2, 0.7, bmStreak) * (0.8 + 0.2 * bmStreak2);',
+        ].join('\n') : '',
         '#endif',
+      ].join('\n'))
+      .replace('#include <normal_fragment_maps>', [
+        '#ifdef USE_NORMALMAP',
+        'vec3 bmMapN = texture2D(normalMap, bmUV * bmTexScale).xyz * 2.0 - 1.0;',
+        'bmMapN.xy *= normalScale;',
+        'normal = bmPerturb(-vViewPosition, normal, bmMapN, bmUV * bmTexScale);',
+        '#endif',
+      ].join('\n'))
+      .replace('void main() {', [
+        '#ifdef USE_NORMALMAP',
+        'vec3 bmPerturb(vec3 eye_pos, vec3 surf_norm, vec3 mapN, vec2 uv) {',
+        '  vec3 q0 = dFdx(eye_pos); vec3 q1 = dFdy(eye_pos); vec2 st0 = dFdx(uv); vec2 st1 = dFdy(uv);',
+        '  vec3 N = surf_norm; vec3 q1perp = cross(q1, N); vec3 q0perp = cross(N, q0);',
+        '  vec3 T = q1perp * st0.x + q0perp * st1.x; vec3 B = q1perp * st0.y + q0perp * st1.y;',
+        '  float det = max(dot(T, T), dot(B, B)); float sc = (det == 0.0) ? 0.0 : inversesqrt(det);',
+        '  return normalize(T * (mapN.x * sc) + B * (mapN.y * sc) + N * mapN.z);',
+        '}',
+        '#endif',
+        'void main() {',
       ].join('\n'));
   };
-  mat.customProgramCacheKey = () => sway ? 'bm-world-mapped-sway-' + sway.base + '-' + sway.amount : 'bm-world-mapped';
+  mat.customProgramCacheKey = () => 'bm-wm' + (sway ? '-sway-' + sway.base + '-' + sway.amount : '') + (weather ? '-weather' : '') + (mat.normalMap ? '-n' : '');
   return mat;
 }
 
@@ -854,22 +963,22 @@ const MAT_DEFS = {
   wallpaper: [0xa89888, 'wallpaper', 0.6, 6],
   wallpaperGreen: [0x6a8572, 'wallpaper', 0.6, 6],
   wallpaperBlue: [0x6a7896, 'wallpaper', 0.6, 6],
-  panel: [0xb09080, 'panel', 0.8, 18],
-  floor: [0xb8a890, 'floorboards', 0.5, 20],
+  panel: [0xb09080, 'panel', 0.8, 18, { bump: 2 }],
+  floor: [0xb8a890, 'floorboards', 0.5, 20, { bump: 1.5 }],
   carpet: [0xb09090, 'carpet', 0.4, 2],
-  stone: [0xffffff, 'stone', 0.35, 4],
+  stone: [0xb0aca2, 'stone', 0.35, 4, { bump: 2.5, weather: true }],
   limestone: [0xffffff, 'limestone', 0.25, 3],
   gravel: [0xffffff, 'gravel', 0.3, 2],
   grass: [0xffffff, 'grass', 0.2, 2],
   hedge: [0x6a7a62, 'hedge', 0.5, 3],
-  bark: [0xffffff, 'bark', 0.8, 2],
-  brick: [0xffffff, 'brick', 0.5, 3],
+  bark: [0xffffff, 'bark', 0.8, 2, { bump: 3 }],
+  brick: [0xb0a098, 'brick', 0.5, 3, { bump: 3, weather: true }],
   metal: [0xffffff, 'metal', 0.35, 40],
   metalDark: [0x707880, 'metal', 0.35, 40],
   concrete: [0xffffff, 'concrete', 0.25, 6],
   tile: [0xffffff, 'tile', 0.8, 30],
   grate: [0xffffff, 'grate', 1.0, 30],
-  roof: [0xffffff, 'roof', 0.5, 6],
+  roof: [0xffffff, 'roof', 0.5, 6, { bump: 2 }],
   water: [0x8fb3c4, 'water', 0.15, 90],
   wood: [0x5a3a24, null, 0, 25],
   darkWood: [0x2e1e14, null, 0, 30],
@@ -887,7 +996,7 @@ const MAT_DEFS = {
   flowersRed: [0x5a0c12, null, 0, 6],
   flowersWhite: [0x6a645a, null, 0, 6],
   flowersPurple: [0x2e2236, null, 0, 6],
-  deadBark: [0x6a625a, 'bark', 0.9, 4, { sway: { base: 1.6, amount: 0.022 } }],
+  deadBark: [0x6a625a, 'bark', 0.9, 4, { sway: { base: 1.6, amount: 0.022 }, bump: 3 }],
   deadTwig: [0x5a544e, 'bark', 0.9, 4, { sway: { base: 1.0, amount: 0.04 } }],
   deadGrass: [0x8a7f5e, 'grass', 0.6, 2, { sway: { base: 0.02, amount: 0.25 } }],
   willow: [0x7a8a5e, 'hedge', 0.7, 3, { sway: { base: 0.5, amount: 0.07 } }],
@@ -899,6 +1008,23 @@ const MAT_DEFS = {
   fungus: [0xc8bfa8, null, 0, 20],
   fungusStem: [0x9a9282, null, 0, 6],
   crow: [0x0a0a0c, null, 0, 40],
+  gothicStone: [0x9a968c, 'ashlar', 0.42, 6, { bump: 3, weather: true }],
+  gothicTrim: [0x8a867c, 'limestone', 0.6, 8, { bump: 2, weather: true }],
+  slate: [0x9aa0aa, 'slate', 0.45, 30, { bump: 2.5 }],
+  shutter: [0x8a8070, 'oldwood', 0.7, 4, { bump: 2 }],
+  boards: [0x9a8c76, 'oldwood', 0.5, 4, { bump: 2 }],
+  darkGlass: [0x0b0d10, null, 0, 120],
+  candleGlow: [0x5a3410, null, 0, 0, { emissive: 0x6a3a10 }],
+  dustSheet: [0xa8a49a, 'plaster', 0.9, 2],
+  drape: [0x4a1218, 'carpet', 1.6, 6],
+  wax: [0xd8d0b8, null, 0, 30],
+  armour: [0x8a9096, 'metal', 0.8, 90],
+  doll: [0xe0d4c0, null, 0, 40],
+  dollDress: [0x6a5a6a, null, 0, 4],
+  piano: [0x101010, null, 0, 100],
+  damp: [0x2a2418, null, 0, 0, { transparent: true, opacity: 0.45, depthWrite: false, side: THREE.DoubleSide }],
+  cobweb: [0xffffff, null, 0, 0, { transparent: true, depthWrite: false, side: THREE.DoubleSide, alphaTest: 0.02 }],
+  peel: [0x9a8a70, null, 0, 2, { side: THREE.DoubleSide }],
   deadStalk: [0x3a3226, null, 0, 2],
   soil: [0x2a1e16, 'gravel', 0.4, 2],
   statue: [0x9a988f, 'limestone', 0.5, 10],
@@ -918,12 +1044,15 @@ const MAT_DEFS = {
 };
 function M(name) {
   if (MATS[name]) return MATS[name];
+  if (name === 'cobweb') { const m = new THREE.MeshBasicMaterial({ map: tex('cobweb'), transparent: true, depthWrite: false, side: THREE.DoubleSide, color: 0xb8b8b0 }); m.name = name; return MATS[name] = m; }
   const d = MAT_DEFS[name] || [0xff00ff, null, 0, 10];
-  const extra = Object.assign({}, d[4] || {}), sway = extra.sway; delete extra.sway;
+  const extra = Object.assign({}, d[4] || {}), sway = extra.sway, weather = extra.weather, bump = extra.bump;
+  delete extra.sway; delete extra.weather; delete extra.bump;
   const o = Object.assign({ color: d[0], shininess: d[3], specular: 0x222222 }, extra);
   if (d[1]) o.map = tex(d[1]);
+  if (d[1] && bump) { o.normalMap = normalTex(d[1], bump); o.normalScale = new THREE.Vector2(1, 1); }
   const m = new THREE.MeshPhongMaterial(o);
-  if (d[1]) worldMapped(m, d[2], sway);
+  if (d[1]) worldMapped(m, d[2], sway, weather);
   m.name = name;
   return MATS[name] = m;
 }
@@ -2631,8 +2760,9 @@ BM.buildHauntedGarden = function (B, game) {
     [-42, -21, 54, 70],        // sunken pool
     [-8, 8, 26, 101],          // the avenue and the gates
     [-64, 64, 85, 101],        // the boundary wall and the lane
+    [33, 43, 21, 29.5],        // the mausoleum
   ];
-  const circles = [[0, 24, 12], [34, 62, 8.5], [48.7, 37, 2.5]];
+  const circles = [[0, 24, 12], [34, 62, 8.5], [48.7, 37, 2.5], [-13, 31, 3]];
   const paths = P.paths.filter(p => p.pts);
   const nearPath = (x, z, m) => paths.some(p => {
     for (let i = 0; i < p.pts.length - 1; i++) {
@@ -2781,6 +2911,532 @@ BM.buildHauntedGarden = function (B, game) {
 };
 })();
 </script>
+<script id="bm-45-gothic">
+/* ==========================================================================
+   BLACKTHORN MANOR — 6d. THE GOTHIC HOUSE
+   The exterior the family built to be looked at: four octagonal corner
+   towers with slate spires, a central clock tower (stopped at 11:41), a
+   steep slate roof with iron cresting, front gables, stepped buttresses with
+   pinnacles, pointed hoods over every window, broken shutters, string
+   courses, battlements, tall chimneys, a gothic porch and gargoyles.
+   Grounds: weeping angels (one headless), a family mausoleum, an old well,
+   a toppled urn and a rope swing.
+   ========================================================================== */
+(function () {
+'use strict';
+const BM = window.BM;
+const G = BM.G;
+
+/* Draw on a wall face: n = outward normal (nx, nz), p = a point on the face.
+   Local x runs along the face, local z out from it. */
+function face(B, nx, nz, px, pz) {
+  const tx = nz, tz = -nx, ry = Math.atan2(nx, nz);
+  const at = (lx, lz) => [px + tx * lx + nx * lz, pz + tz * lx + nz * lz];
+  return {
+    ry, at,
+    box(mat, lx, y, lz, sx, sy, sz, tilt) {
+      const [x, z] = at(lx, lz);
+      const m = B.box(mat, x, y, z, sx, sy, sz, ry);
+      if (tilt) { m.rotation.set(0, ry, tilt); m.updateMatrix(); }
+      return m;
+    },
+    /* a gable/pointed shape in the face plane: width along the face, depth out */
+    wedge(mat, lx, y, lz, width, h, depth) {
+      const [x, z] = at(lx, lz);
+      return B.mesh(G.wedge, mat, x, y, z, depth, h, width, ry + Math.PI / 2);
+    },
+    mesh(geo, mat, lx, y, lz, sx, sy, sz) { const [x, z] = at(lx, lz); return B.mesh(geo, mat, x, y, z, sx, sy, sz, ry); },
+  };
+}
+BM.face = face;
+
+/* A lancet (pointed) window set into masonry: glass, stone surround, hood. */
+function lancet(F, lx, y0, w, h, o) {
+  o = o || {};
+  const glass = o.lit ? 'candleGlow' : 'darkGlass';
+  F.box(glass, lx, y0 + h / 2, 0.03, w, h, 0.04);
+  F.wedge(glass, lx, y0 + h, 0.03, w, w * 0.7, 0.04);
+  // tracery: a mullion and a transom
+  F.box('gothicTrim', lx, y0 + h / 2 + w * 0.2, 0.07, 0.07, h + w * 0.5, 0.06);
+  F.box('gothicTrim', lx, y0 + h * 0.62, 0.07, w, 0.07, 0.06);
+  // jambs, sill and pointed hood
+  F.box('gothicTrim', lx - w / 2 - 0.09, y0 + h / 2, 0.05, 0.18, h, 0.2);
+  F.box('gothicTrim', lx + w / 2 + 0.09, y0 + h / 2, 0.05, 0.18, h, 0.2);
+  F.box('gothicTrim', lx, y0 - 0.06, 0.08, w + 0.4, 0.12, 0.28);
+  F.wedge('gothicTrim', lx, y0 + h - 0.02, 0.06, w + 0.5, w * 0.85, 0.24);
+  if (o.boarded) for (let i = 0; i < 3; i++) F.box('boards', lx, y0 + h * (0.25 + i * 0.25), 0.1, w + 0.3, 0.16, 0.04, (i - 1) * 0.18);
+}
+
+BM.buildGothic = function (B, game) {
+  const P = B.phys, rnd = BM.mulberry32(1888);
+  B.zone = 'mansion'; B.levelName = 'ground'; B.room = 'exterior';
+  const EAVES = 8.2, RIDGE = 17.2;
+
+  /* ---- the steep slate roof, gable ends, iron cresting ---- */
+  B.mesh(G.wedge, 'slate', 0, EAVES, 0, 36.1, RIDGE - EAVES, 25.4);
+  for (const sx of [-1, 1]) {
+    B.mesh(G.wedge, 'gothicStone', sx * 18.15, EAVES, 0, 0.5, (RIDGE - EAVES) * 24.6 / 25.4, 24.6);
+    B.mesh(G.spire, 'gothicTrim', sx * 18.15, RIDGE + 0.35, 0, 0.5, 1.4, 0.5);
+    const F = face(B, sx, 0, sx * 18.4, 0);
+    lancet(F, 0, 10.6, 1.0, 2.4, { boarded: sx > 0 });
+  }
+  for (let x = -17; x <= 17.01; x += 0.5) {
+    B.mesh(G.post, 'iron', x, RIDGE + 0.28, 0, 0.035, 0.56, 0.035);
+    B.mesh(G.pyramid, 'iron', x, RIDGE + 0.62, 0, 0.09, 0.16, 0.09);
+  }
+  B.box('iron', 0, RIDGE + 0.5, 0, 34, 0.04, 0.04);
+
+  /* ---- string courses and the eaves cornice with corbels ---- */
+  const faces = [[0, 1, 0, 12.2, 36.4], [0, -1, 0, -12.2, 36.4], [1, 0, 18.2, 0, 24.8], [-1, 0, -18.2, 0, 24.8]];
+  for (const [nx, nz, px, pz, len] of faces) {
+    const F = face(B, nx, nz, px, pz);
+    F.box('gothicTrim', 0, 4.15, 0.07, len, 0.18, 0.14);
+    F.box('gothicTrim', 0, EAVES - 0.1, 0.18, len + 0.4, 0.34, 0.36);
+    for (let l = -len / 2 + 0.6; l < len / 2; l += 1.2) F.box('gothicTrim', l, EAVES - 0.42, 0.12, 0.2, 0.3, 0.24);
+    F.box('stone', 0, 0.25, 0.08, len + 0.2, 0.5, 0.16); // plinth course
+  }
+
+  /* ---- pointed hoods over every window, and shutters, some hanging ---- */
+  P.windows.filter(w => w.zone === 'mansion').forEach((w, i) => {
+    const F = face(B, w.nx, w.nz, w.x + w.nx * 0.2, w.z + w.nz * 0.2);
+    F.wedge('gothicTrim', 0, w.head + 0.02, 0.1, w.w + 0.45, Math.min(0.9, w.w * 0.6), 0.22);
+    F.wedge('darkGlass', 0, w.head + 0.04, 0.02, w.w - 0.05, Math.min(0.75, w.w * 0.5), 0.03);
+    F.box('gothicTrim', -w.w / 2 - 0.22, w.head + 0.05, 0.12, 0.14, 0.2, 0.24);
+    F.box('gothicTrim', w.w / 2 + 0.22, w.head + 0.05, 0.12, 0.14, 0.2, 0.24);
+    if (i % 3 !== 1) {
+      const sh = (w.head - w.sill), sw = w.w / 2 + 0.04;
+      F.box('shutter', -w.w / 2 - sw / 2 - 0.16, w.sill + sh / 2, 0.08, sw, sh, 0.05);
+      // every so often one hangs from a single hinge
+      if (i % 5 === 2) F.box('shutter', w.w / 2 + sw / 2 + 0.3, w.sill + sh / 2 - 0.3, 0.1, sw, sh, 0.05, -0.35);
+      else F.box('shutter', w.w / 2 + sw / 2 + 0.16, w.sill + sh / 2, 0.08, sw, sh, 0.05);
+    }
+  });
+
+  /* ---- stepped buttresses with pinnacles ---- */
+  const buttress = (F, l) => {
+    const steps = [[0, 3.2, 0.9, 0.9], [3.2, 6.6, 0.7, 0.62], [6.6, EAVES + 0.4, 0.5, 0.38]];
+    for (const [y0, y1, w, d] of steps) {
+      F.box('gothicStone', l, (y0 + y1) / 2, d / 2, w, y1 - y0, d);
+      F.wedge('gothicTrim', l, y1 - 0.02, d / 2 + 0.02, w + 0.06, 0.3, d + 0.04);
+    }
+    F.mesh(G.pyramid, 'gothicTrim', l, EAVES + 1.5, 0.2, 0.42, 2.0, 0.42);
+    F.box('gothicStone', l, EAVES + 0.35, 0.2, 0.42, 0.7, 0.42);
+    const [x0, z0] = F.at(l - 0.45, 0), [x1, z1] = F.at(l + 0.45, 0.9);
+    P.addWall(Math.min(x0, x1), Math.max(x0, x1), Math.min(z0, z1), Math.max(z0, z1), 0, 3.2, { kind: 'wall', structural: false });
+  };
+  { const F = face(B, 0, 1, 0, 12.2); for (const l of [-12, -6.25, 6.25, 12]) buttress(F, l); }
+  { const F = face(B, 0, -1, 0, -12.2); for (const l of [-16.5, -7.5, 0, 7.5, 13]) buttress(F, l); }
+  { const F = face(B, -1, 0, -18.2, 0); for (const l of [-4.2, 2.5]) buttress(F, l); }   // west: z = 4.2, -2.5
+  { const F = face(B, 1, 0, 18.2, 0); for (const l of [-4.2, 2.6]) buttress(F, l); }     // east: z = 4.2, -2.6
+
+  /* ---- front gables with lancet windows (one with a candle burning) ---- */
+  for (const gx of [-11, 11]) {
+    const F = face(B, 0, 1, gx, 12.2);
+    F.wedge('gothicStone', 0, EAVES, 0.0, 7, 7, 0.5);
+    B.mesh(G.wedge, 'slate', gx, EAVES - 0.1, 7.7, 9.8, 7.4, 7.7, Math.PI / 2);
+    lancet(F, 0, 9.6, 1.3, 2.6, { lit: gx < 0 });
+    B.mesh(G.spire, 'gothicTrim', gx, EAVES + 7.4, 12.45, 0.45, 1.6, 0.45);
+  }
+  // the one lit attic window throws a faint light
+  B.fixture({ id: 'gable-candle', name: 'Candle in the gable window', circuit: 'fire', kind: 'fire', style: 'none', pos: [-11, 11, 11.9], colour: 0xff9a3a, target: 0.35, range: 5, lightType: 'flicker', corona: 0.5, noFail: true });
+
+  /* ---- the central clock tower over the hall ---- */
+  const T = { x0: -4, x1: 4, z0: 6.5, z1: 12.45, top: 25 };
+  B.boxE('gothicStone', T.x0, T.x1, EAVES, T.top, T.z0, T.z1);
+  P.addWall(T.x0, T.x1, T.z0, T.z1, EAVES + 2.6, T.top, { kind: 'wall', structural: false });
+  {
+    const F = face(B, 0, 1, 0, T.z1);
+    F.box('gothicTrim', 0, 16.0, 0.08, 8.3, 0.22, 0.18);
+    F.box('gothicTrim', 0, 21.3, 0.08, 8.3, 0.22, 0.18);
+    lancet(F, -1.6, 12.2, 1.0, 2.8); lancet(F, 1.6, 12.2, 1.0, 2.8);
+    // the clock, stopped at 11:41
+    { const ring = F.mesh(G.cyl, 'gothicTrim', 0, 18.6, 0.05, 3.2, 0.1, 3.2); ring.rotation.set(Math.PI / 2, F.ry, 0, 'YXZ'); ring.updateMatrix(); }
+    const [cx, cz] = F.at(0, 0.14);
+    const dial = B.mesh(G.disc, 'paper', cx, 18.6, cz, 2.7); dial.updateMatrix();
+    for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; const m = B.box('black', cx + Math.sin(a) * 1.15, 18.6 + Math.cos(a) * 1.15, cz + 0.02, 0.08, 0.25, 0.02); m.rotation.z = -a; m.updateMatrix(); }
+    for (const [ang, len, w] of [[-(11 + 41 / 60) / 12 * Math.PI * 2, 0.75, 0.1], [-41 / 60 * Math.PI * 2, 1.15, 0.07]]) {
+      const m = B.box('black', cx - Math.sin(ang) * len / 2, 18.6 + Math.cos(ang) * len / 2, cz + 0.04, w, len, 0.02); m.rotation.z = ang; m.updateMatrix();
+    }
+    // belfry: louvred openings
+    for (const l of [-1.6, 1.6]) { lancet(F, l, 22.0, 1.1, 2.0); for (let k = 0; k < 5; k++) F.box('boards', l, 22.3 + k * 0.4, 0.1, 1.1, 0.07, 0.1, 0.25); }
+  }
+  for (const [nx, nz, px, pz, len] of [[-1, 0, T.x0, (T.z0 + T.z1) / 2, 5.95], [1, 0, T.x1, (T.z0 + T.z1) / 2, 5.95]]) {
+    const F = face(B, nx, nz, px, pz);
+    F.box('gothicTrim', 0, 16.0, 0.08, len + 0.3, 0.22, 0.18);
+    lancet(F, 0, 22.0, 1.0, 2.0, { boarded: nx > 0 });
+  }
+  // battlements and corner pinnacles, then the spire
+  B.boxE('gothicTrim', T.x0 - 0.25, T.x1 + 0.25, T.top, T.top + 0.35, T.z0 - 0.25, T.z1 + 0.25);
+  for (let x = T.x0; x <= T.x1 + 0.01; x += 1.0) for (const z of [T.z0 - 0.1, T.z1 + 0.1]) B.box('gothicStone', x, T.top + 0.75, z, 0.5, 0.8, 0.35);
+  for (let z = T.z0 + 1; z < T.z1; z += 1.0) for (const x of [T.x0 - 0.1, T.x1 + 0.1]) B.box('gothicStone', x, T.top + 0.75, z, 0.35, 0.8, 0.5);
+  for (const x of [T.x0, T.x1]) for (const z of [T.z0, T.z1]) { B.box('gothicStone', x, T.top + 1, z, 0.7, 2, 0.7); B.mesh(G.pyramid, 'slate', x, T.top + 3.3, z, 0.8, 2.6, 0.8); }
+  B.mesh(G.pyramid, 'slate', 0, T.top + 0.35 + 5.6, (T.z0 + T.z1) / 2, 7.2, 11.2, 5.4);
+  B.mesh(G.post, 'iron', 0, T.top + 12.4, (T.z0 + T.z1) / 2, 0.06, 1.8, 0.06);
+  B.box('iron', 0, T.top + 12.9, (T.z0 + T.z1) / 2, 0.9, 0.05, 0.05);
+  B.box('iron', 0.2, T.top + 13.2, (T.z0 + T.z1) / 2, 0.5, 0.3, 0.02); // the weathervane's pennant
+
+  /* ---- four octagonal corner towers with slate spires ---- */
+  const tower = (cx, cz) => {
+    const R = 3.2, H = 24;
+    const body = B.mesh(G.post, 'gothicStone', cx, H / 2, cz, R * 2, H, R * 2); body.rotation.y = Math.PI / 8; body.updateMatrix();
+    for (const y of [4.15, EAVES, 16]) { const b = B.mesh(G.post, 'gothicTrim', cx, y, cz, R * 2 + 0.3, 0.25, R * 2 + 0.3); b.rotation.y = Math.PI / 8; b.updateMatrix(); }
+    const crown = B.mesh(G.post, 'gothicTrim', cx, H + 0.4, cz, R * 2 + 0.8, 0.8, R * 2 + 0.8); crown.rotation.y = Math.PI / 8; crown.updateMatrix();
+    for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2; B.box('gothicStone', cx + Math.sin(a) * (R + 0.3), H + 1.1, cz + Math.cos(a) * (R + 0.3), 0.55, 0.7, 0.35, a); }
+    B.mesh(G.spire, 'slate', cx, H + 0.8 + 6.5, cz, R * 2 + 0.4, 13, R * 2 + 0.4);
+    B.mesh(G.sphere, 'iron', cx, H + 14.1, cz, 0.3);
+    B.mesh(G.post, 'iron', cx, H + 14.9, cz, 0.05, 1.6, 0.05);
+    // lancets on the faces turned away from the house
+    const out = Math.atan2(cx, cz);
+    [[-0.5, 2.0, {}], [0.5, 9.4, { boarded: true }], [0, 17.2, { lit: cz > 0 && cx < 0 }], [1.3, 9.4, {}], [-1.3, 17.2, {}]].forEach(([da, y, o]) => {
+      const a = out + da, apothem = R * Math.cos(Math.PI / 8);
+      const F = face(B, Math.sin(a), Math.cos(a), cx + Math.sin(a) * apothem, cz + Math.cos(a) * apothem);
+      lancet(F, 0, y, 0.8, 2.2, o);
+    });
+    P.addWall(cx - 2.95, cx + 2.95, cz - 2.95, cz + 2.95, 0, H, { kind: 'wall', structural: false });
+  };
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) tower(sx * 21, sz * 15);
+  game.towers = [[-21, 15], [21, 15], [-21, -15], [21, -15]];
+
+  /* ---- tall chimney stacks with pots ---- */
+  for (const [x, z] of [[-10, 0], [10, 0], [-15.5, -6], [15.5, 6]]) {
+    B.box('brick', x, 18.6, z, 1.6, 5.4, 1.4);
+    B.box('gothicTrim', x, 21.4, z, 1.9, 0.3, 1.7);
+    for (const dx of [-0.4, 0.4]) B.mesh(G.cyl, 'brick', x + dx, 22.0, z, 0.36, 0.9, 0.36);
+  }
+
+  /* ---- gargoyles at the corners of the cornice and the clock tower ---- */
+  const gargoyle = (x, y, z, ang) => {
+    const s = Math.sin(ang), c = Math.cos(ang);
+    B.mesh(G.sphere, 'gothicTrim', x + s * 0.3, y, z + c * 0.3, 0.55, 0.45, 0.75, ang);
+    B.mesh(G.sphere, 'gothicTrim', x + s * 0.75, y + 0.15, z + c * 0.75, 0.32, 0.3, 0.38, ang);
+    for (const h of [-1, 1]) B.mesh(G.cone, 'gothicTrim', x + s * 0.72 + c * 0.1 * h, y + 0.38, z + c * 0.72 - s * 0.1 * h, 0.06, 0.22, 0.06, ang);
+    for (const h of [-1, 1]) B.mesh(G.wedge, 'gothicTrim', x + c * 0.32 * h, y + 0.15, z - s * 0.32 * h, 0.5, 0.55, 0.06, ang);
+    B.mesh(G.cyl, 'iron', x + s * 0.95, y + 0.05, z + c * 0.95, 0.06, 0.06, 0.06);
+  };
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) gargoyle(sx * 18.1, EAVES - 0.2, sz * 12.0, Math.atan2(sx, sz));
+  for (const sx of [-1, 1]) gargoyle(sx * 4.1, T.top - 0.3, 12.4, Math.atan2(sx, 1));
+  for (const x of [-3, 3]) gargoyle(x, 15.5, 12.6, 0);
+
+  /* ---- the gothic porch ---- */
+  B.room = 'porch';
+  for (const sx of [-1, 1]) {
+    B.solid('gothicStone', sx * 2.6 - 0.3, sx * 2.6 + 0.3, 0, 3.8, 14.1, 14.7, { kind: 'furniture', tag: 'porch pier' });
+    B.mesh(G.pyramid, 'gothicTrim', sx * 2.6, 4.6, 14.4, 0.5, 1.6, 0.5);
+  }
+  B.mesh(G.wedge, 'gothicStone', 0, 3.6, 14.65, 0.4, 1.5, 6.0, Math.PI / 2);
+  B.mesh(G.wedge, 'darkGlass', 0, 3.4, 14.68, 0.42, 1.2, 4.2, Math.PI / 2); // the shadow of the arch
+  B.mesh(G.wedge, 'slate', 0, 3.5, 13.45, 2.8, 1.6, 6.6, Math.PI / 2);
+  B.mesh(G.wedge, 'darkWood', 0, 3.2, 12.28, 0.06, 0.9, 2.4, Math.PI / 2); // pointed tympanum over the doors
+
+  /* ======================= THE GROUNDS ======================= */
+  B.zone = 'exterior'; B.room = 'grounds';
+  /* ---- weeping angels by the porch, one beheaded ---- */
+  const angel = (x, z, ang, headless) => {
+    B.solid('gothicStone', x - 0.45, x + 0.45, 0, 1.2, z - 0.45, z + 0.45, { kind: 'furniture', tag: 'angel plinth' });
+    B.box('gothicTrim', x, 1.25, z, 1.0, 0.1, 1.0);
+    B.mesh(G.cone, 'statue', x, 2.15, z, 0.85, 1.7, 0.75, ang);
+    B.mesh(G.cyl, 'statue', x, 3.05, z, 0.42, 0.55, 0.32, ang);
+    const s = Math.sin(ang), c = Math.cos(ang);
+    if (!headless) {
+      B.mesh(G.sphere, 'statue', x + s * 0.12, 3.42, z + c * 0.12, 0.3, 0.32, 0.3);
+      B.mesh(G.sphere, 'statue', x + s * 0.22, 3.25, z + c * 0.22, 0.26, 0.2, 0.14, ang); // hands over the face
+    } else {
+      B.mesh(G.sphere, 'statue', x + s * 1.1 + 0.4, 0.15, z + c * 1.1, 0.3, 0.3, 0.3); // the head, in the grass
+    }
+    for (const h of [-1, 1]) {
+      const w = B.mesh(G.wedge, 'statue', x - s * 0.22 + c * 0.28 * h, 2.2, z - c * 0.22 - s * 0.28 * h, 0.08, 1.6, 0.9, ang + h * 0.35);
+      w.rotation.set(0, ang + h * 0.35, h * -0.12); w.updateMatrix();
+    }
+  };
+  angel(-4.9, 15.6, 0.0, false);
+  angel(4.9, 15.6, 0.0, true);
+  /* ---- a toppled urn in the fountain garden ---- */
+  { const u = B.mesh(G.cyl, 'statue', 2.8, 0.35, 21.2, 0.6, 0.9, 0.6); u.rotation.set(Math.PI / 2, 0, 0.7); u.updateMatrix();
+    B.box('gothicStone', 2.2, 0.35, 20.6, 0.7, 0.7, 0.7);
+    P.addWall(2.2, 3.2, 20.6, 21.8, 0, 0.7, { kind: 'furniture', tag: 'urn' }); }
+
+  /* ---- the family mausoleum ---- */
+  B.room = 'mausoleum';
+  const MZ = { x0: 35, x1: 41, z0: 23.5, z1: 27.5 };
+  B.solid('gothicStone', MZ.x0, MZ.x1, 0, 3.6, MZ.z0, MZ.z1, { kind: 'wall', structural: false });
+  B.mesh(G.wedge, 'slate', (MZ.x0 + MZ.x1) / 2, 3.6, (MZ.z0 + MZ.z1) / 2, 6.6, 2.2, 4.8);
+  B.mesh(G.wedge, 'gothicStone', (MZ.x0 + MZ.x1) / 2, 3.6, MZ.z0 - 0.35, 0.3, 2.0, 6.2, Math.PI / 2);
+  for (const dx of [-2.2, 2.2]) B.mesh(G.cyl, 'gothicTrim', 38 + dx, 1.8, MZ.z0 - 0.3, 0.45, 3.6, 0.45);
+  B.boxE('darkGlass', 37.0, 39.0, 0.0, 2.4, MZ.z0 - 0.02, MZ.z0);
+  B.mesh(G.wedge, 'darkGlass', 38, 2.4, MZ.z0 - 0.01, 0.04, 0.8, 2.0, Math.PI / 2);
+  for (let i = 0; i < 7; i++) B.mesh(G.post, 'iron', 37.15 + i * 0.28, 1.3, MZ.z0 - 0.08, 0.04, 2.6, 0.04);
+  B.box('brass', 38, 3.2, MZ.z0 - 0.05, 2.4, 0.3, 0.04);
+  B.readable('plaque-mausoleum', 'The mausoleum door', 'BLACKTHORN\n\nCharles · Margaret · Edmund\n\nThe iron gate is chained shut. Inside, in the dark, there are six shelves. One has never been used and never will be.', [36.3, 1.4, 23.4], [0, -1], { plaque: true });
+
+  /* ---- an old stone well ---- */
+  B.room = 'well';
+  B.solid(null, -14.0, -12.0, 0, 0.9, 30.0, 32.0, { kind: 'furniture', tag: 'well' });
+  B.mesh(G.cyl, 'stone', -13, 0.45, 31, 2.0, 0.9, 2.0);
+  B.mesh(G.cyl, 'black', -13, 0.91, 31, 1.6, 0.02, 1.6);
+  for (const dx of [-0.95, 0.95]) B.mesh(G.post, 'darkWood', -13 + dx, 1.5, 31, 0.12, 2.4, 0.12);
+  B.mesh(G.wedge, 'slate', -13, 2.6, 31, 2.4, 0.8, 1.6);
+  { const ax = B.mesh(G.cyl, 'darkWood', -13, 2.25, 31, 0.12, 1.8, 0.12); ax.rotation.z = Math.PI / 2; ax.updateMatrix(); }
+  B.mesh(G.post, 'deadStalk', -13, 1.6, 31, 0.02, 1.3, 0.02);
+  B.mesh(G.cyl, 'iron', -13, 0.95, 31, 0.3, 0.32, 0.3);
+
+  /* ---- a rope swing on one of the dead trees, moving on its own ---- */
+  game.swings = [];
+  const cand = (game.deadTrees || []).find(t => t.tips.some(p => p[1] > 3.5 && p[1] < 6 && Math.hypot(p[0] - t.x, p[2] - t.z) > 1.4));
+  if (cand) {
+    const tip = cand.tips.find(p => p[1] > 3.5 && p[1] < 6 && Math.hypot(p[0] - cand.x, p[2] - cand.z) > 1.4);
+    const pivot = new THREE.Group(); pivot.position.set(tip[0], tip[1], tip[2]);
+    pivot.rotation.order = 'YXZ';
+    pivot.rotation.y = Math.atan2(tip[0] - cand.x, tip[2] - cand.z);
+    B.root.add(pivot);
+    const L = tip[1] - 0.55;
+    for (const h of [-0.22, 0.22]) B.mesh(G.post, 'deadStalk', h, -L / 2, 0, 0.025, L, 0.025, 0, pivot);
+    B.box('boards', 0, -L, 0, 0.6, 0.05, 0.22, 0, pivot);
+    pivot.traverse(o => { o.userData.dynamic = true; });
+    game.swings.push({ pivot, phase: rnd() * 6 });
+  }
+};
+})();
+</script>
+<script id="bm-46-dressing">
+/* ==========================================================================
+   BLACKTHORN MANOR — 6e. DRESSING THE HOUSE
+   Fifty years of neglect: dust sheets over the furniture, cobwebs in every
+   corner, damp coming through the ceilings, wallpaper peeling down in long
+   strips, fallen plaster, heavy drapes, candelabras burnt down to stubs.
+   And the things people remember about a house like this: a grandfather
+   clock, a suit of armour, a stag's head, portraits whose eyes catch the
+   light, a piano no one plays, a four-poster bed, dolls, a rocking chair.
+   ========================================================================== */
+(function () {
+'use strict';
+const BM = window.BM;
+const G = BM.G;
+
+BM.buildDressing = function (B, game) {
+  const P = B.phys, rnd = BM.mulberry32(1974);
+  B.zone = 'mansion';
+
+  /* rooms: [name, level, x0, x1, z0, z1, floor, ceiling] (inner faces) */
+  const R = [
+    ['dining', 'ground', -17.8, -6.1, 4.1, 11.8, 0, 4.0], ['drawing', 'ground', 6.1, 17.8, 4.1, 11.8, 0, 4.0],
+    ['library', 'ground', 6.1, 17.8, -3.9, 3.9, 0, 4.0], ['back sitting', 'ground', -17.8, -6.1, -3.9, 3.9, 0, 4.0],
+    ['kitchen', 'ground', -17.8, -6.1, -11.8, -6.1, 0, 4.0], ['pantry', 'ground', -5.9, -0.1, -11.8, -6.1, 0, 4.0],
+    ['bathroom', 'ground', 0.1, 5.9, -11.8, -6.1, 0, 4.0], ['service', 'ground', 6.1, 17.8, -11.8, -6.1, 0, 4.0],
+    ['corridor', 'ground', -17.8, 17.8, -5.9, -4.1, 0, 4.0], ['hall', 'ground', -5.9, 5.9, 0.1, 11.8, 0, 8.0],
+    ['bedroom1', 'upper', -17.8, -6.1, 4.1, 11.8, 4.2, 8.0], ['bedroom2', 'upper', 6.1, 17.8, 4.1, 11.8, 4.2, 8.0],
+    ["eleanor's sitting room", 'upper', -17.8, -6.1, -3.9, 3.9, 4.2, 8.0], ['gallery', 'upper', 6.1, 17.8, -3.9, 3.9, 4.2, 8.0],
+    ["eleanor's bedroom", 'upper', -17.8, -6.1, -11.8, -6.1, 4.2, 8.0], ['linen', 'upper', -5.9, 5.9, -11.8, -6.1, 4.2, 8.0],
+    ['nursery', 'upper', 6.1, 17.8, -11.8, -6.1, 4.2, 8.0], ['upper corridor', 'upper', -17.8, 17.8, -5.9, -4.1, 4.2, 8.0],
+    ['cellar w', 'cellar', -17.8, -6.1, -11.8, 1.8, -3.2, -0.2], ['cellar', 'cellar', -5.9, 5.9, -11.8, 1.8, -3.2, -0.2],
+    ['cellar e', 'cellar', 6.1, 17.8, -11.8, 1.8, -3.2, -0.2],
+  ];
+
+  /* ---- cobwebs in the ceiling corners of every room ---- */
+  const web = (x, y, z, tx, ty, tz, s) => {
+    const m = new THREE.Mesh(G.plane, BM.M('cobweb'));
+    m.position.set(x, y, z); m.scale.set(s, s, s);
+    m.lookAt(tx, ty, tz);
+    m.matrixAutoUpdate = false; m.updateMatrix();
+    m.userData.instanceOK = true;
+    B.root.add(m);
+    return m;
+  };
+  let webs = 0;
+  for (const [, , x0, x1, z0, z1, , c] of R) {
+    for (const [cx, cz, sx, sz] of [[x0, z0, 1, 1], [x1, z0, -1, 1], [x0, z1, 1, -1], [x1, z1, -1, -1]]) {
+      if (rnd() < 0.15) continue;
+      const s = 0.8 + rnd() * 0.7;
+      web(cx + sx * s * 0.32, c - s * 0.32, cz + sz * s * 0.32, cx + sx * 3, c - 3, cz + sz * 3, s);
+      webs++;
+    }
+  }
+  // the attic is thick with them, strung between the rafters
+  for (let i = 0; i < 26; i++) {
+    const x = -16 + rnd() * 32, z = (rnd() < 0.5 ? -1 : 1) * (2 + rnd() * 4), y = 8.2 + 2.6 - Math.abs(z) * 0.18;
+    web(x, y, z, x + (rnd() - 0.5) * 4, y - 2, 0, 1 + rnd()); webs++;
+  }
+
+  /* ---- damp through the ceilings, wallpaper peeling in strips, fallen plaster ---- */
+  for (const [name, , x0, x1, z0, z1, f, c] of R) {
+    if (/cellar/.test(name)) continue;
+    const n = name === 'hall' ? 4 : 2;
+    for (let i = 0; i < n; i++) {
+      const side = Math.floor(rnd() * 4), t = 0.2 + rnd() * 0.6;
+      const w = 0.7 + rnd() * 1.2, h = 0.5 + rnd() * 0.8, y = c - h / 2 - 0.05;
+      let x, z, ry;
+      if (side === 0) { x = x0 + (x1 - x0) * t; z = z0 + 0.012; ry = 0; }
+      else if (side === 1) { x = x0 + (x1 - x0) * t; z = z1 - 0.012; ry = Math.PI; }
+      else if (side === 2) { x = x0 + 0.012; z = z0 + (z1 - z0) * t; ry = Math.PI / 2; }
+      else { x = x1 - 0.012; z = z0 + (z1 - z0) * t; ry = -Math.PI / 2; }
+      const st = B.mesh(G.plane, 'damp', x, y, z, w, h, 1, ry); st.userData.instanceOK = true;
+      // the stain on the ceiling above it
+      B.mesh(G.ground, 'damp', x + Math.sin(ry) * 0.5, c - 0.012, z + Math.cos(ry) * 0.5, w * 1.2, 1, 1.1, ry).userData.instanceOK = true;
+      // a strip of wallpaper hanging away from the wall
+      if (name !== 'kitchen' && name !== 'pantry' && name !== 'bathroom' && name !== 'service') {
+        const len = 0.6 + rnd() * 0.5, peel = B.box('peel', x + Math.sin(ry) * 0.06 + Math.cos(ry) * (w * 0.3), c - 0.15 - len / 2, z + Math.cos(ry) * 0.06 - Math.sin(ry) * (w * 0.3), 0.32, len, 0.006, ry);
+        peel.rotation.set(0.18 + rnd() * 0.2, ry, (rnd() - 0.5) * 0.3, 'YXZ'); peel.updateMatrix();
+      }
+      // plaster fallen on the floor beneath
+      for (let k = 0; k < 4; k++) B.box('plaster', x + Math.sin(ry) * (0.3 + rnd() * 0.5) + (rnd() - 0.5) * 0.6, f + 0.03, z + Math.cos(ry) * (0.3 + rnd() * 0.5) + (rnd() - 0.5) * 0.6, 0.1 + rnd() * 0.15, 0.05, 0.08 + rnd() * 0.12, rnd() * 3);
+    }
+  }
+
+  /* ---- dust sheets over the furniture (fitted to each piece's collision box) ---- */
+  const sheet = new Set(['sofa', 'armchair', 'settee', 'chaise', 'hall settle', 'hall chest', 'reading chair', 'sideboard', 'piano', 'trunk', 'tea chest', 'bed']);
+  const sheetOver = (f) => {
+    const w = f.x1 - f.x0, d = f.z1 - f.z0, h = f.y1 - f.y0;
+    B.box('dustSheet', (f.x0 + f.x1) / 2, f.y0 + h / 2, (f.z0 + f.z1) / 2, w + 0.08, h + 0.03, d + 0.08);
+    B.mesh(G.sphere, 'dustSheet', (f.x0 + f.x1) / 2, f.y1, (f.z0 + f.z1) / 2, w * 1.02, 0.28, d * 1.02);
+  };
+
+  /* ---- the grand piano in the drawing room, under its sheet ---- */
+  B.room = 'drawing'; B.levelName = 'ground';
+  B.furniture(null, 10.2, 5.4, 0, 1.5, 1.0, 1.8, 'piano');
+  for (const [dx, dz] of [[-0.6, -0.75], [0.6, -0.75], [0, 0.75]]) B.mesh(G.post, 'piano', 10.2 + dx, 0.3, 5.4 + dz, 0.08, 0.6, 0.08);
+  B.mesh(G.post, 'piano', 10.2, 0.25, 5.0, 0.04, 0.5, 0.04);
+  for (const f of P.furniture) if (sheet.has(f.tag)) sheetOver(f);
+
+  /* ---- the stag's head over the drawing room fire ---- */
+  { const x = 15.5, y = 3.35, z = 4.13;
+    B.box('darkWood', x, y, z + 0.03, 0.5, 0.6, 0.06);
+    B.mesh(G.sphere, 'bark', x, y - 0.05, z + 0.22, 0.32, 0.36, 0.38);
+    B.mesh(G.sphere, 'bark', x, y - 0.18, z + 0.5, 0.18, 0.18, 0.36);
+    for (const h of [-1, 1]) {
+      let p = [x + h * 0.1, y + 0.12, z + 0.25];
+      for (let k = 0; k < 4; k++) {
+        const q = [p[0] + h * 0.16, p[1] + 0.14, p[2] + 0.02];
+        B.mesh(G.post, 'fungusStem', (p[0] + q[0]) / 2, (p[1] + q[1]) / 2, (p[2] + q[2]) / 2, 0.035, 0.22, 0.035).rotation.z = -h * 0.85;
+        B.root.children[B.root.children.length - 1].updateMatrix();
+        B.mesh(G.post, 'fungusStem', q[0], q[1] + 0.09, q[2], 0.025, 0.16, 0.025);
+        p = q;
+      }
+    }
+  }
+
+  /* ---- candelabras, burnt down to stubs ---- */
+  const candelabra = (x, y, z, arms) => {
+    B.mesh(G.cyl, 'brass', x, y + 0.02, z, 0.18, 0.04, 0.18);
+    B.mesh(G.post, 'brass', x, y + 0.25, z, 0.04, 0.46, 0.04);
+    B.box('brass', x, y + 0.46, z, 0.5, 0.03, 0.03);
+    for (let i = 0; i < arms; i++) {
+      const dx = (i - (arms - 1) / 2) * 0.24, h = 0.04 + rnd() * 0.14;
+      B.mesh(G.cyl, 'brass', x + dx, y + 0.49, z, 0.07, 0.03, 0.07);
+      B.mesh(G.cyl, 'wax', x + dx, y + 0.5 + h / 2, z, 0.045, h, 0.045);
+      B.mesh(G.cyl, 'wax', x + dx + 0.03, y + 0.47, z, 0.03, 0.08, 0.03); // a drip
+    }
+  };
+  candelabra(-13.2, 0.78, 8, 3); candelabra(-10.8, 0.78, 8, 3);
+  candelabra(14.7, 1.42, 4.45, 3); candelabra(16.3, 1.42, 4.45, 3);
+  B.levelName = 'upper'; candelabra(-9.9, 5.0, 4.4, 3); B.levelName = 'ground';
+
+  /* ---- the hall: grandfather clock, suit of armour, portraits ---- */
+  B.room = 'hall';
+  { const x = -5.55, z = 8.4;
+    B.furniture('darkWood', x, z, 0, 0.6, 2.3, 0.6, 'grandfather clock');
+    B.box('gilt', x + 0.31, 1.95, z, 0.02, 0.5, 0.5);
+    B.mesh(G.disc, 'paper', x + 0.33, 1.95, z, 0.42, 0.42, 1, Math.PI / 2);
+    B.box('black', x + 0.34, 1.97, z - 0.04, 0.01, 0.16, 0.02);   // stopped
+    B.box('black', x + 0.34, 2.0, z + 0.03, 0.01, 0.2, 0.015);
+    B.box('darkGlass', x + 0.31, 1.05, z, 0.02, 0.9, 0.3);
+    B.mesh(G.cyl, 'brass', x + 0.27, 0.85, z, 0.16, 0.02, 0.16).rotation.z = Math.PI / 2;
+    B.root.children[B.root.children.length - 1].updateMatrix();
+    B.mesh(G.pyramid, 'darkWood', x, 2.45, z, 0.62, 0.3, 0.62);
+  }
+  const armour = (x, y, z, ang, room) => {
+    B.room = room;
+    B.furniture(null, x, z, y, 0.55, 1.9, 0.55, 'suit of armour');
+    B.box('gothicStone', x, y + 0.05, z, 0.6, 0.1, 0.6);
+    for (const h of [-1, 1]) B.mesh(G.post, 'armour', x + Math.cos(ang) * 0.12 * h, y + 0.5, z - Math.sin(ang) * 0.12 * h, 0.13, 0.8, 0.13);
+    B.mesh(G.cyl, 'armour', x, y + 1.2, z, 0.44, 0.65, 0.32, ang);
+    B.mesh(G.sphere, 'armour', x, y + 1.48, z, 0.52, 0.22, 0.36, ang);
+    for (const h of [-1, 1]) B.mesh(G.post, 'armour', x + Math.cos(ang) * 0.3 * h, y + 1.15, z - Math.sin(ang) * 0.3 * h, 0.1, 0.65, 0.1);
+    B.mesh(G.sphere, 'armour', x, y + 1.72, z, 0.26, 0.3, 0.28);
+    B.box('black', x + Math.sin(ang) * 0.13, y + 1.74, z + Math.cos(ang) * 0.13, 0.16, 0.025, 0.02, ang);
+    B.mesh(G.post, 'darkWood', x + Math.cos(ang) * 0.38, y + 1.1, z - Math.sin(ang) * 0.38, 0.04, 2.2, 0.04);
+    B.mesh(G.wedge, 'armour', x + Math.cos(ang) * 0.38, y + 2.15, z - Math.sin(ang) * 0.38, 0.02, 0.35, 0.22, ang);
+  };
+  armour(-1.95, 0, 11.35, Math.PI, 'hall');
+  B.levelName = 'upper'; armour(3.6, 4.2, 0.45, 0, 'hall'); B.levelName = 'ground';
+  const portrait = (x, y, z, ry, w, h) => {
+    const s = Math.sin(ry), c = Math.cos(ry);
+    B.box('gilt', x, y, z, w + 0.2, h + 0.2, 0.07, ry);
+    B.box('canvas', x + s * 0.04, y, z + c * 0.04, w, h, 0.02, ry);
+    B.mesh(G.sphere, 'canvas', x + s * 0.05, y + h * 0.18, z + c * 0.05, w * 0.36, h * 0.3, 0.03, ry);
+    // the eyes catch the light
+    for (const e of [-1, 1]) B.box(BM.Basic(0x8a8070), x + s * 0.065 + c * e * w * 0.06, y + h * 0.2, z + c * 0.065 - s * e * w * 0.06, 0.03, 0.015, 0.005, ry);
+  };
+  portrait(-5.88, 2.6, 5.9, Math.PI / 2, 1.0, 1.4);
+  portrait(5.88, 2.6, 5.9, -Math.PI / 2, 1.0, 1.4);
+  B.levelName = 'upper';
+  portrait(-3.6, 6.3, 0.12, 0, 0.9, 1.2); portrait(3.6, 6.6, 0.12, 0, 0.9, 1.2);
+  portrait(-15.5, 6.3, 4.12, 0, 1.0, 1.3);        // bedroom 1
+  portrait(-17.88, 6.3, -11.0, Math.PI / 2, 0.7, 0.9); // eleanor's bedroom: a child's portrait
+  B.levelName = 'ground';
+  portrait(-15.6, 2.5, 4.12, 0, 1.2, 0.9);         // dining
+  portrait(-8.5, 2.4, -3.88, 0, 1.1, 0.8);         // back sitting
+
+  /* ---- heavy drapes at the windows of the formal rooms ---- */
+  const formal = new Set(['dining', 'drawing', 'library', 'back sitting', 'hall', 'bedroom1', 'bedroom2', "eleanor's sitting room", 'gallery', "eleanor's bedroom", 'nursery']);
+  for (const w of P.windows) {
+    if (w.zone !== 'mansion' || !formal.has(w.room) && !formal.has(roomAt(w))) continue;
+    const ix = w.x - w.nx * 0.27, iz = w.z - w.nz * 0.27, ry = Math.atan2(w.nx, w.nz);
+    const tx = w.nz, tz = -w.nx, top = w.head + 0.35, bottom = w.sill - 0.75;
+    for (const h of [-1, 1]) {
+      const off = h * (w.w / 2 + 0.24);
+      B.box('drape', ix + tx * off, (top + bottom) / 2, iz + tz * off, 0.42, top - bottom, 0.1, ry);
+    }
+    B.box('drape', ix, top, iz, w.w + 1.0, 0.3, 0.14, ry);
+  }
+  function roomAt(w) { const r = R.find(q => w.x > q[2] - 0.6 && w.x < q[3] + 0.6 && w.z > q[4] - 0.6 && w.z < q[5] + 0.6 && w.y > q[6] && w.y < q[7]); return r ? r[0] : ''; }
+
+  /* ---- bedroom 1: a four-poster ---- */
+  B.levelName = 'upper'; B.room = 'bedroom1';
+  for (const [x, z] of [[-13.0, 8.5], [-11.0, 8.5], [-13.0, 11.3], [-11.0, 11.3]]) B.mesh(G.post, 'darkWood', x, 4.2 + 1.2, z, 0.12, 2.4, 0.12);
+  B.boxE('darkWood', -13.06, -10.94, 6.55, 6.65, 8.44, 11.36);
+  for (const [x, z, sx, sz] of [[-13.0, 9.9, 0.06, 2.8], [-11.0, 9.9, 0.06, 2.8], [-12.0, 8.5, 2.0, 0.06]]) {
+    const d = B.box('drape', x, 5.55, z, sx, 2.0, sz); d.rotation.set(0.05 * (rnd() - 0.5), 0, 0.04 * (rnd() - 0.5)); d.updateMatrix();
+  }
+
+  /* ---- the nursery: a rocking chair that rocks, and dolls ---- */
+  B.room = 'nursery';
+  const rock = new THREE.Group(); rock.position.set(10.0, 4.2, -8.5); rock.rotation.y = 0.6; B.root.add(rock);
+  for (const h of [-0.28, 0.28]) { B.box('darkWood', h, 0.05, 0, 0.05, 0.08, 1.0, 0, rock); }
+  B.box('darkWood', 0, 0.45, 0, 0.6, 0.06, 0.55, 0, rock);
+  B.box('darkWood', 0, 0.95, 0.27, 0.6, 1.0, 0.05, 0, rock);
+  for (const h of [-0.28, 0.28]) { B.mesh(G.post, 'darkWood', h, 0.65, -0.22, 0.04, 0.4, 0.04, 0, rock); }
+  // a doll sits in it
+  B.mesh(G.cone, 'dollDress', 0, 0.62, -0.02, 0.32, 0.36, 0.28, 0, rock);
+  B.mesh(G.sphere, 'doll', 0, 0.9, -0.02, 0.2, 0.22, 0.2, 0, rock);
+  for (const e of [-1, 1]) B.mesh(G.sphere, 'black', e * 0.045, 0.93, -0.11, 0.03, 0.03, 0.02, 0, rock);
+  rock.traverse(o => { o.userData.dynamic = true; });
+  B.furniture(null, 10.0, -8.5, 4.2, 0.8, 1.2, 0.8, 'rocking chair');
+  game.rockers = [{ obj: rock }];
+  const doll = (x, y, z, ry) => {
+    B.mesh(G.cone, 'dollDress', x, y + 0.13, z, 0.26, 0.26, 0.22, ry);
+    B.mesh(G.sphere, 'doll', x, y + 0.33, z, 0.17, 0.18, 0.17, ry);
+    for (const e of [-1, 1]) B.mesh(G.sphere, 'black', x + Math.cos(ry) * e * 0.04 + Math.sin(ry) * 0.075, y + 0.35, z - Math.sin(ry) * e * 0.04 + Math.cos(ry) * 0.075, 0.025);
+  };
+  doll(15.3, 5.1, -10.5, -0.4);    // in the cot
+  doll(13.0, 4.2, -6.9, Math.PI);  // on the floor, facing the door
+  B.room = "eleanor's bedroom";
+  doll(-15.6, 4.8, -9.3, 0.4);
+  B.room = 'attic'; B.levelName = 'attic';
+  doll(-5.6, 8.2, 3.6, -0.6);
+
+  /* ---- the cellar: barrels; the attic: stacked frames ---- */
+  B.levelName = 'cellar'; B.room = 'cellar e';
+  for (const [x, z] of [[17.2, 0.9], [16.35, 1.1], [17.2, 0.05]]) {
+    B.furniture(null, x, z, -3.2, 0.78, 1.0, 0.78, 'barrel');
+    B.mesh(G.cyl, 'wood', x, -2.7, z, 0.8, 1.0, 0.8);
+    for (const y of [-3.0, -2.4]) B.mesh(G.cyl, 'iron', x, y, z, 0.82, 0.05, 0.82);
+  }
+  B.levelName = 'attic'; B.room = 'attic';
+  for (let i = 0; i < 4; i++) { const f = B.box('gilt', 9.5 + i * 0.12, 8.2 + 0.55, -3.2, 0.06, 1.1 - i * 0.12, 0.9 - i * 0.1); f.rotation.z = -0.25; f.updateMatrix(); }
+
+  game.dressing = { webs };
+};
+})();
+</script>
 <script id="bm-50-fx">
 /* ==========================================================================
    BLACKTHORN MANOR — 7. ATMOSPHERE
@@ -2798,7 +3454,7 @@ const LIGHT_SCALE = 0.5; // fixture intensity -> real light intensity
 BM.POOL = { points: POOL_POINTS, spots: POOL_SPOTS };
 
 const FOG = {
-  exterior: { colour: new THREE.Color(0x1b222b), density: 0.032 },   // cold blue-grey
+  exterior: { colour: new THREE.Color(0x222b36), density: 0.017 },   // cold blue-grey
   house: { colour: new THREE.Color(0x140c07), density: 0.06 },      // warm brown-black
   hive: { colour: new THREE.Color(0x05211f), density: 0.050 },       // dark teal
   core: { colour: new THREE.Color(0x040b33), density: 0.036 },       // deep blue
@@ -3284,7 +3940,7 @@ BM.instance = function (zoneGroup, min) {
   const groups = new Map();
   for (const o of zoneGroup.children) {
     if (!o.isMesh || o.isInstancedMesh || o.userData.dynamic || o.userData.mirror || o.matrixAutoUpdate) continue;
-    if (o.material.transparent && !o.userData.glass) continue;
+    if (o.material.transparent && !o.userData.glass && !o.userData.instanceOK) continue;
     const k = o.geometry.uuid + '|' + o.material.uuid;
     let l = groups.get(k); if (!l) groups.set(k, l = []);
     l.push(o);
@@ -3852,6 +4508,8 @@ class Game {
     BM.buildHive(this.B, this);
     BM.buildAppliances(this.B, this);
     BM.buildHauntedGarden(this.B, this);
+    BM.buildGothic(this.B, this);
+    BM.buildDressing(this.B, this);
     this.interactables = this.B.interactables;
     this.byId = {};
     for (const it of this.interactables) this.byId[it.id] = it;
@@ -4231,6 +4889,9 @@ class Game {
     if (this.stormTimer >= 0) { this.stormTimer -= dt; if (this.stormTimer < 0) { g.stormTrip(); this.stormTimer = -1; } }
   }
   updateDucks(dt) {
+    // the swing and the rocking chair move on their own
+    for (const s of this.swings || []) s.pivot.rotation.x = Math.sin(this.time * 1.15 + s.phase) * 0.22 * (0.6 + 0.4 * Math.sin(this.time * 0.13));
+    for (const r of this.rockers || []) r.obj.rotation.x = Math.sin(this.time * 1.6) * 0.09;
     for (const d of this.ducks || []) {
       d.a += d.w * dt;
       d.obj.position.set(d.cx + Math.sin(d.a) * d.r, 0.05 + Math.sin(this.time * 2 + d.r) * 0.02, d.cz + Math.cos(d.a) * d.r);

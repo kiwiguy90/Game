@@ -104,6 +104,12 @@ suite('builds', () => {
   assert(hg.trees >= 35 && hg.yews >= 3 && hg.clumps >= 300 && hg.crows >= 6, 'haunted planting: ' + JSON.stringify(hg));
   const sway = []; game.scene.traverse(o => { if (o.isInstancedMesh && o.material.userData.sway) sway.push(o.material.name + ':' + o.count); });
   assert(sway.length >= 4, 'swaying instanced vegetation: ' + sway.join(' '));
+  // the gothic house: towers and spires, a clock tower, steep roof; the house dressed
+  assert(game.towers.length === 4, 'four corner towers');
+  let tallest = 0; game.scene.traverse(o => { if (o.isMesh && o.geometry === BM.G.spire) tallest = Math.max(tallest, o.position.y + o.scale.y / 2); if (o.isInstancedMesh && o.geometry === BM.G.spire) { const m = new env.THREE.Matrix4(), p = new env.THREE.Vector3(), q = new env.THREE.Quaternion(), sc = new env.THREE.Vector3(); for (let i = 0; i < o.count; i++) { o.getMatrixAt(i, m); m.decompose(p, q, sc); tallest = Math.max(tallest, p.y + sc.y / 2); } } });
+  assert(tallest > 35, 'the spires rise over 35 m (' + tallest.toFixed(1) + ')');
+  assert(game.dressing.webs > 60, 'cobwebs in the rooms');
+  assert(['grandfather clock', 'suit of armour', 'piano', 'rocking chair'].every(t => game.phys.furniture.some(f => f.tag === t)), 'the house is dressed');
   // audio is synthesised: no buffers loaded from files, sources created
   assert(env.audioLog.contexts === 1 && env.audioLog.sources > 0, 'web audio synth not started');
   return `${game.grid.lights.length} light records, ${game.interactables.length} interactables, ${game.phys.walls.length} colliders`;
@@ -126,7 +132,9 @@ suite('circuits', () => {
   const street = g.lights.filter(l => l.circuit === 'street');
   assert(street.length === 3 && street.every(l => !l.powered && !l.on) && street.filter(l => l.flicker > 0).length === 1, 'three street lights, off at the start, one faulty');
   settle(env, 1);
-  assert(g.lights.filter(l => l.circuit !== 'battery').every(l => !l.powered), 'the whole estate starts dark');
+  // dark, except one candle someone has left burning in a gable window
+  assert(g.lights.filter(l => l.circuit !== 'battery' && l.id !== 'gable-candle').every(l => !l.powered), 'the whole estate starts dark');
+  assert(g.light('gable-candle').powered, 'the candle in the gable window is burning');
   // lodge on: hall is live immediately, everything else waits for MAIN
   g.setLodge(true);
   assert(g.live('hall') && !g.live('main') && ['ground', 'east', 'west', 'attic', 'cellar'].every(c => !g.live(c)), 'hall live, rest waiting for main');

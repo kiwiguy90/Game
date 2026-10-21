@@ -123,6 +123,17 @@ suite('circuits', () => {
   g.setLodge(true);
   assert(g.live('hall') && !g.live('main') && ['ground', 'east', 'west', 'attic', 'cellar'].every(c => !g.live(c)), 'hall live, rest waiting for main');
   assert(lit('lodge-lamp') || (settle(env, 3), lit('lodge-lamp')), 'lodge lamp on lodge supply');
+  // the estate lighting switched at the lodge: floodlights, drive lamps, garden lights
+  const est = game.estateLights;
+  assert(est.flood.length >= 4 && est.drive.length >= 8 && est.garden.length >= 8, 'estate lights exist');
+  const all = [...est.flood, ...est.drive, ...est.garden].map(id => g.light(id));
+  assert(all.every(l => !l.on && l.circuit === 'lodge'), 'estate lights start switched off on the lodge supply');
+  for (const k of ['flood', 'drive', 'garden']) { game.standAt(game.byId['lodge-sw-' + k]); assert(game.pick() === game.byId['lodge-sw-' + k], 'lodge switch selectable: ' + k); game.interact(); }
+  settle(env, 3);
+  assert(all.every(l => l.powered && l.intensity > 0), 'floodlights, drive and garden lights come on from the lodge');
+  g.setLodge(false); g.update(1 / 60);
+  assert(all.every(l => !l.powered), 'and go off with the lodge main');
+  g.setLodge(true);
   // the hall panel: fittings start off; incandescent: two false starts then holds
   assert(game.hallLights.every(id => !g.light(id).on), 'hall fittings start switched off');
   game.toggleFittings(game.hallLights);
@@ -211,6 +222,9 @@ suite('playthrough', () => {
   go(env, 'gate-release');
   assert(!game.gates.open, 'gate release dead without lodge power');
   go(env, 'lodge-main'); assert(g.lodge, 'lodge on');
+  for (const k of ['flood', 'drive', 'garden']) go(env, 'lodge-sw-' + k);
+  settle(env, 2);
+  assert(game.estateLights.drive.every(id => g.light(id).powered), 'drive lamps on from the lodge');
   go(env, 'gate-release'); assert(game.gates.open, 'gates open');
   settle(env, 3);
   go(env, 'front-doors'); assert(game.frontDoors.open, 'front doors open');
@@ -417,6 +431,11 @@ suite('budgets', () => {
     if (game.lastDrawCalls > worst) { worst = game.lastDrawCalls; worstAt = v.id; }
   }
   assert(worst < 2200, `draw calls ${worst} at ${worstAt}`);
+  // a lightning flash tints the sky towards blue-grey, never towards a light's colour
+  game.teleport(0, 0, 45, 0); game.fx.strike(true);
+  for (let i = 0; i < 4; i++) game.frame(1 / 60, 16);
+  const sky = game.scene.background;
+  assert(sky.b >= sky.r, 'sky colour during a flash went ' + sky.getHexString());
   assert(game.frameErrors === 0, 'frame errors');
   return `worst ${worst} draw calls (${worstAt}) over ${views.length} views; ${geos.size} unique geometries, ${Math.round(tris)} tris; ${game.optStats.instancedMeshes} instanced meshes absorbing ${game.optStats.instancesAbsorbed}`;
 });

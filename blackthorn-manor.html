@@ -1062,6 +1062,16 @@ class Builder {
         this.mesh(G.cone, 'fabricCream', x, y + 0.04, z, 0.38, 0.3, 0.38);
         bulbSize = 0.08;
         break;
+      case 'flood':
+        this.box('iron', x, 0.12, z, 0.3, 0.24, 0.3);
+        this.box('metalDark', x, y, z + 0.08, 0.5, 0.36, 0.22);
+        bulbSize = 0.14;
+        break;
+      case 'bollard':
+        this.mesh(G.post, 'iron', x, (y - 0.12) / 2, z, 0.14, y - 0.12, 0.14);
+        this.mesh(G.cone, 'iron', x, y + 0.16, z, 0.26, 0.14, 0.26);
+        bulbSize = 0.13;
+        break;
       case 'beacon':
         this.mesh(G.cyl, 'metalDark', x, y - 0.12, z, 0.26, 0.1, 0.26);
         bulbSize = 0.16;
@@ -1246,11 +1256,53 @@ BM.buildGrounds = function (B, game) {
   B.box(BM.Basic(0x6a1010), -6.22, 1.42, 83.2, 0.02, 0.12, 0.12);
   const lodgeLamp = B.fixture({ id: 'lodge-lamp', name: 'Lodge lamp', circuit: 'lodge', kind: 'incandescent', style: 'pendant', pos: [-10, 2.5, 84], ceiling: L.h, colour: 0xffc27a, target: 1.4, range: 8 });
   B.fixture({ id: 'lodge-porch', name: 'Lodge porch lantern', circuit: 'lodge', kind: 'incandescent', style: 'lantern', pos: [-11.2, 2.4, 88.45], nz: 1, colour: 0xffb060, target: 0.9, range: 7 });
+  /* ---- estate lighting, switched at the lodge: floodlights, drive, garden ---- */
+  const estate = { flood: [], drive: [], garden: [] };
+  const estateLight = (group, o) => { const l = B.fixture(Object.assign({ circuit: 'lodge', on: false }, o)); estate[group].push(l.id); return l; };
+  B.room = 'grounds';
+  for (const x of [-14, -7.5, 7.5, 14]) {
+    estateLight('flood', { id: 'flood' + x, name: 'Floodlight', kind: 'incandescent', style: 'flood', pos: [x, 0.35, 14.2], colour: 0xe8eeff, target: 2.6, range: 18, spot: true, dir: [0, 0.75, -0.66] });
+  }
+  for (const z of [39, 56, 68, 87]) for (const sx of [-1, 1]) {
+    estateLight('drive', { id: 'drive-lamp' + sx * z, name: 'Drive lamp', kind: 'incandescent', style: 'street', pos: [sx * 4.6, 3.2, z], colour: 0xffc070, target: 1.3, range: 10 });
+    P.addWall(sx * 4.6 - 0.1, sx * 4.6 + 0.1, z - 0.1, z + 0.1, 0, 3, { kind: 'tree', occludes: false });
+  }
+  for (let i = 0; i < 4; i++) {
+    const a = Math.PI / 4 + i * Math.PI / 2, x = Math.sin(a) * 9.8, z = 24 + Math.cos(a) * 9.8;
+    estateLight('drive', { id: 'circle-lamp' + i, name: 'Turning circle lamp', kind: 'incandescent', style: 'street', pos: [x, 3.2, z], colour: 0xffc070, target: 1.3, range: 10 });
+    P.addWall(x - 0.1, x + 0.1, z - 0.1, z + 0.1, 0, 3, { kind: 'tree', occludes: false });
+  }
+  const bollard = (id, name, x, z, colour) => {
+    estateLight('garden', { id, name, kind: 'incandescent', style: 'bollard', pos: [x, 0.9, z], colour: colour || 0xffd08a, target: 0.9, range: 7 });
+    P.addWall(x - 0.1, x + 0.1, z - 0.1, z + 0.1, 0, 0.9, { kind: 'tree', occludes: false });
+  };
+  for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; bollard('fountain-light' + i, 'Fountain light', Math.sin(a) * 4.0, 24 + Math.cos(a) * 4.0, 0xbfe0ff); }
+  bollard('maze-light-n', 'Maze lantern', -38.2, 36.6); bollard('maze-light-s', 'Maze lantern', -38.2, 40.4);
+  bollard('pool-light-n', 'Pool light', -23.2, 59.5, 0xbfe0ff); bollard('pool-light-s', 'Pool light', -23.2, 64.5, 0xbfe0ff);
+  bollard('pond-light-n', 'Pond light', 26.6, 59.5); bollard('pond-light-s', 'Pond light', 26.6, 64.5);
+  bollard('cemetery-light-n', 'Cemetery gate lantern', 29.4, 35.3); bollard('cemetery-light-s', 'Cemetery gate lantern', 29.4, 38.7);
+  B.room = 'lodge';
+  game.estateLights = estate;
+  const estateSwitch = (key, label, x) => {
+    B.box('brass', x, 1.4, 80.24, 0.22, 0.32, 0.04);
+    B.interactable({
+      id: 'lodge-sw-' + key, label: () => label + (grid.lodge ? (estate[key].some(id => grid.light(id).on) ? ': ON' : ': OFF') : ' (no power)'),
+      pos: [x, 1.4, 80.26], n: [0, 1],
+      act: g => {
+        if (!grid.lodge) { g.audio.click(); g.ui.say('The switch clicks. Nothing — the lodge main is off.'); return; }
+        const on = g.toggleFittings(estate[key]);
+        g.ui.say(on ? { flood: 'Out in the dark, the floodlights thump on, one after another, and the front of the house leaps out of the rain.', drive: 'Lamps come up along the drive, two by two, all the way to the turning circle.', garden: 'Small lights wake across the gardens: the fountain, the maze, the pool, the pond. And one at the cemetery gate.' }[key] : label + ' off.');
+      },
+    });
+  };
+  estateSwitch('flood', 'Floodlights', -13.2);
+  estateSwitch('drive', 'Drive lamps', -12.2);
+  estateSwitch('garden', 'Garden lights', -11.2);
   B.interactable({
     id: 'lodge-main', label: () => grid.lodge ? 'Lodge main switch: ON' : 'Throw the lodge main switch', pos: [-13.7, 1.6, 84.4], n: [1, 0],
     act: g => {
       if (grid.lodge) { g.ui.say('The lodge switch is on. The estate has a supply.'); return; }
-      grid.setLodge(true); g.audio.lever(); g.ui.say('A heavy clunk. Somewhere up the drive, something hums.');
+      grid.setLodge(true); g.audio.lever(); g.ui.say('A heavy clunk. Somewhere up the drive, something hums. Under the window, a row of switches: FLOODLIGHTS, DRIVE, GARDEN.');
     },
   });
   B.interactable({
@@ -2404,6 +2456,7 @@ class FX {
 
     this.quality = { rain: 9000, shadowEvery: 1, mirrors: true };
     this._tmpColour = new THREE.Color();
+    this._skyColour = new THREE.Color(); this._flashColour = new THREE.Color(0x8a9ab8);
   }
 
   /* Choose the pool assignments for this frame. Returns the chosen records. */
@@ -2487,8 +2540,8 @@ class FX {
     this.scene.fog.color.lerp(target.colour, k);
     this.scene.fog.density += (target.density - this.scene.fog.density) * k;
     if (this.flash > 0.05 && ctx.zone === 'exterior') {
-      this._tmpColour.copy(this.scene.fog.color).lerp(new THREE.Color(0x8a9ab8), Math.min(0.6, this.flash * 0.5));
-      this.scene.background = this._tmpColour;
+      this._skyColour.copy(this.scene.fog.color).lerp(this._flashColour, Math.min(0.6, this.flash * 0.5));
+      this.scene.background = this._skyColour;
     } else this.scene.background = this.scene.fog.color;
     this.fogZone = ctx.zone;
 
@@ -3160,7 +3213,7 @@ class Game {
     const g = this.grid, s = this.story;
     if (s.ended) return 'It is done. They have been seen.';
     if (!g.lodge) return 'The gates are locked. Try the gatekeeper\'s lodge, to the left of the gates.';
-    if (!this.gates.open) return 'There is power at the lodge. Work the gate release.';
+    if (!this.gates.open) return 'There is power at the lodge. Work the gate release — and the switches under the window light the grounds.';
     if (!this.frontDoors.open) return 'Go up the drive to the house.';
     if (!g.breakers.main && !g.stormHasTripped) return this.hallLit() ? 'The hall is lit. Find the fuse board for the rest of the house — try the pantry, at the back.' : 'It is dark. There is a light panel by the door.';
     if (g.tripped) return 'The storm has tripped MAIN. Go back down to the pantry fuse board and reset it.';

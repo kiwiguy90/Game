@@ -21,6 +21,11 @@ requests. There is no build step.
 | P | Phone (objective and documents) |
 | R / F | Look up / down |
 
+In the gatekeeper's lodge, the main switch powers the estate. The three switches
+under the window turn on the FLOODLIGHTS on the front of the house, the DRIVE
+lamps (along the drive and round the turning circle) and the GARDEN lights
+(fountain, maze, pool, pond, cemetery gate).
+
 At the fuse board: `M` throws MAIN, `1`–`6` switch HALL, GROUND, EAST, WEST,
 ATTIC, CELLAR. At the routing console: `1`–`6` feed PLATFORM, LIFTS, LABS,
 SECURITY, DINING, CORE.
@@ -40,7 +45,7 @@ draw-call counts are what the renderer actually issues.
 | Suite | Checks |
 | --- | --- |
 | builds | Boots and runs with no frame errors or network use; 27 house windows; light count constant |
-| circuits | Lodge → hall → MAIN, start-up behaviours, storm trip, appliances, fire, generator limit, the SECURITY bus |
+| circuits | Lodge → estate lights and hall → MAIN, start-up behaviours, storm trip, appliances, fire, generator limit, the SECURITY bus |
 | playthrough | The whole game from the lane to the ending, walking every leg by flood-fill under the current state |
 | reachability | Flood-fill over all seven levels: every switch, door, ladder, lift and readable can be reached and selected |
 | doorways | Every wall gap walks through clear at full width, both directions |

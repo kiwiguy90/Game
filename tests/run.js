@@ -123,16 +123,23 @@ suite('circuits', () => {
   g.setLodge(true);
   assert(g.live('hall') && !g.live('main') && ['ground', 'east', 'west', 'attic', 'cellar'].every(c => !g.live(c)), 'hall live, rest waiting for main');
   assert(lit('lodge-lamp') || (settle(env, 3), lit('lodge-lamp')), 'lodge lamp on lodge supply');
-  // the estate lighting switched at the lodge: floodlights, drive lamps, garden lights
+  // the estate lighting panel in the lodge: every outdoor group
   const est = game.estateLights;
-  assert(est.flood.length >= 4 && est.drive.length >= 8 && est.garden.length >= 8, 'estate lights exist');
-  const all = [...est.flood, ...est.drive, ...est.garden].map(id => g.light(id));
-  assert(all.every(l => !l.on && l.circuit === 'lodge'), 'estate lights start switched off on the lodge supply');
-  for (const k of ['flood', 'drive', 'garden']) { game.standAt(game.byId['lodge-sw-' + k]); assert(game.pick() === game.byId['lodge-sw-' + k], 'lodge switch selectable: ' + k); game.interact(); }
+  const groups = ['street', 'gate', 'flood', 'drive', 'garden', 'pool', 'pond', 'garage', 'shed', 'cemetery'];
+  assert(groups.every(k => est[k] && est[k].length >= 2), 'every estate group has lamps');
+  const all = groups.flatMap(k => est[k]).map(id => g.light(id));
+  assert(all.filter(l => l.circuit !== 'street').every(l => !l.on && l.circuit === 'lodge'), 'estate lights start off on the lodge supply');
+  game.standAt(game.byId['lodge-lighting']); assert(game.pick() === game.byId['lodge-lighting'], 'lighting panel selectable');
+  game.interact(); assert(game.ui.mode === 'estate', 'lighting panel opens');
+  game.keyDown('Digit1'); settle(env, 0.5);
+  assert(est.street.every(id => !g.light(id).powered), 'street lighting switched off from the lodge');
+  game.keyDown('Digit1'); game.keyDown('Digit3');
+  assert(est.street.every(id => g.light(id).on) && est.flood.every(id => g.light(id).on) && !game.estateGroupOn('pool'), 'groups switch independently');
+  game.keyDown('KeyA'); game.keyDown('KeyE');
   settle(env, 3);
-  assert(all.every(l => l.powered && l.intensity > 0), 'floodlights, drive and garden lights come on from the lodge');
+  assert(all.filter(l => !l.dead).every(l => l.powered && l.intensity > 0), 'every estate light on with A');
   g.setLodge(false); g.update(1 / 60);
-  assert(all.every(l => !l.powered), 'and go off with the lodge main');
+  assert(all.filter(l => l.circuit === 'lodge').every(l => !l.powered), 'lodge-fed lights go off with the lodge main');
   g.setLodge(true);
   // the hall panel: fittings start off; incandescent: two false starts then holds
   assert(game.hallLights.every(id => !g.light(id).on), 'hall fittings start switched off');
@@ -222,7 +229,7 @@ suite('playthrough', () => {
   go(env, 'gate-release');
   assert(!game.gates.open, 'gate release dead without lodge power');
   go(env, 'lodge-main'); assert(g.lodge, 'lodge on');
-  for (const k of ['flood', 'drive', 'garden']) go(env, 'lodge-sw-' + k);
+  go(env, 'lodge-lighting'); game.keyDown('KeyA'); game.keyDown('KeyE');
   settle(env, 2);
   assert(game.estateLights.drive.every(id => g.light(id).powered), 'drive lamps on from the lodge');
   go(env, 'gate-release'); assert(game.gates.open, 'gates open');

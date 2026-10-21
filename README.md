@@ -21,10 +21,11 @@ requests. There is no build step.
 | P | Phone (objective and documents) |
 | R / F | Look up / down |
 
-In the gatekeeper's lodge, the main switch powers the estate. The three switches
-under the window turn on the FLOODLIGHTS on the front of the house, the DRIVE
-lamps (along the drive and round the turning circle) and the GARDEN lights
-(fountain, maze, pool, pond, cemetery gate).
+In the gatekeeper's lodge, the main switch powers the estate, and the estate
+lighting panel under the window controls every outdoor group: `1` street
+lighting, `2` gate lights, `3` floodlights (house and yard), `4` drive lamps,
+`5` garden lights, `6` pool lights, `7` pond lights, `8` garage lights, `9` shed
+lights, `0` cemetery lights, `A` everything on or off.
 
 At the fuse board: `M` throws MAIN, `1`–`6` switch HALL, GROUND, EAST, WEST,
 ATTIC, CELLAR. At the routing console: `1`–`6` feed PLATFORM, LIFTS, LABS,

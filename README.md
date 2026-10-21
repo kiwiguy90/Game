@@ -1,0 +1,75 @@
+# Blackthorn Manor
+
+A first-person atmospheric horror exploration game. You inherit a country house
+that stopped in 1974. There is no combat and nothing chases you: the whole game
+is finding electrical power and switching it on, and every light you restore
+shows you more of what the family did.
+
+## Play
+
+Open `blackthorn-manor.html` in a browser. It is one self-contained file
+(Three.js r128 is inlined), runs offline from `file://`, and makes no network
+requests. There is no build step.
+
+| Key | Action |
+| --- | --- |
+| W / S | Move forward / back |
+| A / D | Turn (tank controls) |
+| Space | Jump |
+| E | Interact / put down / close a panel |
+| T | Torch (starts off) |
+| P | Phone (objective and documents) |
+| R / F | Look up / down |
+
+At the fuse board: `M` throws MAIN, `1`–`6` switch HALL, GROUND, EAST, WEST,
+ATTIC, CELLAR. At the routing console: `1`–`6` feed PLATFORM, LIFTS, LABS,
+SECURITY, DINING, CORE.
+
+## Tests
+
+```
+node tests/run.js            # every suite
+node tests/run.js circuits   # one suite
+```
+
+`tests/harness.js` stubs the DOM, WebGL and Web Audio, and loads every
+`<script>` in `blackthorn-manor.html` into a Node `vm` context. The WebGL stub
+is complete enough for `THREE.WebGLRenderer` to run its real render path, so
+draw-call counts are what the renderer actually issues.
+
+| Suite | Checks |
+| --- | --- |
+| builds | Boots and runs with no frame errors or network use; 27 house windows; light count constant |
+| circuits | Lodge → hall → MAIN, start-up behaviours, storm trip, appliances, fire, generator limit, the SECURITY bus |
+| playthrough | The whole game from the lane to the ending, walking every leg by flood-fill under the current state |
+| reachability | Flood-fill over all seven levels: every switch, door, ladder, lift and readable can be reached and selected |
+| doorways | Every wall gap walks through clear at full width, both directions |
+| paths | The drive and every garden path walk clear at full width |
+| furniture | No furniture penetrates a wall |
+| windows | Every window can be seen out of |
+| readables | No readable item is shadowed by a nearby control |
+| budgets | Draw calls under 2,200 from every interactable and key viewpoint; canonical geometry only |
+| random | 10,000 random interactions with no exceptions |
+| quality | Adaptive quality steps on the median frame time; one bad frame cannot stop the loop |
+
+## How it is put together
+
+The HTML holds one `<script>` per system, in load order:
+
+- `bm-10-power` — the electricity model. `PowerGrid` (circuits, breakers,
+  storm trip, Hive generator routing), `LightRecord` (every light is data),
+  start-up sequences and the nine light types.
+- `bm-20-physics` — collision as data: walls and furniture boxes, floor rects,
+  ramps and arcs (the curved stairs), sliding movement, occlusion rays and the
+  flood-fill used by the tests.
+- `bm-30-build` — canonical geometry scaled per mesh, procedural textures
+  mapped in world space, walls with real door and window openings, fittings
+  and interactables.
+- `bm-40-grounds`, `bm-41-mansion`, `bm-42-hive` — the world.
+- `bm-50-fx` — the pool of 8 point and 2 spot lights reassigned each frame,
+  occluded coronas, zone fog, rain, lightning, mist, the torch beam and the
+  mirrors.
+- `bm-55-optimize` — start-up de-duplication and instancing, and adaptive
+  quality.
+- `bm-60-audio` — the Web Audio synth.
+- `bm-70-game` — the player, input, interaction, story, UI and frame loop.

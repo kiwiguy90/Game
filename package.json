@@ -1,0 +1,8 @@
+{
+  "name": "blackthorn-manor",
+  "private": true,
+  "description": "First-person atmospheric horror exploration game in a single HTML file (Three.js r128).",
+  "scripts": {
+    "test": "node tests/run.js"
+  }
+}

@@ -99,6 +99,11 @@ suite('builds', () => {
   // two curved staircases rising to the balcony
   const arcs = game.phys.surfaces.filter(s => s.type === 'arc');
   assert(arcs.length === 2 && arcs.every(a => Math.max(a.y0, a.y1) === 4.2 && Math.min(a.y0, a.y1) === 0), 'two curved staircases 0 -> 4.2');
+  // the haunted garden: dead trees, yews, willow, grass, crows; swaying parts are instanced
+  const hg = game.haunted;
+  assert(hg.trees >= 35 && hg.yews >= 3 && hg.clumps >= 300 && hg.crows >= 6, 'haunted planting: ' + JSON.stringify(hg));
+  const sway = []; game.scene.traverse(o => { if (o.isInstancedMesh && o.material.userData.sway) sway.push(o.material.name + ':' + o.count); });
+  assert(sway.length >= 4, 'swaying instanced vegetation: ' + sway.join(' '));
   // audio is synthesised: no buffers loaded from files, sources created
   assert(env.audioLog.contexts === 1 && env.audioLog.sources > 0, 'web audio synth not started');
   return `${game.grid.lights.length} light records, ${game.interactables.length} interactables, ${game.phys.walls.length} colliders`;

@@ -82,7 +82,8 @@ The HTML holds one `<script>` per system, in load order:
 - `bm-30-build` — canonical geometry scaled per mesh, procedural textures
   mapped in world space, walls with real door and window openings, fittings
   and interactables.
-- `bm-40-grounds`, `bm-41-mansion`, `bm-42-hive`, `bm-43-appliances` — the world.
+- `bm-40-grounds`, `bm-41-mansion`, `bm-42-hive`, `bm-43-appliances`, `bm-44-haunted` — the world,
+  including the haunted garden (dead trees, yews, willow, blackthorn, ivy, crows).
 - `bm-50-fx` — the pool of 8 point and 2 spot lights reassigned each frame,
   occluded coronas, zone fog, rain, lightning, mist, the torch beam and the
   mirrors.

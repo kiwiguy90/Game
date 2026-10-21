@@ -184,8 +184,8 @@ suite('circuits', () => {
   // appliances run, then stop where they stand
   const fan = g.appliances.find(a => a.kind === 'fan');
   settle(env, 2);
-  assert(g.appliances.every(a => a.running), 'appliances running after MAIN');
-  assert(g.appliances.filter(a => a.kind === 'radio').length === 2 && g.appliances.filter(a => a.kind === 'tv').length === 1 && g.appliances.filter(a => a.kind === 'fan').length === 2, 'two radios, a television, two fans');
+  assert(g.appliances.filter(a => g.isHouseCircuit(a.circuit) && a.switchedOn).every(a => a.running), 'house appliances left on are running after MAIN');
+  assert(g.appliances.filter(a => a.kind === 'radio').length >= 2 && g.appliances.filter(a => a.kind === 'tv').length >= 1 && g.appliances.filter(a => a.kind === 'fan').length >= 2, 'at least two radios, a television, two fans');
   // the storm trips MAIN once, while the player is in the attic; everything dies
   game.teleport(-3.5, 8.2, -3.4, 0);
   const startsBefore = game.events.log.filter(e => e === 'appliance:start').length;
@@ -268,6 +268,74 @@ suite('circuits', () => {
   // the light record shape
   for (const k of ['name', 'room', 'circuit', 'kind', 'pos', 'colour', 'target', 'on', 'dead', 'flicker', 'blink', 'lightType']) assert(k in g.lights[0], 'light record field ' + k);
   return `${g.lights.length} fittings, ${deadAll.length} dead, ${g.appliances.length} appliances`;
+});
+
+suite('appliances', () => {
+  const env = H.load({ quiet: true });
+  const { game } = env, g = game.grid;
+  g.failureRate = 0;
+  const A = id => g.appliances.find(a => a.id === id);
+  const lodge = g.appliances.filter(a => a.room === 'lodge');
+  const kinds = k => new Set(lodge.map(a => a.kind)).has(k);
+  assert(['tv', 'fan', 'radio', 'kettle', 'heater', 'clock'].every(kinds), 'the lodge has a TV, fan, radio, kettle, heater and clock');
+  assert(game.phys.furniture.filter(f => f.room === 'lodge').length >= 6, 'the lodge is furnished');
+  // every appliance but a clock has a switch you can reach and use
+  for (const a of g.appliances) {
+    if (a.kind === 'clock') continue;
+    const it = game.byId[a.id + '-switch'] || game.interactables.find(i => i.id.indexOf(a.id) === 0);
+    assert(it, 'no switch for ' + a.id);
+  }
+  // with no power, nothing runs
+  settle(env, 1);
+  assert(g.appliances.every(a => !a.running), 'nothing runs with the power off');
+  const clockAt = A('lodge-clock').clockTime;
+  // the lodge supply alone runs the lodge appliances
+  g.setLodge(true); settle(env, 1);
+  assert(lodge.filter(a => a.switchedOn).every(a => a.running), 'lodge appliances run off the lodge supply');
+  assert(!A('kitchen-fridge').running, 'house appliances still wait for MAIN');
+  assert(A('lodge-clock').clockTime > clockAt, 'the clock runs with power');
+  // TV: switch off and on from its switch; screen and light follow
+  const tv = A('lodge-tv'), sw = game.byId['lodge-tv-switch'];
+  game.standAt(sw); assert(game.pick() === sw, 'tv switch selectable');
+  game.interact(); settle(env, 0.5);
+  assert(!tv.running && !tv.light.powered, 'tv off');
+  const off = tv.object.material.color.r;
+  game.interact(); settle(env, 2);
+  assert(tv.running && tv.light.powered && tv.object.material.color.r > off * 3, 'tv back on, screen and glow lit');
+  // fan: switch off, blades stop where they stand
+  const fan = A('lodge-fan');
+  settle(env, 1); assert(fan.spin > 5, 'fan spinning');
+  game.toggleAppliance(fan); settle(env, 0.1); const ang = fan.angle; settle(env, 1);
+  assert(!fan.running && fan.angle === ang, 'fan stopped where it stood');
+  game.toggleAppliance(fan); settle(env, 1); assert(fan.running && fan.spin > 3, 'fan on again');
+  // kettle: boils and clicks itself off
+  const kettle = A('lodge-kettle');
+  assert(!kettle.switchedOn, 'kettle starts off');
+  game.toggleAppliance(kettle); settle(env, 10);
+  assert(kettle.running && kettle.boil > 0.3 && kettle.boil < 1, 'kettle heating');
+  settle(env, 20);
+  assert(!kettle.switchedOn && !kettle.running && game.events.log.includes('appliance:boiled'), 'kettle boiled and switched itself off');
+  // heater: bars warm up slowly, cast light, cool down after
+  const heater = A('lodge-heater');
+  assert(heater.glow === 1 && heater.light.powered, 'heater glowing');
+  game.toggleAppliance(heater); settle(env, 2);
+  assert(heater.glow > 0 && heater.glow < 1, 'heater bars cooling slowly');
+  // power cut: everything stops where it stands, the clock stops
+  g.setLodge(false); settle(env, 0.2);
+  const stopped = A('lodge-clock').clockTime; settle(env, 3);
+  assert(A('lodge-clock').clockTime === stopped, 'the clock stops when the power goes');
+  assert(lodge.every(a => !a.running), 'lodge appliances stopped');
+  const starts = game.events.log.filter(e => e === 'appliance:start').length;
+  g.setLodge(true); settle(env, 0.5);
+  assert(game.events.log.filter(e => e === 'appliance:start').length > starts, 'they come back by themselves');
+  // the house: fridge compressor cycles, the radiogram turns, the kitchen clock runs
+  g.throwMain(); settle(env, 25);
+  const fridge = A('kitchen-fridge'), rec = A('drawing-radiogram');
+  assert(fridge.running && fridge.cycle > 20, 'fridge running');
+  let sawOff = false, sawOn = false; for (let i = 0; i < 40; i++) { settle(env, 1); if (fridge.compressor) sawOn = true; else sawOff = true; }
+  assert(sawOn && sawOff, 'the fridge compressor cycles on and off');
+  const a0 = rec.angle; settle(env, 0.3); assert(rec.running && rec.angle !== a0, 'the radiogram turntable turns');
+  return `${g.appliances.length} appliances (${lodge.length} in the lodge), ${game.phys.furniture.filter(f => f.room === 'lodge').length} pieces of lodge furniture`;
 });
 
 suite('playthrough', () => {

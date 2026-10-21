@@ -32,6 +32,11 @@ fifty years old: bulbs sputter and warm up slowly, tubes strobe before they
 hold, and each time a light is switched on it may blow (a flare, a bang, dead
 for good) or come on but never stop flickering.
 
+The lodge and the house are furnished, and their appliances work on real
+circuits: televisions, fans, radios, kettles that boil and click off, bar
+heaters that glow, a fridge whose compressor cycles, a radiogram, and electric
+clocks that stop when the power does. Walk up to one and press E to switch it.
+
 At the fuse board: `M` throws MAIN, `1`–`6` switch HALL, GROUND, EAST, WEST,
 ATTIC, CELLAR. At the routing console: `1`–`6` feed PLATFORM, LIFTS, LABS,
 SECURITY, DINING, CORE.
@@ -51,6 +56,7 @@ draw-call counts are what the renderer actually issues.
 | Suite | Checks |
 | --- | --- |
 | builds | Boots and runs with no frame errors or network use; 27 house windows; light count constant |
+| appliances | Lodge and house appliances: switching, boiling, cycling, clocks stopping, coming back by themselves |
 | circuits | Lodge → estate lights and hall → MAIN, start-up behaviours, storm trip, appliances, fire, generator limit, the SECURITY bus |
 | playthrough | The whole game from the lane to the ending, walking every leg by flood-fill under the current state |
 | reachability | Flood-fill over all seven levels: every switch, door, ladder, lift and readable can be reached and selected |
@@ -76,7 +82,7 @@ The HTML holds one `<script>` per system, in load order:
 - `bm-30-build` — canonical geometry scaled per mesh, procedural textures
   mapped in world space, walls with real door and window openings, fittings
   and interactables.
-- `bm-40-grounds`, `bm-41-mansion`, `bm-42-hive` — the world.
+- `bm-40-grounds`, `bm-41-mansion`, `bm-42-hive`, `bm-43-appliances` — the world.
 - `bm-50-fx` — the pool of 8 point and 2 spot lights reassigned each frame,
   occluded coronas, zone fog, rain, lightning, mist, the torch beam and the
   mirrors.

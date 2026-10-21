@@ -19,7 +19,7 @@ function openEverything(game) {
   g.setLodge(true); game.openGates(); game.openFrontDoors(); g.throwMain();
   game.story.journalRead = true; game.tryBlastDoor();
   g.startGenerator(); g.route('lifts', true); g.route('security', true); g.route('security', false); g.route('core', true);
-  for (let i = 0; i < 300; i++) game.updateDoors(1 / 30);
+  for (let i = 0; i < 400; i++) game.updateDoors(1 / 30);
   game.fx.updateAppliances(0, 0);
 }
 
@@ -239,6 +239,28 @@ suite('circuits', () => {
     assert(g2.lights.filter(l => l.circuit === 'battery').every(l => !l.failed), 'battery emergency lamps never fail');
     assert(new Set(g2.lights.map(l => l.failed).filter(Boolean)).size === 2, 'both failure modes');
   }
+  // every lit fitting hums; the nearest get the hum voices, loudness follows brightness
+  {
+    const env3 = H.load({ quiet: true }), gm = env3.game, g3 = gm.grid;
+    g3.failureRate = 0;
+    gm.teleport(-12, 0, 8, 0); // dining room
+    gm.update(1 / 30);
+    assert(!gm.audio.humTargets.length, 'no hum with the power off');
+    g3.setLodge(true); g3.throwMain();
+    for (let i = 0; i < 150; i++) gm.update(1 / 30);
+    const h = gm.audio.humTargets;
+    assert(h.length > 0 && h.length <= BM.Synth.HUM_VOICES, 'hum voices assigned to lit fittings (' + h.length + ')');
+    assert(h[0].light.id === 'dining-pendant' && h[0].gain > 0, 'the nearest lit fitting hums loudest: ' + h[0].light.id);
+    for (const t of h) assert(t.light.powered && t.light.intensity > 0, 'only lit fittings hum');
+    gm.toggleFittings(['dining-pendant', 'dining-sconce']); gm.update(1 / 30);
+    assert(!gm.audio.humTargets.some(t => t.light.id === 'dining-pendant'), 'switched off: no hum');
+    const tube = gm.grid.light('kitchen-tube'); gm.teleport(-12, 0, -8, 0); gm.update(1 / 30);
+    assert(gm.audio.humTargets.some(t => t.light === tube), 'fluorescent tubes hum');
+    const th = gm.audio.humTargets;
+    assert(th[0].light === tube, 'in the kitchen the kitchen tube hums loudest, not a light through the floor: ' + th[0].light.id);
+    assert(th.filter(t => t.light.level !== 'ground').every(t => t.gain < th[0].gain * 0.3), 'hums through a floor are muffled');
+    assert(BM.HUM.fluorescent.freq === 100 && BM.HUM.incandescent.freq === 50, 'mains hum 50 Hz, tubes buzz at 100 Hz');
+  }
   // light types all exist
   for (const t of ['steady', 'pulse', 'subtlePulse', 'blink', 'flicker', 'strobe', 'shock', 'interference', 'rotor']) assert(typeof BM.LIGHT_TYPES[t] === 'function', 'light type ' + t);
   const kinds = new Set(g.lights.map(l => l.lightType));
@@ -258,8 +280,15 @@ suite('playthrough', () => {
   go(env, 'lodge-lighting'); game.keyDown('KeyA'); game.keyDown('KeyE');
   settle(env, 2);
   assert(game.estateLights.drive.every(id => g.light(id).powered), 'drive lamps on from the lodge');
-  go(env, 'gate-release'); assert(game.gates.open, 'gates open');
-  settle(env, 3);
+  go(env, 'gate-release'); assert(game.gates.open, 'gates released');
+  // the gates swing slowly inwards: not passable at once, open after the swing
+  settle(env, 2);
+  assert(game.gates.t < 0.3 && game.gates.wall.enabled, 'gates still swinging after 2 s');
+  const leaf = game.gates.leaves[0], tip = new env.THREE.Vector3(-1.7, 0, 0);
+  settle(env, 9);
+  assert(game.gates.t === 1 && !game.gates.wall.enabled, 'gates fully open after the swing');
+  leaf.updateMatrixWorld(); tip.set(3.4, 0, 0).applyMatrix4(leaf.matrixWorld);
+  assert(tip.z < 87, 'the gates swing inwards, into the estate (leaf tip z ' + tip.z.toFixed(2) + ')');
   go(env, 'front-doors'); assert(game.frontDoors.open, 'front doors open');
   settle(env, 4);
   go(env, 'hall-panel'); settle(env, 3);

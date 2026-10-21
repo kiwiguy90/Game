@@ -2883,6 +2883,17 @@ BM.Quality = Quality;
 'use strict';
 const BM = window.BM;
 
+/* What each kind of fitting sounds like when lit. */
+const HUM = {
+  incandescent: { freq: 50, filter: 120, gain: 0.018, reach: 6 },
+  lamp: { freq: 50, filter: 110, gain: 0.014, reach: 4 },
+  bang: { freq: 50, filter: 120, gain: 0.018, reach: 6 },
+  fluorescent: { freq: 100, filter: 1300, gain: 0.03, reach: 8 },
+  sodium: { freq: 100, filter: 420, gain: 0.03, reach: 12 },
+  emergency: { freq: 100, filter: 700, gain: 0.012, reach: 6 },
+};
+BM.HUM = HUM;
+
 class Synth {
   constructor(game) {
     this.game = game;
@@ -2911,7 +2922,14 @@ class Synth {
     this.loops.rainLow = this.noiseLoop(this.brown, 'lowpass', 400, 0.7);
     this.loops.wind = this.noiseLoop(this.brown, 'bandpass', 260, 3);
     this.loops.hum = this.toneLoop('sawtooth', 50, 'lowpass', 180);
-    this.loops.buzz = this.toneLoop('sawtooth', 100, 'bandpass', 1200);
+    // a small pool of hum voices, reassigned each frame to the nearest lit fittings
+    this.hum = [];
+    for (let i = 0; i < Synth.HUM_VOICES; i++) {
+      const v = this.toneLoop('sawtooth', 50, 'bandpass', 160);
+      v.f.Q.value = 2.5;
+      v.src.detune.value = (i - 2) * 7;
+      this.hum.push(v);
+    }
     this.loops.generator = this.toneLoop('square', 29, 'lowpass', 140);
     this.loops.fan = this.noiseLoop(this.white, 'bandpass', 600, 1.5);
     this.loops.radio = this.noiseLoop(this.white, 'bandpass', 2400, 2.5);
@@ -3021,6 +3039,57 @@ class Synth {
     this.tone('sawtooth', 20, 29, 0.4, 0.8, 1.2, 0.7);
   }
 
+  /* The nearest lit fittings and how loud each hums (follows its brightness, so a flicker crackles). */
+  pickHums(p) {
+    const out = [];
+    for (const l of this.game.grid.lights) {
+      if (l.intensity < 0.02 || l.kind === 'fire') continue;
+      const dx = l.pos.x - p.x, dy = l.pos.y - p.y, dz = l.pos.z - p.z, d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      const spec = HUM[l.kind] || HUM.incandescent;
+      if (d > spec.reach) continue;
+      const level = Math.min(1.3, l.intensity / Math.max(0.01, l.target));
+      let gain = spec.gain * level * (1 - d / spec.reach) * (1 - d / spec.reach);
+      // through a wall or a floor it is only a faint thrum
+      if (this.game.phys.occluded(p.x, p.y, p.z, l.pos.x, l.pos.y, l.pos.z, 0.3)) gain *= 0.15;
+      out.push({ light: l, d, gain });
+    }
+    out.sort((a, b) => b.gain - a.gain);
+    return out.slice(0, Synth.HUM_VOICES);
+  }
+
+  /* The gates: bolts, then a long, uneven, creaking swing. */
+  gateCreak(delay, dur, gain) {
+    if (!this.ctx) return;
+    const ctx = this.ctx, g0 = gain || 0.5;
+    this.tone('square', 140, 90, 0.25 * g0, 0.002, 0.12, delay - 0.7); // the bolts shoot back
+    this.burst(this.white, 'bandpass', 1500, 3, 0.3 * g0, 0.002, 0.2, delay - 0.68);
+    for (const [f0, f1, off] of [[11, 7, 0], [14, 9, 0.35]]) {
+      const t = ctx.currentTime + delay + off;
+      // stick-slip: a slow pulse train exciting a high, narrow resonance — iron on iron
+      const o = ctx.createOscillator(); o.type = 'sawtooth';
+      o.frequency.setValueAtTime(f0, t); o.frequency.linearRampToValueAtTime(f1, t + dur);
+      const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 16;
+      f.frequency.setValueAtTime(950 + off * 300, t); f.frequency.linearRampToValueAtTime(700 + off * 200, t + dur * 0.5); f.frequency.linearRampToValueAtTime(1150, t + dur);
+      const low = ctx.createBiquadFilter(); low.type = 'lowpass'; low.frequency.value = 260;
+      const g = ctx.createGain(), lg = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t); lg.gain.value = 0.35;
+      // the creak swells and catches unevenly as the hinge binds
+      let tt = t;
+      while (tt < t + dur) {
+        const seg = 0.25 + Math.random() * 0.6;
+        g.gain.linearRampToValueAtTime((0.15 + Math.random() * 0.85) * 0.35 * g0, tt + seg * 0.5);
+        g.gain.linearRampToValueAtTime(0.03 * g0, tt + seg);
+        tt += seg;
+      }
+      g.gain.linearRampToValueAtTime(0.0001, t + dur + 0.3);
+      o.connect(f); f.connect(g); o.connect(low); low.connect(lg); lg.connect(g); g.connect(this.master);
+      o.start(t); o.stop(t + dur + 0.5);
+    }
+    // the leaves come up against their stops
+    this.tone('sine', 70, 45, 0.4 * g0, 0.005, 0.5, delay + dur + 0.1);
+    for (let i = 0; i < 3; i++) this.burst(this.white, 'bandpass', 2200 - i * 300, 5, 0.25 * g0, 0.001, 0.25, delay + dur + 0.1 + i * 0.09);
+  }
+
   /* Positional loop levels from the player's position, every frame. */
   update(dt, ctx) {
     if (!this.ctx || !this.enabled) return;
@@ -3033,10 +3102,18 @@ class Synth {
     this.set('rainLow', storm ? 0.25 * out : 0);
     this.set('wind', storm ? 0.12 * out + 0.04 : 0.02);
     this.set('core', zone === 'core' && grid.live('hive:core') ? 0.35 : zone === 'hive' ? 0.05 : 0);
-    // fluorescent buzz: the loudest nearby buzzing tube
-    let buzz = 0, buzzPos = null;
-    for (const l of grid.lights) if (l.buzzing && l.intensity > 0.05) { const v = near(l.pos, 7); if (v > buzz) { buzz = v; buzzPos = l.pos; } }
-    this.set('buzz', buzz * 0.05, buzzPos ? pan(buzzPos) : 0);
+    // every lit fitting hums: the nearest ones get the voices
+    this.humTargets = this.pickHums(p);
+    const tNow = this.ctx.currentTime;
+    for (let i = 0; i < this.hum.length; i++) {
+      const v = this.hum[i], h = this.humTargets[i];
+      if (!h) { v.g.gain.setTargetAtTime(0, tNow, 0.05); continue; }
+      const spec = HUM[h.light.kind] || HUM.incandescent;
+      v.src.frequency.setTargetAtTime(spec.freq, tNow, 0.05);
+      v.f.frequency.setTargetAtTime(spec.filter, tNow, 0.05);
+      v.g.gain.setTargetAtTime(h.gain, tNow, 0.02);
+      if (v.p) v.p.pan.setTargetAtTime(pan(h.light.pos), tNow, 0.05);
+    }
     // appliances
     let fan = 0, fanPos = null, radio = 0, radioPos = null, tv = 0, tvPos = null;
     for (const a of grid.appliances) {
@@ -3063,6 +3140,7 @@ class Synth {
     }
   }
 }
+Synth.HUM_VOICES = 5;
 BM.Synth = Synth;
 })();
 </script>
@@ -3076,6 +3154,8 @@ BM.Synth = Synth;
 const BM = window.BM;
 
 const START = { x: 0, y: 0, z: 95, yaw: 0 };
+const GATE = { delay: 1.0, swing: 9 };
+BM.GATE = GATE;
 const ESTATE_SAY = {
   street: 'Along the lane, the street lamps come up orange — all but the one that never works properly.',
   gate: 'The lanterns on the gate piers glow on.',
@@ -3334,9 +3414,12 @@ class Game {
     this.ui.say('Old newspaper, kindling, a match from the mantel. The fire catches.');
   }
   openGates() {
-    this.gates.open = true; this.gates.wall.enabled = false;
-    this.audio.rattle(); this.audio.clunk();
-    this.ui.say('Out by the lane, the gates shudder and swing inwards.');
+    if (this.gates.open) return;
+    this.gates.open = true; this.gates.t = 0; this.gates.wait = 0;
+    this.audio.clunk();
+    const p = this.player, d = Math.hypot(p.x, p.z - 88);
+    this.audio.gateCreak(GATE.delay, GATE.swing, Math.max(0.3, 1 - d / 40));
+    this.ui.say('Out by the lane the bolts shoot back, and the gates begin to swing inwards, groaning on their hinges.');
   }
   openFrontDoors() {
     if (this.frontDoors.open) return;
@@ -3556,7 +3639,14 @@ class Game {
   }
   updateDoors(dt) {
     const g = this.gates;
-    if (g.open && g.t < 1) { g.t = Math.min(1, g.t + dt / 3); const a = (1 - Math.cos(g.t * Math.PI)) / 2 * 1.7; g.leaves[0].rotation.y = a; g.leaves[1].rotation.y = -a; }
+    if (g.open && g.t < 1) {
+      // bolts first, then a slow inward swing that drags and catches on the hinges
+      g.wait = (g.wait || 0) + dt;
+      if (g.wait > GATE.delay) g.t = Math.min(1, g.t + dt / GATE.swing);
+      const e = (1 - Math.cos(g.t * Math.PI)) / 2, a = (e + Math.sin(g.t * Math.PI * 7) * 0.012 * (1 - g.t)) * 1.65;
+      g.leaves[0].rotation.y = a; g.leaves[1].rotation.y = -a;
+      if (g.t > 0.45) g.wall.enabled = false;
+    }
     const fd = this.frontDoors;
     if (fd.open && fd.t < 1) {
       // two stages: a first heave to a crack, a pause, then the long swing

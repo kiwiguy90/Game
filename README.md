@@ -59,6 +59,7 @@ draw-call counts are what the renderer actually issues.
 | appliances | Lodge and house appliances: switching, boiling, cycling, clocks stopping, coming back by themselves |
 | circuits | Lodge → estate lights and hall → MAIN, start-up behaviours, storm trip, appliances, fire, generator limit, the SECURITY bus |
 | playthrough | The whole game from the lane to the ending, walking every leg by flood-fill under the current state |
+| controls | The whole game again, played only with the keyboard (an autopilot steers with A/D/W and presses E) |
 | reachability | Flood-fill over all seven levels: every switch, door, ladder, lift and readable can be reached and selected |
 | doorways | Every wall gap walks through clear at full width, both directions |
 | paths | The drive and every garden path walk clear at full width |

@@ -593,6 +593,21 @@ class PhysWorld {
     return hit;
   }
 
+  /* If a body has ended up overlapping something solid (a fall beside a
+     staircase, say), find the nearest free spot and put it there. */
+  depenetrate(p) {
+    if (!this.blocked(p.x, p.z, p.y)) return false;
+    for (let r = 0.05; r <= 1.2; r += 0.05) {
+      for (let i = 0; i < 24; i++) {
+        const a = i / 24 * Math.PI * 2, x = p.x + Math.cos(a) * r, z = p.z + Math.sin(a) * r;
+        const y = this.support(x, z, p.y + 0.1);
+        if (!isFinite(y) || y < p.y - 0.6) continue;
+        if (!this.blocked(x, z, y)) { p.x = x; p.z = z; p.y = y; return true; }
+      }
+    }
+    return false;
+  }
+
   /* Segment vs occluding boxes (walls and floor slabs). */
   occluded(ax, ay, az, bx, by, bz, ignoreEnd) {
     const c = this.cell, stamp = ++this._stamp;
@@ -2018,6 +2033,8 @@ BM.buildMansion = function (B, game) {
   P.ramp(8.0, 15.6, -11.8, -10.0, 'x', 0, -3.2, -3.2, 'cellar stairs');
   for (let i = 0; i < 16; i++) { const x = 8 + (i + 0.5) * 7.6 / 16, top = -3.2 * (i + 1) / 16; B.boxE('wood', x - 0.24, x + 0.24, -3.2, top + 0.2, -11.8, -10.0); }
   P.addWall(8.4, 15.6, -10.0, -9.9, 0, 1.0, { kind: 'rail' });
+  // the stair is walled on its open side all the way down to the cellar floor
+  B.solid('brick', 8.0, 15.6, -3.2, -0.2, -10.0, -9.8);
   P.addWall(15.6, 15.7, -11.8, -9.9, 0, 1.0, { kind: 'rail' });
   B.boxE('darkWood', 8.4, 15.6, 0.95, 1.0, -10.0, -9.9);
   B.boxE('darkWood', 15.6, 15.7, 0.95, 1.0, -11.8, -9.9);
@@ -2621,10 +2638,10 @@ BM.buildAppliances = function (B, game) {
   control(lTv, [-13.05, 0.95, 86.9], [1, 0]);
   const lFan = deskFan('lodge-fan', 'Desk fan', 'lodge', -7.3, 0.78, 81.85, 0);
   control(lFan, [-7.3, 0.9, 82.2], [0, 1], { approachDist: 1.0 });
-  const lRadio = radio('lodge-radio', 'Radio', 'lodge', -7.5, 1.0, 80.42, 0, 1, 2);
-  control(lRadio, [-7.5, 1.1, 80.6], [0, 1], { approachDist: 0.6 });
-  const lKettle = kettle('lodge-kettle', 'Kettle', 'lodge', -6.7, 1.0, 80.42, Math.PI);
-  control(lKettle, [-6.7, 1.1, 80.6], [0, 1], { approachDist: 0.6 });
+  const lRadio = radio('lodge-radio', 'Radio', 'lodge', -7.65, 1.0, 80.42, 0, 1, 2);
+  control(lRadio, [-7.65, 1.1, 80.6], [0, 1], { approachDist: 0.6 });
+  const lKettle = kettle('lodge-kettle', 'Kettle', 'lodge', -6.55, 1.0, 80.42, Math.PI);
+  control(lKettle, [-6.55, 1.1, 80.6], [0, 1], { approachDist: 0.6 });
   const lHeater = heater('lodge-heater', 'Bar heater', 'lodge', -11.3, 0, 87.62, 0, -1);
   B.furniture(null, -11.3, 87.62, 0, 0.8, 0.6, 0.25, 'bar heater');
   control(lHeater, [-11.3, 0.5, 87.42], [0, -1], { approachDist: 0.9 });
@@ -4704,9 +4721,10 @@ class Game {
       const d = Math.sqrt(dx * dx + dz * dz);
       if (d > it.reach) continue;
       const dot = d < 0.05 ? 1 : (dx * f.x + dz * f.z) / d;
-      if (dot < 0.55) continue;
+      if (dot < 0.6) continue;
       if (this.phys.occluded(p.x, eyeY, p.z, it.pos.x, it.pos.y, it.pos.z, 0.3)) continue;
-      const score = dot * 1.5 - d * 0.5 - Math.abs(dy) * 0.15;
+      // what you are looking straight at wins over something nearer but off to the side
+      const score = dot * 3.0 - d * 0.5 - Math.abs(dy) * 0.15;
       if (score > bestScore) { bestScore = score; best = it; }
     }
     return best;
@@ -4820,6 +4838,7 @@ class Game {
       if (p.y <= s2) { p.y = s2; if (p.vy < -7) this.audio.step('stone'); p.vy = 0; p.grounded = true; }
       else p.grounded = false;
     }
+    if (p.grounded && phys.depenetrate(p)) this.unstuck = (this.unstuck || 0) + 1;
     if (p.grounded) {
       const z = this.zoneAt(p.x, p.y, p.z);
       if (!phys.blocked(p.x, p.z, p.y)) { p.safe.x = p.x; p.safe.y = p.y; p.safe.z = p.z; p.safe.zone = z; }
@@ -4838,7 +4857,7 @@ class Game {
     this.lastShock = this.time;
     this.audio.zap();
     this.phys.move(this.player, -f.x * 0.8, -f.z * 0.8);
-    this.ui.say('The grid spits and throws you back. It is live while SECURITY is fed.');
+    if (this.time - (this.lastShockSay || -9) > 4) { this.lastShockSay = this.time; this.ui.say('The grid spits and throws you back. It is live while SECURITY is fed.'); }
   }
   updateRide(dt) {
     const r = this.riding, p = this.player;

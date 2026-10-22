@@ -422,6 +422,40 @@ suite('playthrough', () => {
   return `${game.story.read.size} documents read on the way`;
 });
 
+suite('controls', () => {
+  // the whole game again, but played only with the keyboard: turn, walk, use, panel keys
+  const env = H.load({ quiet: true });
+  const { game } = env;
+  env.window.BM.game = game;
+  require('vm').runInContext(require('fs').readFileSync(require('path').join(__dirname, 'autopilot.js'), 'utf8'), env.window);
+  const AP = env.window.AP; AP.renderEvery = 1e9;
+  game.ui.mode = null;
+  const fails = [];
+  const use = (id, o) => { const r = AP.goUse(id, o); if (!r.ok) fails.push(id + ': ' + r.why + ' ' + JSON.stringify(r.at || r.from || '')); return r; };
+  const keys = l => l.forEach(k => AP.press(k));
+  keys(['KeyT']);
+  use('lodge-main'); use('lodge-lighting'); keys(['KeyA', 'KeyE']);
+  use('gate-release'); AP.wait(12);
+  use('front-doors'); AP.wait(5); use('hall-panel'); AP.wait(3);
+  use('fuse-board'); keys(['KeyM', 'KeyE']); AP.wait(4);
+  use('note-order'); keys(['KeyE']);
+  use('ladder-up'); AP.wait(4);
+  assert(game.grid.tripped, 'storm trip in the attic');
+  use('journal'); keys(['KeyE']); use('ladder-down'); AP.wait(2);
+  use('fuse-board'); keys(['KeyM', 'KeyE']); AP.wait(2);
+  use('blast-door'); AP.wait(4); use('lift-house-down'); AP.wait(5);
+  use('generator-start'); use('routing-console'); keys(['Digit2', 'Digit4', 'KeyE']);
+  use('lift-hiveA-to-hiveC'); AP.wait(5);
+  assert(!AP.goUse('core-terminal', { noUse: true }).ok, 'the lasers bar the way while SECURITY is fed');
+  use('lift-hiveC-to-hiveA'); AP.wait(5);
+  use('routing-console'); keys(['Digit4', 'Digit6', 'KeyE']);
+  use('lift-hiveA-to-hiveC'); AP.wait(5); use('core-terminal'); AP.wait(1);
+  assert(!fails.length, 'could not do with the controls: ' + fails.join('; '));
+  assert(game.story.ended, 'reached the ending with the keyboard alone');
+  assert(game.frameErrors === 0, 'frame errors');
+  return `ending reached by keyboard in ${(AP.frames / 60 / 60).toFixed(1)} game minutes, ${AP.stuck} recoveries from snags`;
+});
+
 suite('reachability', () => {
   const env = H.load({ quiet: true });
   const { game, BM } = env;

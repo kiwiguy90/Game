@@ -3554,7 +3554,7 @@ class FX {
     this.hemi = new THREE.HemisphereLight(0x50607a, 0x0a0806, 0.08); scene.add(this.hemi);
     this.moon = new THREE.DirectionalLight(0x7f95b5, 0.05); this.moon.position.set(-40, 80, 30); scene.add(this.moon);
     // the torch: a spot on the camera, with a visible beam
-    this.torch = new THREE.SpotLight(0xfff1d8, 0, 26, 0.36, 0.55, 2);
+    this.torch = new THREE.SpotLight(0xffe9c8, 0, 26, 0.42, 0.75, 2);
     this.torch.castShadow = true;
     this.torch.shadow.mapSize.set(512, 512);
     this.torch.shadow.camera.near = 0.3; this.torch.shadow.camera.far = 30;
@@ -3789,8 +3789,16 @@ class FX {
 
     /* torch */
     const torchOn = game.player.torch;
-    this.torch.intensity += ((torchOn ? 1.25 : 0) - this.torch.intensity) * Math.min(1, dt * 18);
-    this.beam.material.uniforms.level.value = this.torch.intensity / 1.25;
+    // an old torch: softer up close so walls don't white out, still reaching down a corridor
+    let torchTarget = 0;
+    if (torchOn) {
+      const f = game.forward(), p = game.player;
+      let near = 6;
+      for (let d = 0.3; d < 6; d += 0.3) if (game.phys.blocked(p.x + f.x * d, p.z + f.z * d, p.y, 0.05)) { near = d; break; }
+      torchTarget = 0.95 * Math.min(1, 0.35 + near / 3.5);
+    }
+    this.torch.intensity += (torchTarget - this.torch.intensity) * Math.min(1, dt * 10);
+    this.beam.material.uniforms.level.value = torchOn ? Math.min(1, this.torch.intensity / 0.95) : 0;
     this.beam.visible = this.torch.intensity > 0.02;
 
     /* coronas + bulbs */

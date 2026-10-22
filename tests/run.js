@@ -283,6 +283,82 @@ suite('circuits', () => {
   return `${g.lights.length} fittings, ${deadAll.length} dead, ${g.appliances.length} appliances`;
 });
 
+suite('switches', () => {
+  // every light control in the game, one by one
+  const env = H.load({ quiet: true });
+  const { game, BM } = env, g = game.grid;
+  g.failureRate = 0;
+  g.stormHasTripped = true; // the storm trip has its own test; here it would cut the power mid-check
+  const clicks = []; const origClick = game.audio.click.bind(game.audio); game.audio.click = () => { clicks.push(1); origClick(); };
+  const switches = game.interactables.filter(i => i.switchVisual);
+  assert(switches.length >= 18, 'visible wall switches: ' + switches.length);
+  const fails = [];
+  const lit = l => l.powered && l.intensity > 0;
+  // 1. with no power, every switch clicks and nothing lights
+  for (const it of switches) {
+    game.standAt(it); if (game.pick() !== it) { fails.push(it.id + ': not selectable from its spot'); continue; }
+    const n = clicks.length; game.interact(); settle(env, 0.2);
+    if (clicks.length === n) fails.push(it.id + ': no click with the power off');
+    if (it.controls.some(id => lit(g.light(id)))) fails.push(it.id + ': lit with no power');
+    game.interact(); settle(env, 0.1);
+  }
+  // 2. with power: off then on again for every switch; toggle, lights, glow, hum follow
+  g.setLodge(true); g.throwMain(); settle(env, 4);
+  for (const it of switches) {
+    game.standAt(it);
+    const lights = it.controls.map(id => g.light(id)).filter(l => !l.dead);
+    if (!lights.length) continue;
+    if (!lights.some(l => l.on)) { game.interact(); settle(env, 4); }
+    if (!lights.every(lit)) { fails.push(it.id + ': not all lit before the test (' + lights.filter(l => !lit(l)).map(l => l.id).join(',') + ')'); continue; }
+    const leverOn = it.switchVisual.lever.rotation.x;
+    const glowOn = lights[0].bulb ? lights[0].bulb.material.color.r + lights[0].bulb.material.color.g : null;
+    game.interact(); settle(env, 0.3);
+    if (lights.some(l => l.powered || l.intensity > 0)) fails.push(it.id + ': did not switch off');
+    if (Math.abs(it.switchVisual.lever.rotation.x - leverOn) < 0.5) fails.push(it.id + ': toggle did not flip');
+    if (glowOn !== null && lights[0].bulb.material.color.r + lights[0].bulb.material.color.g >= glowOn) fails.push(it.id + ': bulb still glowing');
+    game.interact();
+    settle(env, 0.1);
+    const startedDim = lights.every(l => l.fraction < 1);
+    settle(env, 4.5);
+    if (!lights.every(lit)) fails.push(it.id + ': did not come back on');
+    if (!startedDim) fails.push(it.id + ': snapped on instead of warming up');
+    game.update(1 / 30);
+    const near = game.audio.humTargets.map(h => h.light.id);
+    if (!lights.some(l => near.includes(l.id)) && lights.some(l => Math.hypot(l.pos.x - it.pos.x, l.pos.z - it.pos.z) < 5)) fails.push(it.id + ': no hum from its lights');
+  }
+  // 3. the fuse board: every breaker kills exactly its circuit and brings it back
+  for (const c of ['hall', 'ground', 'east', 'west', 'attic', 'cellar']) {
+    const mine = g.lights.filter(l => l.circuit === c && l.on && !l.dead), others = g.lights.filter(l => g.isHouseCircuit(l.circuit) && l.circuit !== c && l.on && !l.dead && lit(l));
+    g.setBreaker(c, false); settle(env, 0.2);
+    if (mine.some(lit)) fails.push('breaker ' + c + ': its lights stayed on');
+    if (others.some(l => !lit(l))) fails.push('breaker ' + c + ': killed another circuit');
+    g.setBreaker(c, true); settle(env, 4.5);
+    if (!mine.every(lit)) fails.push('breaker ' + c + ': lights did not return');
+  }
+  // 4. the estate lighting panel: every group independently
+  game.standAt(game.byId['lodge-lighting']); game.interact();
+  const keys = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0'];
+  game.estateGroups.forEach(([k], i) => {
+    const mine = game.estateLights[k].map(id => g.light(id));
+    const before = game.estateGroupOn(k);
+    game.keyDown(keys[i]); settle(env, before ? 0.3 : 8);
+    const now = mine.filter(l => !l.dead).every(l => before ? !lit(l) : lit(l));
+    if (!now) fails.push('estate group ' + k + ': did not switch ' + (before ? 'off' : 'on'));
+  });
+  game.keyDown('KeyE');
+  // 5. no orphans: every light can be controlled by something the player can reach
+  const controlled = new Set();
+  for (const it of switches) for (const id of it.controls) controlled.add(id);
+  for (const k in game.estateLights) for (const id of game.estateLights[k]) controlled.add(id);
+  const orphans = g.lights.filter(l => !controlled.has(l.id) && !l.circuit.startsWith('hive:') && !['battery', 'fire', 'generator', 'street'].includes(l.circuit) && !/-glow$/.test(l.id) && !(g.isHouseCircuit(l.circuit)));
+  if (orphans.length) fails.push('lights nothing can switch: ' + orphans.map(l => l.id).join(', '));
+  const houseLights = g.lights.filter(l => g.isHouseCircuit(l.circuit));
+  const unswitched = houseLights.filter(l => !controlled.has(l.id) && !/-glow$/.test(l.id));
+  if (unswitched.length) fails.push('house fittings with no wall switch (breaker only): ' + unswitched.map(l => l.id).join(', '));
+  assert(!fails.length, fails.join('\n'));
+  return `${switches.length} wall switches, 6 breakers and ${game.estateGroups.length} estate groups all switch off and on, with toggle, glow, warm-up and hum`;
+});
+
 suite('appliances', () => {
   const env = H.load({ quiet: true });
   const { game } = env, g = game.grid;

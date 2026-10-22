@@ -1343,6 +1343,36 @@ class Builder {
   levelFloor() {
     return { ground: 0, upper: 4.2, attic: 8.2, cellar: -3.2, hiveA: -30, hiveB: -38, hiveC: -46 }[this.levelName] || 0;
   }
+  /* A wall switch you can see: a brass plate flush on the wall with a toggle
+     that flips up (on) and down (off). `ids` are the fittings it controls. */
+  switchPlate(it, ids) {
+    const n = it.n, p = it.pos;
+    // find the wall face behind the switch position
+    const w = this.phys.occluded(p.x + n.x * 0.05, p.y, p.z + n.z * 0.05, p.x - n.x * 0.8, p.y, p.z - n.z * 0.8);
+    let fx = p.x, fz = p.z;
+    if (w && w.x0 !== undefined) {
+      if (n.x) fx = n.x > 0 ? w.x1 : w.x0;
+      if (n.z) fz = n.z > 0 ? w.z1 : w.z0;
+    }
+    const ry = Math.atan2(n.x, n.z);
+    this.box('brass', fx + n.x * 0.008, p.y, fz + n.z * 0.008, 0.1, 0.15, 0.016, ry);
+    const lever = this.box('ivory' in BM.MATS ? 'ivory' : 'porcelain', fx + n.x * 0.03, p.y, fz + n.z * 0.03, 0.022, 0.055, 0.03, ry);
+    lever.rotation.order = 'YXZ';
+    lever.matrixAutoUpdate = true; lever.userData.dynamic = true;
+    it.switchVisual = { lever, ids, ry };
+    it.controls = ids;
+    it.leverOn = ids.some(id => { const l = this.grid.light(id); return l && l.on && !l.dead; });
+    it.pos = { x: fx + n.x * 0.03, y: p.y, z: fz + n.z * 0.03 };
+    it.approach = { x: it.pos.x + n.x * it.approachDist, y: it.floorY, z: it.pos.z + n.z * it.approachDist };
+    return lever;
+  }
+  /* A light switch: interactable plus a visible plate whose toggle follows it. */
+  lightSwitch(id, label, pos, n, ids) {
+    const it = this.interactable({ id, label, pos, n, act: g => { it.leverOn = g.toggleFittings(ids); } });
+    this.switchPlate(it, ids);
+    return it;
+  }
+
   /* A readable item: a sheet of paper (or book, plaque) and its text. */
   readable(id, title, text, pos, n, o) {
     o = o || {};
@@ -1482,6 +1512,7 @@ BM.buildGrounds = function (B, game) {
   B.box('metalDark', -6.28, 1.4, 83.2, 0.1, 0.5, 0.35);  // gate release box
   B.box(BM.Basic(0x6a1010), -6.22, 1.42, 83.2, 0.02, 0.12, 0.12);
   const lodgeLamp = B.fixture({ id: 'lodge-lamp', name: 'Lodge lamp', circuit: 'lodge', kind: 'incandescent', style: 'pendant', pos: [-10, 2.5, 84], ceiling: L.h, colour: 0xffc27a, target: 1.4, range: 8 });
+  B.lightSwitch('sw-lodge', 'Lodge light', [-8.9, 1.4, 87.75], [0, -1], ['lodge-lamp']);
   B.fixture({ id: 'lodge-porch', name: 'Lodge porch lantern', circuit: 'lodge', on: false, kind: 'incandescent', style: 'lantern', pos: [-11.2, 2.4, 88.45], nz: 1, colour: 0xffb060, target: 0.9, range: 7 });
   /* ---- estate lighting, all controlled from the lodge lighting panel ---- */
   const ESTATE_GROUPS = [
@@ -1710,7 +1741,7 @@ BM.buildGrounds = function (B, game) {
   B.fixture({ id: 'garage-tube', name: 'Garage tube', circuit: 'lodge', on: false, kind: 'fluorescent', style: 'tube', pos: [30, 2.85, 3], colour: 0xe6f2ff, target: 1.6, range: 10, ry: Math.PI / 2, len: 1.6 });
   B.fixture({ id: 'garage-lantern', name: 'Garage lantern', circuit: 'lodge', on: false, kind: 'incandescent', style: 'lantern', pos: [26.8, 2.3, 8.3], nz: 1, colour: 0xffb866, target: 0.9, range: 7 });
   game.estateLights.garage.push('garage-tube', 'garage-lantern');
-  B.interactable({ id: 'garage-switch', label: 'Garage light', pos: [26.2, 1.4, 6.6], n: [1, 0], act: g => g.toggleFittings(['garage-tube']) });
+  B.lightSwitch('garage-switch', 'Garage light', [26.2, 1.4, 6.6], [1, 0], ['garage-tube']);
   B.readable('note-garage', 'Logbook in the glovebox', 'Rover 3500. Last entry, 18 October 1974, in a careful round hand:\n\n"Drove E. to the station. She would not get on the train. Drove her back. Father furious. Car stays here."\n\nThe keys are still in it.', [33.3, 0.92, 4.8], [-1, 0], { book: true });
 
   /* ---- garden shed (walk-in, lit) ---- */
@@ -1728,7 +1759,7 @@ BM.buildGrounds = function (B, game) {
   B.fixture({ id: 'shed-bulb', name: 'Shed bulb', circuit: 'lodge', on: false, kind: 'incandescent', style: 'pendant', pos: [-29.5, 2.0, -1], ceiling: SH.h, colour: 0xffc070, target: 1.0, range: 6 });
   B.fixture({ id: 'shed-lantern', name: 'Shed lantern', circuit: 'lodge', on: false, kind: 'incandescent', style: 'lantern', pos: [-30.7, 2.0, 2.15], nz: 1, colour: 0xffb866, target: 0.8, range: 6 });
   game.estateLights.shed.push('shed-bulb', 'shed-lantern');
-  B.interactable({ id: 'shed-switch', label: 'Shed light', pos: [-28.7, 1.4, 1.9], n: [0, -1], act: g => g.toggleFittings(['shed-bulb']) });
+  B.lightSwitch('shed-switch', 'Shed light', [-28.7, 1.4, 1.9], [0, -1], ['shed-bulb']);
   B.readable('note-shed', "Gardener's list", 'Box along the drive — clip.\nYew — clip.\nPond — ducks fed, 2 handfuls.\nThe little stone outside the railings — cut round it. Miss E. asked. Told not to. Doing it anyway.\n\n— T.H., Nov 1975', [-27.12, 1.4, -2.5], [-1, 0], { plaque: true });
 
   return { paths: PATHS };
@@ -1753,7 +1784,7 @@ BM.buildMansion = function (B, game) {
   const EXT = { t: 0.4, mat: 'plaster', matOut: 'stone' };
   const win = (at, id, o) => Object.assign({ at, w: 1.4, type: 'window', id }, o || {});
   const door = (at, id, o) => Object.assign({ at, w: 1.2, type: 'door', id }, o || {});
-  const roomSwitch = (id, label, pos, n, ids) => B.interactable({ id, label, pos, n, act: g => g.toggleFittings(ids) });
+  const roomSwitch = (id, label, pos, n, ids) => B.lightSwitch(id, label, pos, n, ids);
 
   /* ======================= GROUND FLOOR ======================= */
   B.levelName = 'ground'; B.room = 'house';
@@ -1800,7 +1831,7 @@ BM.buildMansion = function (B, game) {
   B.boxE('stone', -3, 3, 0, 0.06, 12.2, 15.2);
   for (const sx of [-1, 1]) {
     B.solid('stone', sx * 2.2 - 0.3, sx * 2.2 + 0.3, 0, 3.4, 12.2, 12.8, { kind: 'furniture', tag: 'porch column' });
-    B.fixture({ id: 'porch' + sx, name: 'Porch lantern', room: 'porch', circuit: 'ground', kind: 'incandescent', style: 'lantern', pos: [sx * 2.2, 2.6, 12.95], nz: 1, colour: 0xffb366, target: 1.0, range: 7 });
+    B.fixture({ id: 'porch' + sx, name: 'Porch lantern', room: 'porch', circuit: 'ground', on: false, kind: 'incandescent', style: 'lantern', pos: [sx * 2.2, 2.6, 12.95], nz: 1, colour: 0xffb366, target: 1.0, range: 7 });
   }
 
   /* ---- ENTRY HALL: double height, two curved stairs, balcony ---- */
@@ -1860,14 +1891,15 @@ BM.buildMansion = function (B, game) {
   hall({ id: 'hall-sconce-b1', name: 'Balcony sconce', kind: 'incandescent', style: 'sconce', pos: [-2.6, 6.6, 0.15], nz: 1, target: 0.8, range: 7 });
   hall({ id: 'hall-sconce-b2', name: 'Balcony sconce', kind: 'incandescent', style: 'sconce', pos: [2.6, 6.6, 0.15], nz: 1, target: 0.8, range: 7, dead: true });
   game.hallLights = hallIds;
-  B.box('brass', 2.0, 1.4, 11.76, 0.3, 0.42, 0.06);
-  B.interactable({
+  B.box('brass', 2.0, 1.4, 11.77, 0.3, 0.42, 0.04);
+  const hallPanel = B.interactable({
     id: 'hall-panel', label: 'Hall light panel', pos: [2.0, 1.4, 11.72], n: [0, -1],
     act: g => {
-      if (!grid.live('hall')) { g.audio.click(); g.ui.say('The switches click. Nothing. No power to the house.'); return; }
-      g.toggleFittings(hallIds);
+      if (!grid.live('hall')) { g.audio.click(); g.ui.say('The switches click. Nothing. No power to the house.'); hallPanel.leverOn = !hallPanel.leverOn; return; }
+      hallPanel.leverOn = g.toggleFittings(hallIds.concat(['porch-1', 'porch1']));
     },
   });
+  B.switchPlate(hallPanel, hallIds.concat(['porch-1', 'porch1']));
   B.readable('note-solicitor', "Solicitor's letter", [
     'Harrow & Lisle, Solicitors. 3 March.',
     'Dear Sir or Madam, we write regarding the estate of the late Miss A. Blackthorn, who has named you as sole beneficiary of Blackthorn Manor.',
@@ -2017,6 +2049,7 @@ BM.buildMansion = function (B, game) {
     id: 'fuse-board', label: 'Fuse board', pos: [-0.3, 1.7, -8.6], n: [-1, 0], kind: 'control', approachDist: 0.95,
     act: g => g.ui.openFuseBoard(),
   });
+  roomSwitch('sw-pantry', 'Pantry light', [-1.8, 1.4, -6.2], [0, -1], ['pantry-tube']);
   B.readable('note-electrician', "Electrician's tag", "ESTATE SUPPLY — BLACKTHORN\n\nLodge main must be ON before anything in the house will take.\nHall circuit runs direct from the lodge.\nEverything else is fed through MAIN here. Throwing MAIN brings every circuit and every fitting back as it was left.\n\nLeft as instructed 21/10/74: ALL ON. Do not touch. — W.G.", [-4.6, 1.4, -6.12], [0, -1], { plaque: true });
 
   /* ---- BATHROOM ---- */
@@ -2163,6 +2196,7 @@ BM.buildMansion = function (B, game) {
   B.room = 'linen';
   B.furniture('wood', 0, -11.45, 4.2, 4.0, 2.2, 0.6, 'linen shelves');
   B.fixture({ id: 'linen-light', name: 'Linen room light', circuit: 'east', style: 'bulkhead', pos: [0, 7.6, -6.25], nz: 1, colour: 0xf2e6d0, target: 0.8, range: 6 });
+  roomSwitch('sw-linen', 'Linen room light', [1.4, 5.6, -6.2], [0, -1], ['linen-light']);
 
   /* ======================= ATTIC ======================= */
   B.levelName = 'attic'; B.room = 'attic';
@@ -2196,6 +2230,7 @@ BM.buildMansion = function (B, game) {
   B.fixture({ id: 'attic-1', name: 'Attic bulb', circuit: 'attic', style: 'pendant', pos: [-12, 10.4, 0], ceiling: 11.4, colour: 0xffc070, target: 1.1, range: 8 });
   B.fixture({ id: 'attic-2', name: 'Attic bulb', circuit: 'attic', style: 'pendant', pos: [0, 10.4, -1], ceiling: 11.6, colour: 0xffc070, target: 1.1, range: 8 });
   B.fixture({ id: 'attic-3', name: 'Attic bulb', circuit: 'attic', style: 'pendant', pos: [12, 10.4, 0], ceiling: 11.4, colour: 0xffc070, target: 1.1, range: 8, flicker: 0.2 });
+  roomSwitch('sw-attic', 'Attic lights', [-9.35, 9.6, 0], [1, 0], ['attic-1', 'attic-2', 'attic-3']);
   B.readable('journal', "Eleanor's journal", [
     'This is the last book. They are taking me "abroad" in the morning.',
     'If you are reading this, the lights are on, and you have come up here in the dark to find it, which is more than any of them ever did.',
@@ -2225,6 +2260,7 @@ BM.buildMansion = function (B, game) {
   B.fixture({ id: 'cellar-2', name: 'Cellar bulb', circuit: 'cellar', style: 'cage', pos: [0, -0.6, -6], colour: 0xffbb70, target: 1.0, range: 8 });
   B.fixture({ id: 'cellar-3', name: 'Cellar bulb', circuit: 'cellar', style: 'cage', pos: [12, -0.6, -5], colour: 0xffbb70, target: 0.9, range: 7, dead: true });
   B.fixture({ id: 'cellar-4', name: 'Cellar bulb', circuit: 'cellar', style: 'cage', pos: [12, -0.6, -1], colour: 0xffbb70, target: 0.8, range: 7 });
+  roomSwitch('sw-cellar', 'Cellar lights', [17.75, -1.8, -9.2], [-1, 0], ['cellar-1', 'cellar-2', 'cellar-3', 'cellar-4']);
   B.readable('note-halcyon', 'Notice on the cellar wall', 'HALCYON RESEARCH LTD\nORCHARD ACCESS — SERVICE LIFT\n\nAUTHORISED PERSONNEL ONLY\nThe family are reminded that under the terms of the lease they shall not inquire into the nature of the works.\n\nLift supply is taken from the house CELLAR circuit.', [-5.0, -1.8, -11.75], [0, 1], { plaque: true });
   // the steel blast door
   const blastWall = P.addWall(-1.1, 1.1, -12.15, -11.85, CY, CY + 2.6, { kind: 'door' });
@@ -2243,6 +2279,7 @@ BM.buildMansion = function (B, game) {
   B.boxE('concrete', -1.7, 1.7, -0.3, 0, -24.2, -12);
   B.fixture({ id: 'passage-1', name: 'Passage light', circuit: 'cellar', kind: 'fluorescent', style: 'tube', pos: [0, -0.45, -16], colour: 0xe8f0ff, target: 0.9, range: 7, ry: Math.PI / 2 });
   B.fixture({ id: 'passage-2', name: 'Lift light', circuit: 'cellar', kind: 'fluorescent', style: 'tube', pos: [0, -0.45, -22], colour: 0xe8f0ff, target: 0.8, range: 6, ry: Math.PI / 2, flicker: 0.3 });
+  roomSwitch('sw-passage', 'Passage lights', [1.3, CY + 1.4, -13.5], [-1, 0], ['passage-1', 'passage-2']);
   B.box(BM.Basic(0x2a3a2a), 1.32, CY + 1.4, -22.6, 0.04, 0.4, 0.25);
   B.interactable({
     id: 'lift-house-down', kind: 'lift', label: () => grid.live('cellar') ? 'Service lift: down' : 'Service lift (no power)', pos: [1.32, CY + 1.4, -22.6], n: [-1, 0],
@@ -3808,6 +3845,15 @@ class FX {
 
   updateAppliances(dt, t) {
     const game = this.game, grid = game.grid;
+    // wall switch toggles: up for on, down for off, with a quick snap
+    for (const it of game.interactables) {
+      const sv = it.switchVisual; if (!sv) continue;
+      // the toggle always shows the real state of its fittings (MAIN can switch them all on)
+      const live = sv.ids.map(id => grid.light(id)).filter(l => l && !l.dead);
+      if (live.length) it.leverOn = live.some(l => l.on);
+      const target = it.leverOn ? -0.5 : 0.5;
+      sv.lever.rotation.set(sv.lever.rotation.x + (target - sv.lever.rotation.x) * Math.min(1, dt * 30), sv.ry, 0);
+    }
     for (const a of grid.appliances) {
       if (!a.object) continue;
       if (a.kind === 'fan') {
@@ -4568,6 +4614,14 @@ class Game {
       this.ui.say(e.mode === 'exploded' ? `Pop — the ${l.name.toLowerCase()} flares and blows. Glass tinkles down.` : `The ${l.name.toLowerCase()} won't settle. It just keeps flickering.`, 4);
     });
     ev.on('appliance:start', () => this.audio.clunk());
+    // the little sounds of old fittings striking up, if you are near enough to hear
+    ev.on('light:start', l => {
+      const p = this.player, d = Math.hypot(l.pos.x - p.x, l.pos.y - p.y - 1.6, l.pos.z - p.z);
+      if (d > 9 || !this.audio.ctx) return;
+      const v = 1 - d / 9;
+      if (l.kind === 'fluorescent') { for (let i = 0; i < 3; i++) this.audio.tone('square', 5200 - i * 300, 4800, 0.02 * v, 0.001, 0.03, 0.05 + i * 0.11); }
+      else if (l.kind === 'incandescent' || l.kind === 'lamp') this.audio.tone('sine', 3800 + Math.random() * 900, 3500, 0.025 * v, 0.001, 0.12);
+    });
     ev.on('appliance:boiled', a => {
       this.audio.click();
       const p = this.player;

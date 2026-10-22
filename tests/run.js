@@ -71,6 +71,14 @@ function segBox(a, b, w) {
   }
   return true;
 }
+/* Lights come on one at a time down each chain: wait until every one that has supply is up (or blown). */
+function settleLights(env, max) {
+  const g = env.game.grid, busy = () => g.lights.some(l => l.waiting || (l.powered && l.seq && !g.instant(l)));
+  let t = 0; env.game.update(1 / 30);
+  while (busy() && t < (max || 180)) { settle(env, 0.25); t += 0.25; }
+  settle(env, 0.1);
+  return t;
+}
 
 /* -------------------------------------------------------------- suites -- */
 suite('builds', () => {
@@ -149,12 +157,12 @@ suite('circuits', () => {
   assert(all.filter(l => l.circuit !== 'street').every(l => l.circuit === 'lodge'), 'estate lights on the lodge supply');
   game.standAt(game.byId['lodge-lighting']); assert(game.pick() === game.byId['lodge-lighting'], 'lighting panel selectable');
   game.interact(); assert(game.ui.mode === 'estate', 'lighting panel opens');
-  game.keyDown('Digit1'); settle(env, 0.5);
+  game.keyDown('Digit1'); settleLights(env);
   assert(est.street.every(id => g.light(id).powered), 'street lighting switched on from the lodge');
   game.keyDown('Digit3');
   assert(est.street.every(id => g.light(id).on) && est.flood.every(id => g.light(id).on) && !game.estateGroupOn('pool'), 'groups switch independently');
   game.keyDown('KeyA'); game.keyDown('KeyE');
-  settle(env, 3);
+  settleLights(env);
   assert(all.filter(l => !l.dead).every(l => l.powered && l.intensity > 0), 'every estate light on with A');
   g.setLodge(false); g.update(1 / 60);
   assert(all.filter(l => l.circuit === 'lodge').every(l => !l.powered), 'lodge-fed lights go off with the lodge main');
@@ -162,16 +170,21 @@ suite('circuits', () => {
   // the hall panel: fittings start off; incandescent: two false starts then holds
   assert(game.hallLights.every(id => !g.light(id).on), 'hall fittings start switched off');
   game.toggleFittings(game.hallLights);
-  const chand = g.light('hall-chandelier');
+  // the hall's fittings come on one after another: follow the first to start
   const trace = [];
-  for (let i = 0; i < 120; i++) { g.update(1 / 60); trace.push(chand.fraction > 0.3 ? 1 : 0); }
+  g.update(1 / 60);
+  const chand = game.hallLights.map(id => g.light(id)).find(l => l.powered);
+  assert(chand && game.hallLights.filter(id => g.light(id).powered).length === 1, 'one hall fitting starts at a time');
+  trace.push(chand.fraction > 0.3 ? 1 : 0);
+  const frac = [], lvl = [];
+  for (let i = 0; i < 300; i++) { g.update(1 / 60); trace.push(chand.fraction > 0.3 ? 1 : 0); frac.push(chand.fraction); lvl.push(chand.intensity / chand.target); }
   let onRuns = 0; for (let i = 0; i < trace.length; i++) if (trace[i] && !trace[i - 1]) onRuns++;
   assert(onRuns === 3 && trace[trace.length - 1] === 1, `incandescent: two false starts then hold (saw ${onRuns} on-runs)`);
   // ...and it warms up slowly and unsteadily rather than snapping on
-  const lvl = []; for (let i = 0; i < 60; i++) { g.update(1 / 30); lvl.push(chand.intensity / chand.target); }
-  const warm = lvl.slice(0, 20);
-  assert(chand.fraction < 1 || warm.some(v => v < 0.8), 'incandescent warms up slowly');
-  assert(Math.max(...warm) - Math.min(...warm) > 0.1, 'the warm-up flickers');
+  assert(frac[110] > 0 && frac[110] < 0.8 && frac[299] === 1, 'incandescent warms up slowly to full brightness');
+  const warm = lvl.filter((v, i) => frac[i] > 0.25 && frac[i] < 0.95);
+  assert(warm.length > 20 && Math.max(...warm) - Math.min(...warm) > 0.1, 'the warm-up flickers');
+  settleLights(env);
   // one hall sconce flares, bangs and dies permanently with a scorch mark
   const bang = g.light('hall-sconce-e1');
   assert(bang.dead && bang.scorched, 'the bang sconce died with a scorch');
@@ -187,11 +200,11 @@ suite('circuits', () => {
   const tube = g.light('kitchen-tube');
   tube.flicker = 0;
   let strobes = 0, prev = 0, buzzed = false;
-  for (let i = 0; i < 600 && !tube.buzzing; i++) { g.update(1 / 120); const on = tube.fraction > 0.5 ? 1 : 0; if (on && !prev) strobes++; prev = on; }
+  for (let i = 0; i < 4000 && !tube.buzzing; i++) { g.update(1 / 120); const on = tube.fraction > 0.5 ? 1 : 0; if (on && !prev) strobes++; prev = on; }
   buzzed = tube.buzzing;
   assert(buzzed, 'fluorescent holds with a buzz');
   assert(strobes >= 9 && strobes <= 14, 'fluorescent strobes 9-13 times then holds, saw ' + strobes);
-  settle(env, 3);
+  settleLights(env);
   assert(house.filter(l => !l.dead).every(l => l.powered), 'all live fittings powered');
   assert(deadAll.every(l => !l.powered && l.intensity === 0), 'dead fittings never light');
   // appliances run, then stop where they stand
@@ -245,6 +258,7 @@ suite('circuits', () => {
     g2.setLodge(true); g2.throwMain(); env2.game.setEstateAll(true);
     for (let i = 0; i < 300; i++) g2.update(1 / 30);
     for (let cycle = 0; cycle < 4; cycle++) { g2.setLodge(false); g2.update(1 / 30); g2.setLodge(true); for (let i = 0; i < 300; i++) g2.update(1 / 30); }
+    settleLights(env2);
     const blown = g2.lights.filter(l => l.failed === 'exploded'), faulty = g2.lights.filter(l => l.failed === 'faulty');
     assert(fails.exploded > 3 && fails.faulty > 3, `failures happen (${fails.exploded} blown, ${fails.faulty} faulty)`);
     assert(blown.every(l => l.dead && !l.powered && l.intensity === 0), 'blown bulbs stay dead after re-powering');
@@ -303,12 +317,12 @@ suite('switches', () => {
     game.interact(); settle(env, 0.1);
   }
   // 2. with power: off then on again for every switch; toggle, lights, glow, hum follow
-  g.setLodge(true); g.throwMain(); settle(env, 4);
+  g.setLodge(true); g.throwMain(); settleLights(env);
   for (const it of switches) {
     game.standAt(it);
     const lights = it.controls.map(id => g.light(id)).filter(l => !l.dead);
     if (!lights.length) continue;
-    if (!lights.some(l => l.on)) { game.interact(); settle(env, 4); }
+    if (!lights.some(l => l.on)) { game.interact(); settleLights(env); }
     if (!lights.every(lit)) { fails.push(it.id + ': not all lit before the test (' + lights.filter(l => !lit(l)).map(l => l.id).join(',') + ')'); continue; }
     const leverOn = it.switchVisual.lever.rotation.x;
     const glowOn = lights[0].bulb ? lights[0].bulb.material.color.r + lights[0].bulb.material.color.g : null;
@@ -319,7 +333,7 @@ suite('switches', () => {
     game.interact();
     settle(env, 0.1);
     const startedDim = lights.every(l => l.fraction < 1);
-    settle(env, 4.5);
+    settleLights(env);
     if (!lights.every(lit)) fails.push(it.id + ': did not come back on');
     if (!startedDim) fails.push(it.id + ': snapped on instead of warming up');
     game.update(1 / 30);
@@ -332,7 +346,7 @@ suite('switches', () => {
     g.setBreaker(c, false); settle(env, 0.2);
     if (mine.some(lit)) fails.push('breaker ' + c + ': its lights stayed on');
     if (others.some(l => !lit(l))) fails.push('breaker ' + c + ': killed another circuit');
-    g.setBreaker(c, true); settle(env, 4.5);
+    g.setBreaker(c, true); settleLights(env);
     if (!mine.every(lit)) fails.push('breaker ' + c + ': lights did not return');
   }
   // 4. the estate lighting panel: every group independently
@@ -341,7 +355,7 @@ suite('switches', () => {
   game.estateGroups.forEach(([k], i) => {
     const mine = game.estateLights[k].map(id => g.light(id));
     const before = game.estateGroupOn(k);
-    game.keyDown(keys[i]); settle(env, before ? 0.3 : 8);
+    game.keyDown(keys[i]); if (before) settle(env, 0.3); else settleLights(env);
     const now = mine.filter(l => !l.dead).every(l => before ? !lit(l) : lit(l));
     if (!now) fails.push('estate group ' + k + ': did not switch ' + (before ? 'off' : 'on'));
   });
@@ -417,6 +431,47 @@ suite('arrival', () => {
   return `${road.poles} poles, ${road.trees} pines; drive in, stall, lights die, walk; skippable`;
 });
 
+suite('one-by-one', () => {
+  // old wiring: lights given supply together come on one at a time, each reaching
+  // full brightness before the next starts, beginning with the one nearest you
+  const env = H.load({ quiet: true });
+  const { game } = env, g = game.grid;
+  g.failureRate = 0; g.stormHasTripped = true;
+  g.setLodge(true);
+  game.teleport(0, 0, 90, 0);
+  game.toggleEstate('drive');
+  const lamps = game.estateLights.drive.map(id => g.light(id));
+  const order = [], fullAt = {};
+  let t = 0, overlap = 0;
+  while (t < 120 && Object.keys(fullAt).length < lamps.length) {
+    game.update(1 / 30); t += 1 / 30;
+    let starting = 0;
+    for (const l of lamps) {
+      if (l.powered && order.indexOf(l) < 0) order.push(l);
+      if (l.powered && l.seq) starting++;
+      if (l.powered && !l.seq && !(l.id in fullAt)) fullAt[l.id] = t;
+    }
+    if (starting > 1) overlap++;
+  }
+  assert(Object.keys(fullAt).length === lamps.length, 'every drive lamp came on');
+  assert(overlap === 0, 'never two lamps warming up at once');
+  const d = l => Math.hypot(l.pos.x - 0, l.pos.z - 90);
+  assert(order.every((l, i) => i === 0 || d(l) >= d(order[i - 1]) - 0.01), 'nearest lamp first, then outwards');
+  assert(t > lamps.length * 2, 'slowly: ' + t.toFixed(1) + ' s for ' + lamps.length + ' lamps');
+  // the waiting lamps show as warming on the side panel, and other groups run alongside
+  game.toggleEstate('drive'); game.update(1 / 30);
+  game.toggleEstate('drive'); game.toggleEstate('flood'); game.update(1 / 30); game.update(1 / 30);
+  const flood = game.estateLights.flood.map(id => g.light(id));
+  assert(lamps.filter(l => l.powered).length === 1 && flood.filter(l => l.powered).length === 1, 'each group has its own chain');
+  assert(game.lightPanelRows().find(r => r.k === 'estate:drive').warming, 'the panel shows the group still coming on');
+  // the house: each room's lights in turn, rooms side by side
+  g.throwMain(); game.update(1 / 30); game.update(1 / 30);
+  const byRoom = {};
+  for (const l of g.lights) if (g.isHouseCircuit(l.circuit) && l.powered && !g.instant(l)) byRoom[l.room] = (byRoom[l.room] || 0) + 1;
+  assert(Object.values(byRoom).every(n => n === 1) && Object.keys(byRoom).length > 8, 'one light per room starting: ' + JSON.stringify(byRoom));
+  return `${lamps.length} drive lamps one by one, nearest first, ${t.toFixed(0)} s; rooms in parallel`;
+});
+
 suite('hud', () => {
   // the lighting panel on the side of the screen, and running
   const env = H.load({ quiet: true });
@@ -435,7 +490,7 @@ suite('hud', () => {
   game.teleport(0, -3.2, -6, 0);
   game.lightPanelToggle('estate:drive');
   game.lightPanelToggle('room:sw-attic'); game.lightPanelToggle('room:sw-attic');
-  for (let i = 0; i < 150; i++) game.update(1 / 30);
+  settleLights(env);
   assert(game.estateLights.drive.every(id => g.light(id).powered), 'drive lamps switched on from the cellar');
   assert(['attic-1', 'attic-2', 'attic-3'].every(id => g.light(id).powered), 'attic lights toggled from the cellar');
   game.lightPanelToggle('room:sw-attic'); for (let i = 0; i < 10; i++) game.update(1 / 30);
@@ -542,8 +597,8 @@ suite('playthrough', () => {
   assert(!game.gates.open, 'gate release dead without lodge power');
   go(env, 'lodge-main'); assert(g.lodge, 'lodge on');
   go(env, 'lodge-lighting'); game.keyDown('KeyA'); game.keyDown('KeyE');
-  settle(env, 2);
-  assert(game.estateLights.drive.every(id => g.light(id).powered), 'drive lamps on from the lodge');
+  settleLights(env);
+  assert(game.estateLights.drive.every(id => g.light(id).powered || g.light(id).dead), 'drive lamps on from the lodge');
   go(env, 'gate-release'); assert(game.gates.open, 'gates released');
   // the gates swing slowly inwards: not passable at once, open after the swing
   settle(env, 2);

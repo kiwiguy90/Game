@@ -43,8 +43,11 @@ lighting, `2` gate lights, `3` floodlights (house and yard), `4` drive lamps,
 `5` garden lights, `6` pool lights, `7` pond lights, `8` garage lights, `9` shed
 lights, `0` cemetery lights, `A` everything on or off.
 
-Everything starts dark, the lane's street lights included. The fittings are
-fifty years old: bulbs sputter and warm up slowly, tubes strobe before they
+Everything starts dark, the lane's street lights included. The wiring is old, so
+lights that get power together come on one at a time: the one nearest you
+first, each warming up to full brightness before the next one starts. Every
+room in the house, and every estate group, works through its own lights side
+by side with the others. The fittings are fifty years old: bulbs sputter and warm up slowly, tubes strobe before they
 hold, and each time a light is switched on it may blow (a flare, a bang, dead
 for good) or come on but never stop flickering.
 

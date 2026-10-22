@@ -149,6 +149,7 @@ class LightRecord {
     this.level = o.level || 'ground';
     this.corona = o.corona !== undefined ? o.corona : 1;
     this.phase = o.phase !== undefined ? o.phase : (lightSeq * 0.618) % 1;
+    this.chain = o.chain || null;          // lights in one chain come on one at a time
     // runtime
     this.powered = false;
     this.fraction = 0;    // 0..1 start-up envelope
@@ -156,6 +157,7 @@ class LightRecord {
     this.seqIndex = 0; this.seqT = 0;
     this.buzzing = false;
     this.warming = false;
+    this.waiting = false; // has supply, queued behind the light before it in its chain
     this.failed = null;   // null | 'exploded' | 'faulty' — old fittings fail when switched on
     this.noFail = !!o.noFail;
     this.intensity = 0;
@@ -171,7 +173,7 @@ class LightRecord {
       s.push({ d: 0.06 + rng() * 0.05, v: 0.9 }, { d: 0.18 + rng() * 0.2, v: 0 });
       s.push({ d: 0.04 + rng() * 0.05, v: 0.7 }, { d: 0.3 + rng() * 0.3, v: 0 });
       // then an old filament warms up slowly, unsteadily
-      s.push({ d: 0.05, v: 0.35 }, { d: 1.2 + rng() * 1.8, v: 1, ramp: true, warm: true });
+      s.push({ d: 0.05, v: 0.2 }, { d: 2.0 + rng() * 1.5, v: 1, ramp: true, warm: true });
     } else if (this.kind === 'fluorescent') {
       const n = 9 + Math.floor(rng() * 5); // 9..13 strobes
       for (let i = 0; i < n; i++) {
@@ -240,6 +242,8 @@ class PowerGrid {
     this.time = 0;
     this._lastLive = {};
     this.failureRate = 0.07; // chance an old fitting fails each time it powers up
+    this.origin = null;      // where the player stands: a chain starts with the light nearest them
+    this.sequential = true;  // lights that get supply together come on one after another
 
   }
 
@@ -345,26 +349,55 @@ class PowerGrid {
 
   /* Old fittings: each power-up may blow the bulb or leave it flickering for good. */
   rollFailure(l, rng) {
-    if (l.noFail || l.failed || l.kind === 'bang' || l.kind === 'emergency' || l.kind === 'fire') return;
-    if (l.circuit === 'battery' || l.circuit === 'fire' || l.circuit === 'generator') return;
-    if (rng() >= this.failureRate) return;
-    if (rng() < 0.5) {
+    // a fitting that has already failed fails the same way again (its power may have been cut mid-start)
+    if (!l.failed) {
+      if (l.noFail || l.kind === 'bang' || l.kind === 'emergency' || l.kind === 'fire') return;
+      if (l.circuit === 'battery' || l.circuit === 'fire' || l.circuit === 'generator') return;
+      if (rng() >= this.failureRate) return;
+      l.failed = rng() < 0.5 ? 'exploded' : 'faulty';
+    }
+    if (l.failed === 'exploded') {
       // flares, pops and dies: keep the first sputters, then blow
-      l.failed = 'exploded';
       l.seq = l.seq.slice(0, 2).concat([{ d: 0.1 + rng() * 0.3, v: 0.9 }, { d: 0.12, v: 3.4, ramp: true }, { d: 0.01, v: 0, bang: true }]);
     } else {
       // lights, but never settles
-      l.failed = 'faulty';
-      l.seq.push({ d: 0.01, v: 1, fault: 0.45 + rng() * 0.4 });
+      l.seq.push({ d: 0.01, v: 1, fault: Math.max(l.flicker, 0.45 + rng() * 0.4) });
     }
+  }
+
+  /* Which chain a light starts in: its estate group, its room in the house, else its supply and room. */
+  chainOf(l) { return l.chain || (this.isHouseCircuit(l.circuit) ? 'house:' : l.circuit + ':') + l.room; }
+  /* Lights that just come on, with no warm-up to wait for. */
+  instant(l) { return l.kind === 'emergency' || l.kind === 'fire' || l.circuit === 'car' || l.circuit === 'fire' || l.circuit === 'battery'; }
+
+  /* Old wiring brings its lights up one at a time: within a chain, the next
+     light only starts once the one before it has reached full brightness
+     (or blown). The first to go is the one nearest the player. */
+  chooseStarters() {
+    const busy = new Set(), best = new Map(), o = this.origin;
+    for (const l of this.lights) if (l.powered && l.seq && !this.instant(l)) busy.add(this.chainOf(l));
+    for (const l of this.lights) {
+      l.waiting = false;
+      if (l.powered || l.dead || !l.on || this.instant(l) || !this.live(l.circuit)) continue;
+      const k = this.chainOf(l);
+      if (busy.has(k)) { l.waiting = true; continue; }
+      const d = o ? (l.pos.x - o.x) * (l.pos.x - o.x) + (l.pos.z - o.z) * (l.pos.z - o.z) + (l.pos.y - (o.y || 0)) * (l.pos.y - (o.y || 0)) : 0;
+      const b = best.get(k);
+      if (!b || d < b.d) { if (b) b.l.waiting = true; best.set(k, { l, d }); } else l.waiting = true;
+    }
+    const go = new Set();
+    for (const v of best.values()) go.add(v.l);
+    return go;
   }
 
   /* Advance start-up envelopes, fault modulation and appliances. */
   update(dt) {
     this.time += dt;
     const t = this.time, rng = this.rng;
+    const go = this.sequential ? this.chooseStarters() : null;
     for (const l of this.lights) {
-      const powered = !l.dead && l.on && this.live(l.circuit);
+      let powered = !l.dead && l.on && this.live(l.circuit);
+      if (powered && !l.powered && go && !go.has(l) && !this.instant(l)) powered = false; // waiting its turn
       if (powered && !l.powered) {
         l.seq = l.startSequence(rng); l.seqIndex = 0; l.seqT = 0; l.fraction = 0; l.buzzing = false;
         this.rollFailure(l, rng);
@@ -382,7 +415,7 @@ class PowerGrid {
           l.seqT -= step.d;
           l.fraction = step.v;
           if (step.buzz) { l.buzzing = true; this.events.emit('light:buzz', l); }
-          if (step.fault) { l.flicker = Math.max(l.flicker, step.fault); l.lightType = 'flicker'; this.events.emit('light:fail', { light: l, mode: 'faulty' }); }
+          if (step.fault) { const first = !l.faultShown; l.faultShown = true; l.flicker = Math.max(l.flicker, step.fault); l.lightType = 'flicker'; if (first) this.events.emit('light:fail', { light: l, mode: 'faulty' }); }
           if (step.bang) {
             // flares, bangs and dies permanently with a scorch mark
             l.dead = true; l.scorched = true; l.powered = false; l.fraction = 0; l.seq = null; l.warming = false;
@@ -1571,7 +1604,7 @@ BM.buildGrounds = function (B, game) {
     ['pond', 'Pond lights'], ['garage', 'Garage lights'], ['shed', 'Shed lights'], ['cemetery', 'Cemetery lights'],
   ];
   const estate = {}; for (const [k] of ESTATE_GROUPS) estate[k] = [];
-  const estateLight = (group, o) => { const l = B.fixture(Object.assign({ circuit: 'lodge', on: false }, o)); estate[group].push(l.id); return l; };
+  const estateLight = (group, o) => { const l = B.fixture(Object.assign({ circuit: 'lodge', on: false, chain: 'estate:' + group }, o)); estate[group].push(l.id); return l; };
   B.room = 'grounds';
   for (const [x] of street) estate.street.push('street' + x);
   for (const sx of [-1, 1]) estateLight('gate', { id: 'gate-lantern' + sx, name: 'Gate lantern', kind: 'incandescent', style: 'lantern', pos: [sx * 3.8, 2.7, 88.55], nz: 1, colour: 0xffb866, target: 1.1, range: 8 });
@@ -5350,7 +5383,7 @@ class Game {
     const g = this.grid, rows = [];
     const state = ids => {
       const ls = ids.map(id => g.light(id)).filter(l => l && !l.dead);
-      return { on: ls.some(l => l.on), lit: ls.some(l => l.powered && l.fraction >= 0.95), warming: ls.some(l => l.powered && l.fraction < 0.95), live: ls.some(l => g.live(l.circuit)) || !ls.length };
+      return { on: ls.some(l => l.on), lit: ls.some(l => l.powered && l.fraction >= 0.95), warming: ls.some(l => (l.powered && l.fraction < 0.95) || l.waiting), live: ls.some(l => g.live(l.circuit)) || !ls.length };
     };
     const short = { street: 'Street (lane)', gate: 'Gate', flood: 'Floodlights', drive: 'Drive lamps', garden: 'Garden', pool: 'Pool', pond: 'Pond', garage: 'Garage', shed: 'Shed', cemetery: 'Cemetery' };
     this.estateGroups.forEach(([k], i) => {
@@ -5543,6 +5576,7 @@ class Game {
     else if (!frozen) this.updatePlayer(dt);
     this.updateDoors(dt);
     this.updateStorm(dt);
+    this.grid.origin = this.player;
     this.grid.update(dt);
     this.updateDucks(dt);
     const camPos = { x: p.x, y: p.y + BM.PLAYER.eye, z: p.z };

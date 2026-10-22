@@ -355,13 +355,30 @@ suite('switches', () => {
   const houseLights = g.lights.filter(l => g.isHouseCircuit(l.circuit));
   const unswitched = houseLights.filter(l => !controlled.has(l.id) && !/-glow$/.test(l.id));
   if (unswitched.length) fails.push('house fittings with no wall switch (breaker only): ' + unswitched.map(l => l.id).join(', '));
+  // 6. the switchboards: every lever, lamp and meter follows the real state
+  const sbs = game.switchboards;
+  if (!sbs || sbs.length < 3) fails.push('switchboards missing');
+  const snapshot = () => sbs.map(sb => [sb.levers.map(l => Math.sign(l.mesh.rotation.x)), sb.lamps.map(l => l.mesh.material.color.getHex() !== 0x200a06), sb.needles.map(nd => +(nd.cur || 0).toFixed(2))]);
+  g.setLodge(true); g.throwMain(); for (const k in game.estateLights) game.estateLights[k].forEach(id => { g.light(id).on = true; }); settle(env, 2);
+  const onSnap = snapshot();
+  for (const sb of sbs) for (const l of sb.levers) if (l.state() !== (l.mesh.rotation.x < 0)) fails.push('a switchboard lever shows the wrong position');
+  for (const sb of sbs) for (const l of sb.lamps) if (l.state() !== (l.mesh.material.color.getHex() !== 0x200a06)) fails.push('a switchboard lamp shows the wrong state');
+  g.setBreaker('east', false); settle(env, 1);
+  const pantry = sbs[2], eastLever = pantry.levers[3], eastLamp = pantry.lamps[3]; // MAIN comes first
+  if (eastLever.mesh.rotation.x < 0 || eastLamp.mesh.material.color.getHex() !== 0x200a06) fails.push('EAST breaker off: lever or lamp did not follow');
+  g.setBreaker('east', true);
+  g.setLodge(false); settle(env, 3);
+  const offSnap = snapshot();
+  if (JSON.stringify(onSnap) === JSON.stringify(offSnap)) fails.push('switchboards look the same with the power on and off');
+  if (sbs[0].needles.some(nd => Math.abs(nd.cur - -0.8) > 0.1)) fails.push('lodge meters did not drop to zero with the supply off');
+  g.setLodge(true);
   assert(!fails.length, fails.join('\n'));
-  return `${switches.length} wall switches, 6 breakers and ${game.estateGroups.length} estate groups all switch off and on, with toggle, glow, warm-up and hum`;
+  return `${sbs.length} switchboards follow the power; ${switches.length} wall switches, 6 breakers and ${game.estateGroups.length} estate groups all switch off and on, with toggle, glow, warm-up and hum`;
 });
 
 suite('appliances', () => {
   const env = H.load({ quiet: true });
-  const { game } = env, g = game.grid;
+  const { game, BM } = env, g = game.grid;
   g.failureRate = 0;
   const A = id => g.appliances.find(a => a.id === id);
   const lodge = g.appliances.filter(a => a.room === 'lodge');
@@ -424,6 +441,16 @@ suite('appliances', () => {
   let sawOff = false, sawOn = false; for (let i = 0; i < 40; i++) { settle(env, 1); if (fridge.compressor) sawOn = true; else sawOff = true; }
   assert(sawOn && sawOff, 'the fridge compressor cycles on and off');
   const a0 = rec.angle; settle(env, 0.3); assert(rec.running && rec.angle !== a0, 'the radiogram turntable turns');
+  // each appliance's state is its own: no two share the material that shows it
+  const mats = g.appliances.filter(a => a.object && a.object.material).map(a => a.object.material);
+  assert(new Set(mats).size === mats.length, 'two appliances share a state material (one would light the other)');
+  game.toggleAppliance(A('lodge-tv')); settle(env, 0.5);
+  const otherTv = A('tv');
+  assert(!tv.running && otherTv.object.material !== tv.object.material, 'switching one TV off leaves the other alone');
+  // the routing console lamps show each sector's own state
+  g.startGenerator(); g.route('lifts', true); g.route('core', true); game.fx.updateAppliances(0.016, 0);
+  const lampOn = game.consoleLamps.map(c => c.mesh.material.color.getHex() === 0x40ff70);
+  assert(JSON.stringify(lampOn) === JSON.stringify(BM.HIVE_SECTORS.map(s => g.routed.has(s))), 'console lamps match the routed sectors: ' + lampOn);
   return `${g.appliances.length} appliances (${lodge.length} in the lodge), ${game.phys.furniture.filter(f => f.room === 'lodge').length} pieces of lodge furniture`;
 });
 

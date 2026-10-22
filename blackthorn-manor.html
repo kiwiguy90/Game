@@ -20,6 +20,20 @@
   #panel .row { display: grid; grid-template-columns: 34px 1fr 70px 90px; padding: 5px 0; border-bottom: 1px solid #333; }
   #panel .key { color: #e8c070; } #panel .on { color: #8f8; } #panel .off { color: #a55; } #panel .live { color: #ffd070; } #panel .dead { color: #666; }
   #panel .hint { margin-top: 14px; font-size: 13px; opacity: .75; line-height: 1.5; }
+  #lights { display: none; position: fixed; right: 12px; top: 12px; width: 250px; max-height: calc(100vh - 24px); overflow-y: auto; background: rgba(12,9,6,.74); border: 1px solid #4a3c28; border-radius: 6px; padding: 8px 8px 10px; font: 12px/1.25 'Courier New', monospace; color: #d8cba8; user-select: none; box-shadow: 0 0 18px rgba(0,0,0,.6); }
+  #lights .hd { display: flex; justify-content: space-between; color: #e8c070; font-weight: bold; letter-spacing: .06em; margin: 6px 2px 4px; cursor: pointer; }
+  #lights .hd:first-child { margin-top: 0; }
+  #lights .sup { font-weight: normal; font-size: 11px; color: #9a8a68; }
+  #lights .r { display: grid; grid-template-columns: 14px 16px 1fr 30px; align-items: center; gap: 3px; padding: 2px 3px; border-radius: 3px; cursor: pointer; }
+  #lights .r:hover { background: rgba(255,210,140,.10); }
+  #lights .r.dead { color: #6a604c; }
+  #lights .k { color: #e8c070; }
+  #lights .st { text-align: right; font-size: 11px; }
+  #lights .st.on { color: #f0c860; } #lights .st.off { color: #7a6a50; }
+  #lights .dot { width: 9px; height: 9px; border-radius: 50%; background: #2a1a10; border: 1px solid #5a4a34; }
+  #lights .dot.lit { background: #ffcf6a; border-color: #ffe0a0; box-shadow: 0 0 6px #ffb040; }
+  #lights .dot.warm { background: #a8641c; border-color: #d08a3a; }
+  #lights .hint { margin-top: 6px; font-size: 10.5px; color: #8a7a5a; }
   #phone { display: none; position: fixed; right: 6vw; bottom: 6vh; width: 270px; height: 520px; border-radius: 28px; background: #0b0d10; border: 2px solid #333; box-shadow: 0 0 40px rgba(120,160,220,.25); padding: 16px; box-sizing: border-box; font-family: -apple-system, 'Segoe UI', sans-serif; font-size: 13px; color: #cfd8e4; overflow: auto; }
   #phone .ph-top { display: flex; justify-content: space-between; font-size: 11px; opacity: .7; margin-bottom: 14px; }
   #phone .ph-h { margin: 14px 0 6px; font-weight: 600; color: #9ab8e8; } #phone .doc { opacity: .85; padding: 2px 0; }
@@ -37,11 +51,12 @@
 <div id="reader" class="sheet"><h2 id="reader-title"></h2><div id="reader-text"></div><div class="close">E to put it down</div></div>
 <div id="panel" class="sheet"><h2 id="panel-title"></h2><div id="panel-body"></div></div>
 <div id="phone"><div id="phone-body"></div></div>
+<div id="lights"></div>
 <div id="fade"></div>
 <div id="ending"><div id="ending-text"></div></div>
 <div id="title"><h1>BLACKTHORN MANOR</h1>
   <p>You have inherited a house that stopped in 1974. There is no one here to fight. There is only the dark, and the switches, and what the lights will show you.</p>
-  <div class="keys">W / S move · A / D turn · Space jump · E interact · T torch · P phone<br>R / F look up and down<br><br>Click to begin</div></div>
+  <div class="keys">W / S move · A / D turn · Shift run · Space jump · E interact · T torch · P phone<br>R / F look up and down · L lighting panel · 1–0 estate lights<br><br>Click to begin</div></div>
 <script id="three-r128">/**
  * @license
  * Copyright 2010-2021 Three.js Authors
@@ -238,6 +253,7 @@ class PowerGrid {
     switch (c) {
       case 'street': case 'battery': case 'fire': case 'always': return true;
       case 'lodge': return this.lodge;
+      case 'car': return true; // the car's own battery: its lamps are switched by the intro
       case 'generator': return this.generator;
       case 'hall': return this.lodge && !this.tripped && this.breakers.hall;
       case 'main': return this.lodge && !this.tripped && this.breakers.main;
@@ -802,6 +818,17 @@ function tex(name) {
       g.fillStyle = 'rgba(255,255,255,0.15)'; for (let i = 8; i < s; i += 30) { g.beginPath(); g.arc(8, i, 2, 0, 7); g.fill(); g.beginPath(); g.arc(s - 8, i, 2, 0, 7); g.fill(); }
       for (let i = 0; i < 60; i++) { g.fillStyle = 'rgba(90,50,20,' + r() * 0.3 + ')'; g.fillRect(r() * s, r() * s, 3 + r() * 10, 2 + r() * 20); }
     }); break;
+    case 'asphalt': t = canvasTex(256, (g, s, r) => {
+      // old tarmac: worn aggregate, patched, and crazed with cracks
+      speckle(g, s, r, '#3b3b3a', 0.22, 9000, 2);
+      for (let i = 0; i < 5; i++) { g.fillStyle = r() < 0.5 ? 'rgba(0,0,0,0.18)' : 'rgba(150,145,130,0.08)'; g.fillRect(r() * s, r() * s, 30 + r() * 70, 20 + r() * 50); }
+      g.strokeStyle = 'rgba(8,8,8,0.8)';
+      for (let i = 0; i < 14; i++) {
+        let x = r() * s, y = r() * s; g.lineWidth = 0.6 + r() * 1.4; g.beginPath(); g.moveTo(x, y);
+        for (let k = 0; k < 8; k++) { x += (r() - 0.5) * 34; y += (r() - 0.5) * 34; g.lineTo(x, y); }
+        g.stroke();
+      }
+    }); break
     case 'concrete': t = canvasTex(128, (g, s, r) => { speckle(g, s, r, '#55585a', 0.15, 2000, 2); g.fillStyle = 'rgba(0,0,0,0.3)'; g.fillRect(0, s - 2, s, 2); g.fillRect(s - 2, 0, 2, s); }); break;
     case 'tile': t = canvasTex(128, (g, s, r) => {
       for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) { g.fillStyle = (x + y) % 2 ? '#d8d2c0' : '#2a2a2a'; g.fillRect(x * 32, y * 32, 32, 32); }
@@ -991,6 +1018,18 @@ const MAT_DEFS = {
   metal: [0xffffff, 'metal', 0.35, 40],
   metalDark: [0x707880, 'metal', 0.35, 40],
   concrete: [0xffffff, 'concrete', 0.25, 6],
+  asphalt: [0x8a8986, 'asphalt', 0.22, 8, { bump: 2.5, weather: true }],
+  tarPatch: [0x5c5b58, 'asphalt', 0.3, 12, { bump: 1.5 }],
+  gravelOld: [0x5e5a50, 'gravel', 0.3, 2],
+  weed: [0x3c3e28, null, 0, 2, { sway: { base: 0.0, amount: 0.3 } }],
+  roadPaint: [0x8a887c, null, 0, 6],
+  pole: [0x5a4a3a, 'oldwood', 0.9, 3, { bump: 2.5, weather: true }],
+  wire: [0x0c0c0c, null, 0, 30],
+  insulator: [0x6a7a6a, null, 0, 90],
+  rust: [0x5a3420, 'metal', 0.6, 10],
+  pine: [0x18231a, 'hedge', 0.35, 2, { sway: { base: 1.5, amount: 0.02 } }],
+  pineDark: [0x111a13, 'hedge', 0.35, 2, { sway: { base: 1.5, amount: 0.02 } }],
+  moss: [0x2c3a22, 'grass', 0.4, 2],
   tile: [0xffffff, 'tile', 0.8, 30],
   grate: [0xffffff, 'grate', 1.0, 30],
   roof: [0xffffff, 'roof', 0.5, 6, { bump: 2 }],
@@ -1310,6 +1349,11 @@ class Builder {
         bulbSize = 0;
         rec.bulbBox = this.box(Basic(0x111111), x, y, z, o.len || 2, 0.05, 0.05, o.ry || 0);
         break;
+      case 'cobra': // a sodium lantern hung from a pole's arm
+        this.box('metalDark', x, y + 0.12, z, 0.36, 0.14, 0.62);
+        this.box('iron', x, y + 0.22, z + 0.12, 0.2, 0.08, 0.5);
+        bulbSize = 0.2;
+        break;
       case 'fire': case 'none':
         bulbSize = 0;
         break;
@@ -1415,8 +1459,8 @@ BM.buildGrounds = function (B, game) {
 
   /* ---- ground ---- */
   B.floor('grass', -64, 64, -54, 100, 0, 0.5, [[-18, 18, -12, 12], [-40, -24, 56, 68]]);
-  // the lane
-  B.boxE('gravel', -64, 64, 0, 0.03, 89.5, 99, null);
+  // the lane's verges (the road itself, out into the forest, is laid in 49-road)
+  B.boxE('soil', -64, 64, 0, 0.02, 89.5, 100.6, null);
   // limestone carriage drive, turning circle ring and paths (visual overlays)
   B.boxE('limestone', -3, 3, 0, 0.03, 33, 89.5);
   const ring = 28;
@@ -1442,16 +1486,18 @@ BM.buildGrounds = function (B, game) {
     { id: 'shed-walk', pts: [[-20, 24], [-29.5, 24], [-29.5, 2.7]], w: 2, y: 0 },
     { id: 'pond-walk', pts: [[3.1, 62], [27, 62]], w: 2, y: 0 },
     { id: 'pool-walk', pts: [[-3.1, 62], [-23.6, 62]], w: 2, y: 0 },
-    { id: 'lane', pts: [[-60, 94], [60, 94]], w: 6, y: 0 },
+    { id: 'lane', pts: [[-60, 94], [60, 94]], w: 4.2, y: 0 }, // your car is parked on the far verge
   ];
   for (const p of PATHS) { if (p.pts && p.id !== 'drive' && p.id !== 'lane' && p.id !== 'forecourt') gravelPath(p.pts, p.w); B.paths.push(p); }
 
   /* ---- boundary ---- */
   const wallH = 2.4;
-  B.solid('stone', -64.4, -64, 0, wallH, -54, 100);
-  B.solid('stone', 64, 64.4, 0, wallH, -54, 100);
+  B.solid('stone', -64.4, -64, 0, wallH, -54, 88.2);
+  B.solid('stone', 64, 64.4, 0, wallH, -54, 88.2);
   B.solid('stone', -64, 64, 0, wallH, -54.4, -54);
-  B.solid('hedge', -64, 64, 0, 3, 100, 101.2);                 // far side of the lane
+  // the lane runs on for miles through the forest; you are not walking back
+  P.addWall(-64, 64, 100.6, 101.2, 0, 4, { kind: 'hedge', tag: 'forest' });
+  for (const x of [-64.6, 64]) P.addWall(x, x + 0.6, 88.2, 100.6, 0, 4, { kind: 'hedge', tag: 'the road on' });
   B.solid('stone', -64, -14, 0, wallH, 87.8, 88.2);             // estate wall
   B.solid('stone', -6, -4.2, 0, wallH, 87.8, 88.2);
   B.solid('stone', 4.2, 64, 0, wallH, 87.8, 88.2);
@@ -1481,14 +1527,16 @@ BM.buildGrounds = function (B, game) {
 
   /* ---- the lane's street lights (council supply; one is faulty) ---- */
   B.room = 'lane';
-  const street = [[-30, 97.8, false], [8, 97.8, false], [40, 97.8, true]];
+  // old sodium lanterns on arms from the timber power poles (the poles are built in 49-road)
+  const LANE = BM.LANE = { poleZ: 99.6, armZ: 97.1, lampY: 6.4, span: 16, from: -168, to: 168 };
+  const street = [[-24, LANE.armZ, false], [8, LANE.armZ, false], [40, LANE.armZ, true]];
+  LANE.lampXs = street.map(s => s[0]);
   for (const [x, z, faulty] of street) {
     B.fixture({
-      id: 'street' + x, name: 'Street light', circuit: 'street', on: false, kind: 'sodium', style: 'street', pos: [x, 5.2, z],
+      id: 'street' + x, name: 'Street light', circuit: 'street', on: false, kind: 'sodium', style: 'cobra', pos: [x, LANE.lampY, z],
       colour: 0xffa04a, target: 2.4, range: 16, spot: true, dir: [0, -1, -0.2], flicker: faulty ? 0.7 : 0, blink: faulty ? 0.35 : 0,
       lightType: faulty ? 'flicker' : 'steady',
     });
-    P.addWall(x - 0.12, x + 0.12, z - 0.12, z + 0.12, 0, 5, { kind: 'tree', occludes: false });
   }
 
   /* ---- the gatekeeper's lodge (door on the lane) ---- */
@@ -2743,6 +2791,7 @@ function crooked(B, mat, a, dir, len, r0, r1, rnd) {
   limb(B, mat, k, t, (r0 + r1) / 2);
   return t;
 }
+BM.limb = limb;
 function norm(v) { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; }
 
 /* A gnarled dead tree: leaning trunk, clawing limbs, twigs. Returns limb tips. */
@@ -3656,6 +3705,386 @@ BM.buildSwitchboards = function (B, game) {
 };
 })();
 </script>
+<script id="bm-48-arrival">
+/* ==========================================================================
+   BLACKTHORN MANOR — 6g. THE ARRIVAL
+   Your car comes up the lane in the rain with the radio on low. It pulls up
+   at the gates, the engine coughs, the headlights flicker, dim and die, and
+   the radio crackles away to nothing. The battery is flat. You walk.
+   The car stays parked on the lane.
+   ========================================================================== */
+(function () {
+'use strict';
+const BM = window.BM;
+const G = BM.G;
+
+const CAR = { stopX: 2.0, z: 97.5, roadZ: 95.0, startX: -80, y: 0 };
+BM.CAR = CAR;
+/* timeline, seconds */
+const T = { arrive: 11.0, cough: 12.0, flicker: 12.6, dim: 14.0, dead: 16.0, fadeOut: 17.0, out: 18.0, end: 19.0 };
+BM.INTRO_T = T;
+
+BM.buildCar = function (B, game) {
+  B.zone = 'exterior'; B.levelName = 'ground'; B.room = 'lane';
+  const car = new THREE.Group();
+  car.position.set(CAR.startX, CAR.y, CAR.roadZ);
+  car.rotation.y = -Math.PI / 2; // nose towards +x
+  B.root.add(car);
+  // the car is built along its own -z axis (nose at -z), 4.4 m long
+  const add = (geo, mat, x, y, z, sx, sy, sz, rx, rz) => {
+    const m = B.mesh(geo, mat, x, y, z, sx, sy, sz, 0, car);
+    if (rx || rz) { m.rotation.set(rx || 0, 0, rz || 0); m.updateMatrix(); }
+    return m;
+  };
+  add(G.box, 'carPaint', 0, 0.62, 0, 1.78, 0.62, 4.4);                 // body
+  add(G.box, 'carPaint', 0, 0.5, -1.95, 1.7, 0.36, 0.5);               // nose
+  add(G.box, 'chrome', 0, 0.42, -2.22, 1.74, 0.12, 0.06);              // front bumper
+  add(G.box, 'chrome', 0, 0.42, 2.22, 1.74, 0.12, 0.06);               // rear bumper
+  add(G.box, 'black', 0, 0.62, -2.21, 0.9, 0.22, 0.03);                // grille
+  // the cabin: glass and pillars (seen from inside, its back faces vanish)
+  add(G.box, 'carPaint', 0, 1.47, 0.35, 1.6, 0.06, 1.9);               // roof
+  for (const sx of [-0.78, 0.78]) {
+    add(G.box, 'carPaint', sx, 1.2, -0.65, 0.06, 0.55, 0.08, 0.35);    // A-pillars
+    add(G.box, 'carPaint', sx, 1.2, 1.3, 0.06, 0.55, 0.1);             // C-pillars
+    add(G.box, 'glass', sx, 1.2, 0.35, 0.02, 0.5, 1.85);               // side glass
+  }
+  add(G.box, 'glass', 0, 1.2, -0.72, 1.55, 0.5, 0.02, 0.35);           // windscreen
+  add(G.box, 'glass', 0, 1.2, 1.32, 1.55, 0.5, 0.02, -0.3);            // rear screen
+  add(G.box, 'darkWood', 0, 1.0, -0.45, 1.6, 0.14, 0.32);              // dashboard
+  const wheel = add(G.ring, 'black', 0.38, 1.08, -0.2, 0.36, 0.36, 0.36, -0.4);
+  add(G.post, 'black', 0.38, 1.0, -0.3, 0.03, 0.2, 0.03, 1.2);
+  const dial = add(G.box, BM.Own(0x101010), 0.0, 1.07, -0.3, 0.16, 0.05, 0.02); // the radio's dial
+  for (const sx of [-0.4, 0.4]) add(G.box, 'fabricRed', sx, 0.85, 0.55, 0.55, 0.5, 0.55);   // seats
+  for (const [x, z] of [[-0.82, -1.4], [0.82, -1.4], [-0.82, 1.4], [0.82, 1.4]]) add(G.cyl, 'rubber', x, 0.33, z, 0.66, 0.24, 0.66, 0, Math.PI / 2);
+  // lamps: headlight glass and red tail lights that show their state
+  const heads = [-0.62, 0.62].map(sx => add(G.sphere, BM.Own(0x202020), sx, 0.62, -2.18, 0.26, 0.2, 0.08));
+  const tails = [-0.66, 0.66].map(sx => add(G.box, BM.Own(0x200404), sx, 0.68, 2.21, 0.3, 0.12, 0.03));
+  car.traverse(o => { o.userData.dynamic = true; });
+  wheel.userData.dynamic = true;
+
+  // the headlights are real light records on the car's own supply, moved each frame
+  const beams = [-0.62, 0.62].map((sx, i) => B.fixture({
+    id: 'car-head-' + i, name: 'Headlight', circuit: 'car', kind: 'emergency', style: 'none', pos: [CAR.startX + 2.3, 0.62, CAR.z + sx],
+    colour: 0xfff0c8, target: 2.6, range: 26, spot: true, dir: [1, -0.12, 0], on: false, noFail: true, corona: 0.7,
+  }));
+
+  // parked: collision, and the car itself is something you can try
+  game.car = { group: car, heads, tails, dial, beams, parked: false };
+  B.interactable({
+    id: 'car', label: 'Your car', pos: [CAR.stopX, 1.0, CAR.z - 0.92], n: [0, -1],
+    act: g => { g.audio.click(); g.audio.tone('sine', 60, 40, 0.15, 0.01, 0.12); g.ui.say('You try the key. A dry click from under the bonnet, then nothing. The battery is completely flat.'); },
+  });
+  game.carWall = B.phys.addWall(CAR.stopX - 2.25, CAR.stopX + 2.25, CAR.z - 0.92, CAR.z + 0.92, 0, 1.5, { kind: 'furniture', tag: 'your car', enabled: false });
+};
+
+/* ---- the intro sequence: runs before the player has control ---- */
+BM.Intro = class {
+  constructor(game) { this.game = game; this.t = 0; this.done = false; this.said = {}; this.radio = 0; this.engine = 0; }
+  skip() { this.t = T.end; this.finish(); }
+  carX(t) {
+    if (t >= T.arrive) return CAR.stopX;
+    const u = t / T.arrive, e = 1 - Math.pow(1 - u, 2.2); // eases to a stop
+    return CAR.startX + (CAR.stopX - CAR.startX) * e;
+  }
+  /* on the road, then pulled over onto the verge as it stops */
+  carZ(t) { const u = Math.min(1, Math.max(0, (t - (T.arrive - 2.6)) / 2.6)); return CAR.roadZ + (CAR.z - CAR.roadZ) * u * u * (3 - 2 * u); }
+  say(key, text, secs) { if (!this.said[key]) { this.said[key] = true; this.game.ui.say(text, secs || 5); } }
+  update(dt) {
+    const g = this.game, car = g.car, p = g.player;
+    this.t += dt;
+    const t = this.t;
+    // the car rolls up the lane
+    const x = this.carX(t), speed = Math.max(0, (x - this.carX(Math.max(0, t - 0.1))) / 0.1);
+    const z = this.carZ(t);
+    car.group.position.x = x; car.group.position.z = z;
+    car.group.rotation.y = -Math.PI / 2 - Math.max(0, this.carZ(t + 0.15) - z) * 0.5;
+    car.group.position.y = Math.sin(t * 9) * 0.008 * Math.min(1, speed / 3);
+    // the driver: in the seat, looking up the lane, then round to the gates as it stops
+    if (t < T.out) {
+      const look = Math.min(1, Math.max(0, (t - T.arrive + 1.5) / 3));
+      p.x = x - 0.45; p.z = z + 0.4; p.y = 1.22 - BM.PLAYER.eye;
+      p.yaw = -Math.PI / 2 + look * 1.0;
+      p.pitch = -0.04;
+    }
+    // headlights: full, then flicker, then a dying orange, then out
+    let head = 1, flick = 0;
+    if (t >= T.flicker && t < T.dim) flick = 0.85;
+    if (t >= T.dim) head = Math.max(0, 1 - (t - T.dim) / (T.dead - T.dim));
+    car.beams.forEach((l, i) => {
+      l.on = head > 0.02 && t < T.dead;
+      l.pos.x = x + 2.3; l.pos.z = z + (i ? 0.62 : -0.62);
+      l.flicker = flick; l.lightType = flick ? 'flicker' : 'steady';
+      l.target = 2.6 * head; l.colour = head > 0.6 ? 0xfff0c8 : 0xffa050;
+      g.fx.moveLight(l);
+    });
+    const glow = t < T.dead ? head * (flick ? 0.4 + 0.6 * BM.noise1(t * 20) : 1) : 0;
+    car.heads.forEach(m => m.material.color.setRGB(1.0 * glow, 0.92 * glow, 0.7 * glow * glow));
+    car.tails.forEach(m => m.material.color.setRGB(0.12 + 0.6 * glow, 0.02, 0.02));
+    car.dial.material.color.setRGB(0.6 * Math.min(1, this.radio * 3), 0.35 * Math.min(1, this.radio * 3), 0.05);
+    // sound: radio low, engine, the cough, the crackle, silence
+    this.radio = t < T.flicker ? 0.05 : t < T.dim ? 0.05 * (0.4 + 0.6 * BM.noise1(t * 14)) : Math.max(0, 0.05 * (1 - (t - T.dim) / 1.2));
+    this.engine = t < T.cough ? 0.16 * (0.5 + 0.5 * Math.min(1, speed / 6)) : Math.max(0, 0.16 * (1 - (t - T.cough) / 1.0));
+    this.engineRev = 0.6 + Math.min(1, speed / 8) * 0.6;
+    if (t >= T.cough && !this.said.cough) { g.audio.cough && g.audio.cough(); }
+    this.say('arrive', 'Blackthorn Lane, after midnight. Miles of forest and not another car. The radio is down low and the wipers can barely keep up.', 6);
+    if (t >= T.arrive - 1.5) this.say('gates', 'The headlights find the gates. Chained. Not a light anywhere up the drive.', 4);
+    if (t >= T.cough) this.say('cough', 'The engine coughs once, twice — and dies.', 3);
+    if (t >= T.flicker + 0.5) this.say('lights', 'The headlights flicker, sag to a dull orange... and go out. The radio crackles away to nothing.', 5);
+    if (t >= T.dead) this.say('flat', 'You turn the key. A click. The battery is flat. You will have to walk.', 5);
+    // fade, then you are standing in the rain beside the car
+    if (t >= T.fadeOut && t < T.out) g.ui.fade(Math.min(1, (t - T.fadeOut) / (T.out - T.fadeOut)));
+    if (t >= T.out && !this.placed) { this.placed = true; this.place(); }
+    if (t >= T.out) g.ui.fade(Math.max(0, 1 - (t - T.out) / (T.end - T.out)));
+    if (t >= T.end) this.finish();
+  }
+  place() {
+    const g = this.game, car = g.car;
+    car.group.position.set(CAR.stopX, 0, CAR.z); car.group.rotation.y = -Math.PI / 2;
+    car.beams.forEach(l => { l.on = false; l.flicker = 0; l.lightType = 'steady'; l.target = 2.6; l.pos.x = CAR.stopX + 2.3; l.pos.z = CAR.z + (car.beams.indexOf(l) ? 0.62 : -0.62); g.fx.moveLight(l); });
+    car.heads.forEach(m => m.material.color.setRGB(0.12, 0.12, 0.12));
+    car.tails.forEach(m => m.material.color.setRGB(0.12, 0.02, 0.02));
+    g.carWall.enabled = true; car.parked = true;
+    g.teleport(BM.START.x, BM.START.y, BM.START.z, BM.START.yaw);
+    g.player.pitch = 0;
+  }
+  finish() {
+    if (this.done) return;
+    if (!this.placed) { this.placed = true; this.place(); }
+    this.done = true; this.radio = 0; this.engine = 0;
+    this.game.ui.fade(0);
+    this.game.intro = null;
+  }
+};
+})();
+</script>
+<script id="bm-49-road">
+/* ==========================================================================
+   BLACKTHORN MANOR — 6h. THE OLD ROAD
+   Blackthorn Lane: a country road nobody maintains any more, running for
+   miles through pine forest. Cracked, patched tarmac with weeds in the
+   seams, potholes full of rain and a centre line worn almost away. Timber
+   power poles lean along the far verge, sagging wires between them, and
+   the three sodium street lights hang off their arms. Past the estate the
+   road runs on into the trees and the fog.
+   ========================================================================== */
+(function () {
+'use strict';
+const BM = window.BM;
+const G = BM.G;
+
+BM.buildRoad = function (B, game) {
+  B.zone = 'exterior'; B.levelName = 'ground'; B.room = 'lane';
+  const L = BM.LANE, limb = BM.limb;
+  const rnd = BM.mulberry32(1974);
+  const X0 = -184, X1 = 184, R0 = 91.9, R1 = 96.1; // the tarmac, either side of the lane's centre (z 94)
+  const stats = { poles: 0, spans: 0, trees: 0, potholes: 0 };
+
+  /* ---- the forest floor beyond the estate wall, all round ---- */
+  B.boxE('soil', -220, -64.4, -0.02, 0.0, -140, 170);
+  B.boxE('soil', 64.4, 220, -0.02, 0.0, -140, 170);
+  B.boxE('soil', -64.4, 64.4, -0.02, 0.0, 100.6, 170);
+  B.boxE('soil', -64.4, 64.4, -0.02, 0.0, -140, -54.4);
+  // the verge beyond the estate, either side of the road
+  for (const [a, b] of [[X0, -64], [64, X1]]) B.boxE('soil', a, b, 0, 0.02, 88.2, 100.6);
+
+  /* ---- the road ---- */
+  B.boxE('asphalt', X0, X1, 0, 0.035, R0, R1);
+  // the apron from the gates, gravel gone to moss
+  B.boxE('gravelOld', -3.4, 3.4, 0, 0.03, 88.2, R0 + 0.1);
+  // the centre line: what is left of it
+  for (let x = X0 + 2; x < X1 - 2; x += 6) {
+    if (rnd() < 0.38) continue;
+    const len = 1.2 + rnd() * 1.6;
+    B.box('roadPaint', x + rnd() * 0.6, 0.037, 94 + (rnd() - 0.5) * 0.06, len, 0.004, 0.11, (rnd() - 0.5) * 0.02);
+  }
+  // crumbling edges: the verge creeping over the tarmac
+  for (let x = X0; x < X1; x += 2.5 + rnd() * 3) {
+    for (const edge of [R0, R1]) {
+      if (rnd() < 0.45) continue;
+      const w = 0.3 + rnd() * 0.6, l = 1 + rnd() * 2.5;
+      B.box(rnd() < 0.5 ? 'soil' : 'moss', x, 0.038, edge + (edge === R0 ? w / 2 - 0.15 : 0.15 - w / 2), l, 0.006, w, (rnd() - 0.5) * 0.3);
+    }
+  }
+  // patches of newer tarmac, now cracked themselves
+  for (let i = 0; i < 26; i++) {
+    const x = X0 + rnd() * (X1 - X0);
+    B.box('tarPatch', x, 0.036, 92.6 + rnd() * 2.8, 1.2 + rnd() * 2.4, 0.003, 0.8 + rnd() * 1.4, (rnd() - 0.5) * 0.4);
+  }
+  // potholes holding rain
+  for (let i = 0; i < 46; i++) {
+    const x = X0 + rnd() * (X1 - X0), z = 92.3 + rnd() * 3.4, s = 0.35 + rnd() * 0.9;
+    if (Math.abs(x - BM.CAR.stopX) < 3 && z > 95) continue;
+    B.box('soil', x, 0.037, z, s * 1.25, 0.004, s * 1.05, rnd() * 3);
+    B.box('water', x, 0.039, z, s, 0.003, s * 0.8, rnd() * 3);
+    stats.potholes++;
+  }
+  // weeds in the cracks and along the crown, dead leaves blown across
+  for (let i = 0; i < 300; i++) {
+    const x = X0 + rnd() * (X1 - X0);
+    const z = rnd() < 0.35 ? 94 + (rnd() - 0.5) * 0.5 : rnd() < 0.5 ? R0 + rnd() * 0.5 : R1 - rnd() * 0.5;
+    // a tuft: a few thin blades splayed out of the crack
+    for (let k = 0; k < 3; k++) {
+      const h = 0.1 + rnd() * 0.22, a = rnd() * 6.3, l = 0.06 + rnd() * 0.08;
+      limb(B, rnd() < 0.6 ? 'weed' : 'deadGrass', [x, 0.03, z], [x + Math.cos(a) * l, h, z + Math.sin(a) * l], 0.012 + rnd() * 0.01, G.cone);
+    }
+  }
+  for (let i = 0; i < 260; i++) {
+    const x = X0 + rnd() * (X1 - X0), z = R0 + rnd() * (R1 - R0);
+    B.box(rnd() < 0.5 ? 'leafLitter' : 'leafLitter2', x, 0.04, z, 0.12 + rnd() * 0.2, 0.004, 0.08 + rnd() * 0.12, rnd() * 3);
+  }
+  // bracken and long grass on the verges
+  for (let i = 0; i < 520; i++) {
+    const far = rnd() < 0.6, x = X0 + rnd() * (X1 - X0);
+    const z = far ? R1 + 0.2 + rnd() * 4.6 : 88.4 + rnd() * (R0 - 88.6);
+    if (!far && Math.abs(x) < 64) continue; // inside the estate the verge is already dressed
+    if (far && Math.abs(x - BM.CAR.stopX) < 3 && z < 98.8) continue;
+    const h = 0.3 + rnd() * 0.7, mat = rnd() < 0.5 ? 'weed' : rnd() < 0.6 ? 'deadGrass' : 'thorn';
+    for (let k = 0; k < 4; k++) {
+      const a = rnd() * 6.3, l = 0.1 + rnd() * 0.25;
+      limb(B, mat, [x, 0.02, z], [x + Math.cos(a) * l, h * (0.6 + rnd() * 0.4), z + Math.sin(a) * l], 0.02 + rnd() * 0.02, G.cone);
+    }
+  }
+
+  /* ---- the power poles along the far verge ---- */
+  const poles = [];
+  for (let x = L.from; x <= L.to; x += L.span) {
+    const lamp = L.lampXs.indexOf(x) >= 0, broken = x === 152;
+    const h = 8.6;
+    // old poles lean: towards the road, away from it, along it
+    const lean = lamp ? 0.012 : (rnd() - 0.4) * 0.09, along = lamp ? 0 : (rnd() - 0.5) * 0.05;
+    const base = [x, 0, L.poleZ + (rnd() - 0.5) * 0.3];
+    if (broken) {
+      // snapped in a storm: a stump, and the rest of it down in the bracken
+      limb(B, 'pole', base, [x, 2.1, base[2]], 0.14, G.cyl);
+      limb(B, 'pole', [x + 0.4, 0.25, base[2] + 0.6], [x + 6.2, 0.35, base[2] + 2.8], 0.13, G.cyl);
+      B.box('pole', x + 6.4, 0.4, base[2] + 2.9, 0.12, 0.12, 2.0, 1.2);
+      poles.push({ x, broken: true, top: [x, 2.1, base[2]] });
+      continue;
+    }
+    const top = [x + along * h, h, base[2] - lean * h];
+    limb(B, 'pole', base, top, 0.14, G.cyl);
+    B.mesh(G.cone, 'pole', top[0], h + 0.08, top[2], 0.3, 0.16, 0.3); // weathered cap
+    // the crossarm, three glass insulators
+    B.box('pole', top[0], h - 0.35, top[2], 0.12, 0.12, 2.1);
+    limb(B, 'pole', [top[0], h - 1.1, top[2]], [top[0], h - 0.4, top[2] - 0.8], 0.03);
+    limb(B, 'pole', [top[0], h - 1.1, top[2]], [top[0], h - 0.4, top[2] + 0.8], 0.03);
+    const ends = [];
+    for (const o of [-0.9, 0, 0.9]) {
+      const y = h - 0.22 + (o === 0 ? 0.42 : 0);
+      B.mesh(G.cyl, 'insulator', top[0], y - 0.06, top[2] + o, 0.09, 0.14, 0.09);
+      ends.push([top[0], y, top[2] + o]);
+    }
+    // a rusted step bolt here and there, and the pole's number plate
+    for (let k = 0; k < 5; k++) B.box('rust', x + (k % 2 ? 0.14 : -0.14), 2.6 + k * 0.9, base[2], 0.18, 0.03, 0.03);
+    if (lamp) {
+      // the lantern's arm reaches out over the road
+      const a0 = [x, 7.2, base[2] - 0.1], a1 = [x, 6.75, L.armZ + 0.2];
+      limb(B, 'iron', a0, [x, 7.0, (a0[2] + a1[2]) / 2 + 0.3], 0.05);
+      limb(B, 'iron', [x, 7.0, (a0[2] + a1[2]) / 2 + 0.3], a1, 0.045);
+      limb(B, 'iron', [x, 6.2, base[2] - 0.12], [x, 6.95, (a0[2] + a1[2]) / 2 + 0.4], 0.03);
+      limb(B, 'iron', a1, [x, L.lampY + 0.22, L.armZ + 0.1], 0.04);
+      // the feed from the lines down the pole to the lantern
+      limb(B, 'wire', ends[0], [x - 0.05, 7.2, base[2] - 0.14], 0.012);
+      B.box('metalDark', x, 3.0, base[2] - 0.16, 0.22, 0.34, 0.12); // the photocell box, long dead
+    }
+    poles.push({ x, ends, top });
+    stats.poles++;
+  }
+  // the transformer that fed the house, and the drop across the lane to the lodge
+  const feed = poles.find(p => p.x === -8);
+  if (feed) {
+    const t = feed.top;
+    B.mesh(G.cyl, 'metalDark', t[0] + 0.32, 6.2, t[2] + 0.05, 0.62, 1.1, 0.62);
+    B.mesh(G.disc, 'metalDark', t[0] + 0.32, 6.76, t[2] + 0.05, 0.62, 1, 0.62);
+    for (const o of [-0.15, 0.15]) B.mesh(G.cyl, 'insulator', t[0] + 0.32 + o, 6.88, t[2] + 0.05, 0.08, 0.16, 0.08);
+    const a = [t[0] + 0.32, 6.9, t[2] + 0.05], b = [-8.2, 3.05, 87.8], n = 8;
+    let prev = a;
+    for (let i = 1; i <= n; i++) {
+      const u = i / n, p = [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u - 1.1 * 4 * u * (1 - u), a[2] + (b[2] - a[2]) * u];
+      limb(B, 'wire', prev, p, 0.014); prev = p;
+    }
+    B.box('metalDark', -8.2, 2.9, 87.95, 0.26, 0.3, 0.14); // the service head on the lodge wall
+  }
+  // the lines, sagging between the poles
+  const sag = (a, b, s, segs) => {
+    let prev = a;
+    for (let i = 1; i <= segs; i++) {
+      const u = i / segs, p = [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u - s * 4 * u * (1 - u), a[2] + (b[2] - a[2]) * u];
+      limb(B, 'wire', prev, p, 0.012); prev = p;
+    }
+  };
+  for (let i = 0; i < poles.length - 1; i++) {
+    const p = poles[i], q = poles[i + 1];
+    if (p.broken || q.broken) {
+      // the lines from the snapped pole lie slack in the verge
+      const whole = p.broken ? q : p, down = p.broken ? p : q;
+      for (const e of whole.ends) sag(e, [down.x + (whole.x < down.x ? -1.5 : 1.5), 0.15, down.top[2] + 1.2 + e[2] - whole.top[2]], 1.4, 8);
+      continue;
+    }
+    for (let k = 0; k < 3; k++) sag(p.ends[k], q.ends[k], 0.75 + rnd() * 0.5 + (i === 4 && k === 2 ? 2.4 : 0), 6);
+    stats.spans++;
+  }
+
+  /* ---- the forest: tall black pines, with dead trees leaning out over the road ---- */
+  const pine = (x, z, s) => {
+    const h = (11 + rnd() * 7) * s;
+    B.mesh(G.cyl, 'bark', x, h * 0.3, z, 0.36 * s, h * 0.6, 0.36 * s);
+    const tiers = 4;
+    for (let k = 0; k < tiers; k++) {
+      const u = k / tiers, w = (3.6 - u * 2.6) * s * (0.85 + rnd() * 0.3), th = h * 0.36;
+      B.mesh(G.cone, rnd() < 0.5 ? 'pine' : 'pineDark', x + (rnd() - 0.5) * 0.3, h * (0.34 + u * 0.19) + th / 2, z + (rnd() - 0.5) * 0.3, w, th, w);
+    }
+    stats.trees++;
+  };
+  const clearOf = (x, z) => !(z > 88.2 && z < 101.2) || (Math.abs(x) < 64 ? z > 101.2 : z > 101.6);
+  // across the road, the whole length
+  for (let x = X0; x < X1; x += 5.5) for (let z = 102.2; z < 140; z += 6) {
+    const px = x + rnd() * 4, pz = z + rnd() * 4;
+    if (rnd() < 0.12 || !clearOf(px, pz)) continue;
+    pine(px, pz, 0.8 + rnd() * 0.45);
+  }
+  // either side of the estate, right up to its wall, and behind it
+  for (const [ax, bx] of [[-150, -66], [66, 150]]) for (let x = ax; x < bx; x += 6) for (let z = -90; z < 88; z += 6.5) {
+    const px = x + rnd() * 4, pz = z + rnd() * 4;
+    if (rnd() < 0.15 || pz > 87.4) continue;
+    pine(px, pz, 0.8 + rnd() * 0.45);
+  }
+  for (let x = -64; x < 64; x += 7) for (let z = -100; z < -57; z += 7) { if (rnd() < 0.2) continue; pine(x + rnd() * 4, z + rnd() * 4, 0.8 + rnd() * 0.4); }
+  // along the road beyond the estate, on the near side too
+  for (let x = X0; x < X1; x += 6) {
+    if (Math.abs(x) < 70) continue;
+    const pz = 82 + rnd() * 5;
+    if (rnd() < 0.3) continue;
+    pine(x + rnd() * 3, pz, 0.8 + rnd() * 0.4);
+  }
+  // dead trees right on the verge, reaching over the road
+  for (let i = 0; i < 16; i++) {
+    const x = X0 + 6 + rnd() * (X1 - X0 - 12), z = 101.8 + rnd() * 1.6;
+    if (Math.abs(x - BM.CAR.stopX) < 6) continue;
+    BM.deadTree(B, x, z, 0.95 + rnd() * 0.5, game, 40 + i);
+  }
+
+  /* ---- signs ---- */
+  const sign = (x, z, ry, text, o, w, h, tilt) => {
+    B.mesh(G.post, 'rust', x, 1.1, z, 0.06, 2.2, 0.06);
+    const m = B.mesh(G.plane, BM.labelMat(text, o), x, 1.9, z + 0.04 * Math.cos(ry), w, h, 1, ry);
+    if (tilt) { m.rotation.z = tilt; m.updateMatrix(); }
+  };
+  sign(6.2, 100.0, Math.PI, 'BLACKTHORN LANE\nNO THROUGH ROAD', { w: 256, h: 128, bg: '#7d8a7a', fg: '#e2e0d2', border: '#e2e0d2' }, 0.9, 0.45, 0.06);
+  sign(-60, 90.2, 0, 'BRIDGE OUT\n3 MILES', { w: 256, h: 128, bg: '#8a6a24', fg: '#1a1408', border: '#1a1408' }, 0.8, 0.4, -0.12);
+  // the road was closed, east of the estate, years ago
+  for (const z of [92.6, 95.4]) { B.box('wood', 61.5, 0.45, z, 0.08, 0.9, 0.7); }
+  B.mesh(G.plane, BM.labelMat('ROAD CLOSED', { w: 256, h: 64, bg: '#a89a88', fg: '#5a1410', border: '#5a1410' }), 61.42, 0.85, 94, 3.0, 0.38, 1, -Math.PI / 2);
+  B.box('wood', 61.5, 0.85, 94, 0.05, 0.4, 3.1);
+  B.phys.addWall(61.4, 61.6, 92.2, 95.8, 0, 1.1, { kind: 'rail', tag: 'road closed' });
+  limb(B, 'deadBark', [63.4, 0.35, 90.2], [62.6, 0.7, 99.5], 0.32, G.cyl); // and a tree came down across it
+  // milepost
+  B.box('stone', -44, 0.4, 89.0, 0.28, 0.8, 0.2);
+
+  game.road = stats;
+};
+})();
+</script>
 <script id="bm-50-fx">
 /* ==========================================================================
    BLACKTHORN MANOR — 7. ATMOSPHERE
@@ -3746,7 +4175,7 @@ class FX {
     const lights = game.grid.lights;
     this.coronaCount = lights.length;
     const pos = new Float32Array(lights.length * 3), col = new Float32Array(lights.length * 3), size = new Float32Array(lights.length);
-    lights.forEach((l, i) => { pos[i * 3] = l.pos.x; pos[i * 3 + 1] = l.pos.y; pos[i * 3 + 2] = l.pos.z; l.occl = 0; l.occlTarget = 1; });
+    lights.forEach((l, i) => { pos[i * 3] = l.pos.x; pos[i * 3 + 1] = l.pos.y; pos[i * 3 + 2] = l.pos.z; l.occl = 0; l.occlTarget = 1; l.coronaIndex = i; });
     const cg = new THREE.BufferGeometry();
     cg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     cg.setAttribute('colour', new THREE.BufferAttribute(col, 3));
@@ -3860,6 +4289,12 @@ class FX {
     this.quality = { rain: 9000, shadowEvery: 1, mirrors: true };
     this._tmpColour = new THREE.Color();
     this._skyColour = new THREE.Color(); this._flashColour = new THREE.Color(0x8a9ab8);
+  }
+
+  /* A light that moves (the car's headlights): keep its corona with it. */
+  moveLight(l) {
+    const a = this.coronaGeo.attributes.position;
+    a.setXYZ(l.coronaIndex, l.pos.x, l.pos.y, l.pos.z); a.needsUpdate = true;
   }
 
   /* Choose the pool assignments for this frame. Returns the chosen records. */
@@ -4358,6 +4793,7 @@ class Synth {
     this.loops.laser = this.toneLoop('sine', 120, 'lowpass', 600);
     this.loops.core = this.toneLoop('sine', 41, 'lowpass', 200);
     this.loops.lift = this.toneLoop('sawtooth', 72, 'lowpass', 260);
+    this.loops.engine = this.toneLoop('sawtooth', 38, 'lowpass', 240);
     this.enabled = true;
   }
 
@@ -4436,6 +4872,10 @@ class Synth {
       this.tone('sawtooth', 820, 560, 0.09 * v, 0.02, 0.2, w);
       this.burst(this.white, 'bandpass', 1500, 4, 0.12 * v, 0.01, 0.18, w, pan);
     }
+  }
+  /* The car's engine coughing and dying. */
+  cough() {
+    for (const [w, v] of [[0, 0.9], [0.45, 0.7], [0.8, 0.5], [1.05, 0.3]]) { this.burst(this.brown, 'lowpass', 260, 2, 0.8 * v, 0.01, 0.16, w); this.tone('sawtooth', 44, 26, 0.25 * v, 0.01, 0.2, w); }
   }
   quack() { this.tone('sawtooth', 520, 380, 0.08, 0.01, 0.12); this.tone('sawtooth', 500, 360, 0.07, 0.01, 0.1, 0.18); }
   step(surface) {
@@ -4583,6 +5023,14 @@ class Synth {
     this.set('laser', grid.lasersLive && game.laserWall ? near({ x: 16, y: -45, z: -52 }, 14) * 0.18 : 0);
     this.set('lift', game.riding ? 0.22 : 0);
     this.set('hum', (grid.live('main') && zone === 'house' ? 0.03 : 0) + (zone === 'hive' ? 0.03 : 0));
+    // the arrival: your engine and your car radio, on low
+    const intro = game.intro;
+    this.set('engine', intro ? intro.engine : 0);
+    if (intro) {
+      this.loops.engine.src.frequency.setTargetAtTime(32 * (intro.engineRev || 1), this.ctx.currentTime, 0.2);
+      this.set('radio', intro.radio * 0.9, 0); this.set('radioTone', intro.radio, 0);
+      if (intro.radio > 0.01 && Math.random() < dt * 2.5) this.loops.radioTone.src.frequency.setTargetAtTime([196, 220, 247, 262, 294, 330, 262, 247][Math.floor(Math.random() * 8)], this.ctx.currentTime, 0.05);
+    }
     if (zone === 'exterior' && game.crows && game.crows.length && Math.random() < dt * 0.06) {
       const c = game.crows[Math.floor(Math.random() * game.crows.length)], v = near(c, 60);
       if (v > 0) this.caw(pan(c), 0.4 + v);
@@ -4605,7 +5053,7 @@ BM.Synth = Synth;
 'use strict';
 const BM = window.BM;
 
-const START = { x: 0, y: 0, z: 95, yaw: 0 };
+const START = { x: 0.6, y: 0, z: 95.6, yaw: 0 }; // on the lane beside your car, facing the gates
 const GATE = { delay: 1.0, swing: 9 };
 const APPLIANCE_SAY = {
   tv: 'The set warms up with a whine. Snow, and a grey hiss.',
@@ -4641,6 +5089,14 @@ class UI {
       panel: $('panel'), panelTitle: $('panel-title'), panelBody: $('panel-body'), phone: $('phone'), phoneBody: $('phone-body'),
       fade: $('fade'), title: $('title'), ending: $('ending'), endingText: $('ending-text'), objective: $('objective'),
     };
+    this.el.lights = $('lights');
+    this.lightsVisible = true;
+    this.lightsT = 0;
+    if (this.el.lights && this.el.lights.addEventListener) this.el.lights.addEventListener('click', e => {
+      let t = e.target;
+      while (t && t !== this.el.lights && !(t.dataset && t.dataset.k)) t = t.parentNode;
+      if (t && t.dataset && t.dataset.k) { this.game.lightPanelToggle(t.dataset.k); this.lightsT = 0; }
+    });
     this.mode = null;    // null | 'read' | 'fuse' | 'console' | 'phone' | 'title' | 'ending'
     this.msgT = 0;
     this.fadeV = 0;
@@ -4708,11 +5164,32 @@ class UI {
       `<div class="ph-h">Torch</div><div>${g.player.torch ? 'On' : 'Off'} — press T</div>`;
   }
   fade(v) { this.fadeV = v; if (this.el.fade) this.el.fade.style.opacity = String(v); }
+  /* The lighting panel on the side of the screen: every light group, always to hand. */
+  renderLights() {
+    const el = this.el.lights; if (!el) return;
+    const show = this.lightsVisible && this.mode !== 'title' && this.mode !== 'ending' && !this.game.intro;
+    el.style.display = show ? 'block' : 'none';
+    if (!show) return;
+    const rows = this.game.lightPanelRows();
+    let html = '', section = '';
+    for (const r of rows) {
+      if (r.section !== section) {
+        section = r.section;
+        html += `<div class="hd"><span>${section}</span><span class="sup">${r.supply}</span></div>`;
+      }
+      const dot = r.lit ? 'lit' : r.warming ? 'warm' : '';
+      html += `<div class="r${r.live ? '' : ' dead'}" data-k="${r.k}"><span class="dot ${dot}"></span><span class="k">${r.key || ''}</span><span>${r.name}</span><span class="st ${r.on ? 'on' : 'off'}">${r.on ? 'ON' : 'OFF'}</span></div>`;
+    }
+    html += '<div class="hint">Click to switch · 1–0 estate · L hide</div>';
+    if (html !== this.lightsHtml) { el.innerHTML = html; this.lightsHtml = html; }
+  }
   update(dt) {
     if (this.msgT > 0) { this.msgT -= dt; if (this.msgT <= 0) this.el.msg.style.opacity = '0'; }
     if (this.mode === 'fuse') this.renderFuse();
     if (this.mode === 'console') this.renderConsole();
     if (this.mode === 'estate') this.renderEstate();
+    this.lightsT -= dt;
+    if (this.lightsT <= 0) { this.lightsT = 0.2; this.renderLights(); }
   }
 }
 BM.UI = UI;
@@ -4753,11 +5230,13 @@ class Game {
     this.time = 0;
 
     BM.buildGrounds(this.B, this);
+    BM.buildCar(this.B, this);
     BM.buildMansion(this.B, this);
     BM.buildHive(this.B, this);
     BM.buildAppliances(this.B, this);
     BM.buildHauntedGarden(this.B, this);
     BM.buildGothic(this.B, this);
+    BM.buildRoad(this.B, this);
     BM.buildDressing(this.B, this);
     BM.buildSwitchboards(this.B, this);
     this.interactables = this.B.interactables;
@@ -4865,6 +5344,34 @@ class Game {
     const powered = lights.some(l => this.grid.live(l.circuit));
     if (!powered) this.ui.say('The switch clicks. Nothing — that circuit is dead.');
     return !anyOn;
+  }
+  /* Rows for the side lighting panel: estate groups, then every room's switch. */
+  lightPanelRows() {
+    const g = this.grid, rows = [];
+    const state = ids => {
+      const ls = ids.map(id => g.light(id)).filter(l => l && !l.dead);
+      return { on: ls.some(l => l.on), lit: ls.some(l => l.powered && l.fraction >= 0.95), warming: ls.some(l => l.powered && l.fraction < 0.95), live: ls.some(l => g.live(l.circuit)) || !ls.length };
+    };
+    const short = { street: 'Street (lane)', gate: 'Gate', flood: 'Floodlights', drive: 'Drive lamps', garden: 'Garden', pool: 'Pool', pond: 'Pond', garage: 'Garage', shed: 'Shed', cemetery: 'Cemetery' };
+    this.estateGroups.forEach(([k], i) => {
+      const st = state(this.estateLights[k]);
+      rows.push(Object.assign({ section: 'ESTATE', supply: g.lodge ? 'lodge supply ●' : 'no supply ○', k: 'estate:' + k, key: String((i + 1) % 10), name: short[k] || k }, st, { live: g.lodge && st.live }));
+    });
+    const allOn = this.estateGroups.every(([k]) => this.estateGroupOn(k));
+    rows.push({ section: 'ESTATE', supply: g.lodge ? 'lodge supply ●' : 'no supply ○', k: 'estate-all', key: '', name: allOn ? 'All estate lights off' : 'All estate lights on', on: allOn, lit: false, live: g.lodge });
+    const houseSupply = g.live('main') ? 'house supply ●' : g.live('hall') ? 'hall only ◐' : 'no supply ○';
+    for (const it of this.interactables) {
+      if (!it.switchVisual) continue;
+      const name = (typeof it.label === 'function' ? it.label() : it.label).replace(/ light panel$| lights$| light$/i, '');
+      rows.push(Object.assign({ section: 'ROOMS', supply: houseSupply, k: 'room:' + it.id, name }, state(it.controls)));
+    }
+    return rows;
+  }
+  lightPanelToggle(k) {
+    if (k === 'estate-all') return this.setEstateAll(!this.estateGroups.every(([g]) => this.estateGroupOn(g)));
+    const [kind, id] = k.split(':');
+    if (kind === 'estate') return this.toggleEstate(id);
+    if (kind === 'room' && this.byId[id]) return this.byId[id].act(this);
   }
   estateGroupOn(k) { return this.estateLights[k].some(id => this.grid.light(id).on); }
   toggleEstate(k) {
@@ -4988,6 +5495,7 @@ class Game {
     this.keys[code] = true;
     const ui = this.ui;
     if (ui.mode === 'title') { this.begin(); return; }
+    if (this.intro) { if (['KeyE', 'Space', 'Enter', 'Escape'].includes(code)) this.intro.skip(); return; }
     if (ui.mode === 'ending') return;
     if (ui.mode === 'read') { if (code === 'KeyE' || code === 'Escape' || code === 'Space' || code === 'Enter') ui.close(); return; }
     if (ui.mode === 'fuse') {
@@ -5008,6 +5516,9 @@ class Game {
       return;
     }
     if (code === 'KeyP') { ui.phone(); return; }
+    if (code === 'KeyL') { ui.lightsVisible = !ui.lightsVisible; ui.lightsT = 0; return; }
+    { const i = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0'].indexOf(code);
+      if (i >= 0 && !ui.mode && this.estateGroups[i]) { this.toggleEstate(this.estateGroups[i][0]); ui.lightsT = 0; return; } }
     if (ui.mode === 'phone' && (code === 'Escape' || code === 'KeyE')) { ui.close(); return; }
     if (code === 'KeyT') { this.player.torch = !this.player.torch; this.audio.click(); }
     if (code === 'KeyE') this.interact();
@@ -5018,7 +5529,7 @@ class Game {
     this.ui.mode = null;
     if (this.ui.el.title) this.ui.el.title.style.display = 'none';
     this.audio.start();
-    this.ui.say('Blackthorn Manor. The gates are chained, and there is not a light anywhere up the drive.', 6);
+    this.intro = new BM.Intro(this); // your car arrives; when it dies, you walk
   }
 
   /* -------------------------------------------------------- update ---- */
@@ -5026,7 +5537,8 @@ class Game {
     this.time += dt; this.clock += dt;
     const p = this.player;
     const frozen = this.ui.mode === 'read' || this.ui.mode === 'fuse' || this.ui.mode === 'console' || this.ui.mode === 'title' || this.ui.mode === 'ending';
-    if (this.riding) this.updateRide(dt);
+    if (this.intro) this.intro.update(dt);
+    else if (this.riding) this.updateRide(dt);
     else if (this.climbing) this.updateClimb(dt);
     else if (!frozen) this.updatePlayer(dt);
     this.updateDoors(dt);
@@ -5042,7 +5554,7 @@ class Game {
     this.ui.update(dt);
     this.updateCamera();
     // prompt
-    if (!frozen && !this.riding && !this.climbing) {
+    if (!frozen && !this.riding && !this.climbing && !this.intro) {
       const it = this.pick();
       const label = it ? this.labelOf(it) : '';
       this.currentPick = it;
@@ -5059,14 +5571,15 @@ class Game {
     if (k.KeyF) p.pitch = Math.max(-0.9, p.pitch - dt * 1.2);
     if (!k.KeyR && !k.KeyF) p.pitch *= Math.max(0, 1 - dt * 2);
     const fwd = (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 0.6 : 0);
-    const speed = 2.8;
+    const running = (k.ShiftLeft || k.ShiftRight) && fwd > 0;
+    const speed = running ? 5.2 : 2.8;
     const f = this.forward();
     const y0 = p.y;
     if (fwd !== 0) {
       const hit = phys.move(p, f.x * fwd * speed * dt, f.z * fwd * speed * dt);
       if (hit && hit.kind === 'laser') this.shock(f);
-      p.bob += dt * 8; p.stepAcc += Math.abs(fwd) * speed * dt;
-      if (p.stepAcc > 0.75 && p.grounded) { p.stepAcc = 0; this.audio.step(this.surfaceAt(p)); }
+      p.bob += dt * (running ? 12 : 8); p.stepAcc += Math.abs(fwd) * speed * dt;
+      if (p.stepAcc > (running ? 1.1 : 0.75) && p.grounded) { p.stepAcc = 0; this.audio.step(this.surfaceAt(p)); }
     }
     // vertical
     const sup = phys.support(p.x, p.z, Math.max(p.y, y0));

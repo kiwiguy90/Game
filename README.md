@@ -14,12 +14,28 @@ requests. There is no build step.
 | Key | Action |
 | --- | --- |
 | W / S | Move forward / back |
+| Left Shift | Run (hold with W) |
 | A / D | Turn (tank controls) |
 | Space | Jump |
 | E | Interact / put down / close a panel |
 | T | Torch (starts off) |
 | P | Phone (objective and documents) |
 | R / F | Look up / down |
+| L | Show / hide the lighting panel |
+| 1 – 0 | Switch an estate lighting group from anywhere (while no panel is open) |
+| Mouse | Click a row on the lighting panel to switch it |
+
+It begins in your own car, coming up Blackthorn Lane after midnight with the
+radio on low: an old abandoned country road through miles of pine forest,
+cracked tarmac, potholes full of rain, and timber power poles leaning along
+the verge with the street lights hung off their arms. The car stalls at the
+gates, the headlights flicker and die and the battery is flat; that is why you
+are here on foot. Press E, Space, Enter or Escape to skip the arrival.
+
+The lighting panel on the right of the screen lists every estate group and
+every room's lights, with what is on, lit, warming up or without supply. It
+works from anywhere, but a light still needs its supply: the lodge for the
+estate, the hall circuit or MAIN for the house.
 
 In the gatekeeper's lodge, the main switch powers the estate, and the estate
 lighting panel under the window controls every outdoor group: `1` street
@@ -56,6 +72,8 @@ draw-call counts are what the renderer actually issues.
 | Suite | Checks |
 | --- | --- |
 | builds | Boots and runs with no frame errors or network use; 27 house windows; light count constant |
+| arrival | The old road, poles and forest; the car drives in, stalls, its lights die; you get out and walk; skippable |
+| hud | The side lighting panel switches estate groups and rooms from anywhere; number keys; L; walking and running speeds |
 | appliances | Lodge and house appliances: switching, boiling, cycling, clocks stopping, coming back by themselves |
 | circuits | Lodge → estate lights and hall → MAIN, start-up behaviours, storm trip, appliances, fire, generator limit, the SECURITY bus |
 | playthrough | The whole game from the lane to the ending, walking every leg by flood-fill under the current state |

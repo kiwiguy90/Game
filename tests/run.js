@@ -350,7 +350,7 @@ suite('switches', () => {
   const controlled = new Set();
   for (const it of switches) for (const id of it.controls) controlled.add(id);
   for (const k in game.estateLights) for (const id of game.estateLights[k]) controlled.add(id);
-  const orphans = g.lights.filter(l => !controlled.has(l.id) && !l.circuit.startsWith('hive:') && !['battery', 'fire', 'generator', 'street'].includes(l.circuit) && !/-glow$/.test(l.id) && !(g.isHouseCircuit(l.circuit)));
+  const orphans = g.lights.filter(l => !controlled.has(l.id) && !l.circuit.startsWith('hive:') && !['battery', 'fire', 'generator', 'street', 'car'].includes(l.circuit) && !/-glow$/.test(l.id) && !(g.isHouseCircuit(l.circuit)));
   if (orphans.length) fails.push('lights nothing can switch: ' + orphans.map(l => l.id).join(', '));
   const houseLights = g.lights.filter(l => g.isHouseCircuit(l.circuit));
   const unswitched = houseLights.filter(l => !controlled.has(l.id) && !/-glow$/.test(l.id));
@@ -374,6 +374,86 @@ suite('switches', () => {
   g.setLodge(true);
   assert(!fails.length, fails.join('\n'));
   return `${sbs.length} switchboards follow the power; ${switches.length} wall switches, 6 breakers and ${game.estateGroups.length} estate groups all switch off and on, with toggle, glow, warm-up and hum`;
+});
+
+suite('arrival', () => {
+  // your car arrives, the radio on low; it stalls at the gates and its lights die
+  const env = H.load({ quiet: true });
+  const { game, BM } = env, T = BM.INTRO_T;
+  game.ui.mode = 'title'; game.keyDown('KeyX');
+  assert(game.intro, 'clicking the title starts the arrival');
+  const at = s => { while (game.intro && game.intro.t < s) game.update(1 / 30); };
+  at(3);
+  const road = game.road;
+  assert(road.poles >= 20 && road.spans >= 18 && road.trees > 300 && road.potholes > 20, 'an old road through the forest, power poles along it: ' + JSON.stringify(road));
+  assert(['street-24', 'street8', 'street40'].every(id => game.grid.light(id)), 'the street lights hang from the poles');
+  const car = game.car, x3 = car.group.position.x;
+  assert(car.beams.every(l => l.powered && l.intensity > 1.5), 'headlights on as you drive');
+  assert(game.intro.radio > 0.02 && game.intro.radio < 0.1 && game.intro.engine > 0.05, 'radio on low, engine running');
+  assert(game.audio.loops.engine && game.audio.loops.radio, 'engine and radio sounds exist');
+  game.keyDown('KeyW'); at(5); game.keyUp('KeyW');
+  assert(car.group.position.x > x3 + 5, 'the car drives up the lane (and W does nothing while you are in it)');
+  at(T.arrive + 0.2);
+  assert(Math.abs(car.group.position.x - BM.CAR.stopX) < 0.01, 'it pulls up at the gates');
+  at(T.flicker + 0.6);
+  assert(car.beams.every(l => l.flicker > 0.5), 'the headlights flicker');
+  at(T.dim + 1.2);
+  const dim = car.beams[0].target;
+  assert(dim > 0 && dim < 1.6 && car.beams[0].colour === 0xffa050, 'they sag to a dull orange');
+  at(T.dead + 0.2);
+  assert(car.beams.every(l => !l.powered) && game.intro.radio === 0, 'then go out, and the radio is gone');
+  at(T.end + 1);
+  assert(!game.intro && car.parked && game.carWall.enabled, 'you are out of the car; it stays parked');
+  assert(Math.abs(game.player.x - BM.START.x) < 0.01 && Math.abs(game.player.z - BM.START.z) < 0.01, 'standing beside it, facing the gates');
+  game.standAt(game.byId['car']); assert(game.pick() === game.byId['car'], 'you can try the car');
+  game.interact(); assert(/flat/.test(game.ui.lastSay), 'the battery is flat');
+  game.keys = {}; game.teleport(BM.START.x, 0, BM.START.z, BM.START.yaw); game.keyDown('KeyW'); for (let i = 0; i < 30; i++) game.update(1 / 30); game.keyUp('KeyW');
+  assert(game.player.z < BM.START.z - 0.5, 'and you can walk');
+  // skipping
+  const env2 = H.load({ quiet: true }), g2 = env2.game;
+  g2.ui.mode = 'title'; g2.keyDown('KeyX'); g2.update(1 / 30); g2.keyDown('Space');
+  assert(!g2.intro && g2.car.parked && g2.car.beams.every(l => !l.on), 'any key skips the arrival');
+  assert(game.frameErrors === 0, 'frame errors');
+  return `${road.poles} poles, ${road.trees} pines; drive in, stall, lights die, walk; skippable`;
+});
+
+suite('hud', () => {
+  // the lighting panel on the side of the screen, and running
+  const env = H.load({ quiet: true });
+  const { game } = env, g = game.grid;
+  g.failureRate = 0; g.stormHasTripped = true;
+  const rows = game.lightPanelRows();
+  assert(rows.filter(r => r.section === 'ESTATE').length === 11 && rows.filter(r => r.section === 'ROOMS').length >= 20, 'panel lists every estate group and every room: ' + rows.length);
+  game.ui.renderLights();
+  const el = env.window.document.getElementById('lights');
+  assert(el.style.display === 'block' && /Drive lamps/.test(el.innerHTML) && /Dining room/.test(el.innerHTML), 'panel is shown with its rows');
+  // without supply nothing comes on
+  game.lightPanelToggle('estate:drive'); for (let i = 0; i < 60; i++) game.update(1 / 30);
+  assert(!game.estateLights.drive.some(id => g.light(id).powered), 'no supply, no lights');
+  g.setLodge(true); g.throwMain();
+  // from anywhere: stand in the cellar and switch the drive lamps and the attic lights
+  game.teleport(0, -3.2, -6, 0);
+  game.lightPanelToggle('estate:drive');
+  game.lightPanelToggle('room:sw-attic'); game.lightPanelToggle('room:sw-attic');
+  for (let i = 0; i < 150; i++) game.update(1 / 30);
+  assert(game.estateLights.drive.every(id => g.light(id).powered), 'drive lamps switched on from the cellar');
+  assert(['attic-1', 'attic-2', 'attic-3'].every(id => g.light(id).powered), 'attic lights toggled from the cellar');
+  game.lightPanelToggle('room:sw-attic'); for (let i = 0; i < 10; i++) game.update(1 / 30);
+  assert(['attic-1', 'attic-2', 'attic-3'].every(id => !g.light(id).powered), 'and off again');
+  const r = game.lightPanelRows().find(x => x.k === 'room:sw-attic');
+  assert(!r.on && !r.lit && game.byId['sw-attic'].leverOn === false, 'the panel row and the wall toggle agree');
+  // number keys work the estate groups while walking about
+  const before = game.estateGroupOn('pool'); game.keyDown('Digit6'); assert(game.estateGroupOn('pool') !== before, 'key 6 switches the pool lights');
+  // L hides and shows the panel
+  game.keyDown('KeyL'); game.ui.renderLights(); assert(el.style.display === 'none', 'L hides the panel');
+  game.keyDown('KeyL'); game.ui.renderLights(); assert(el.style.display === 'block', 'L shows it again');
+  // Shift to run
+  game.teleport(0, 0, 70, 0); game.keys = { KeyW: true }; for (let i = 0; i < 60; i++) game.update(1 / 60);
+  const walk = 70 - game.player.z;
+  game.teleport(0, 0, 70, 0); game.keys = { KeyW: true, ShiftLeft: true }; for (let i = 0; i < 60; i++) game.update(1 / 60);
+  const run = 70 - game.player.z; game.keys = {};
+  assert(walk > 2.5 && walk < 3.1 && run > 4.8, `walk ${walk.toFixed(2)} m/s, run ${run.toFixed(2)} m/s`);
+  return `panel: ${rows.length} rows, works from anywhere; walk ${walk.toFixed(1)} m/s, run ${run.toFixed(1)} m/s`;
 });
 
 suite('appliances', () => {

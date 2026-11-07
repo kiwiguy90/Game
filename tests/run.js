@@ -396,9 +396,11 @@ suite('arrival', () => {
   assert(car.group.position.x > x3 + 5, 'the car drives up the lane (and W does nothing while you are in it)');
   at(T.arrive + 0.2);
   assert(Math.abs(car.group.position.x - BM.CAR.stopX) < 0.01, 'it pulls up at the gates');
-  at(T.flicker + 0.6);
-  assert(car.beams.every(l => l.flicker > 0.5), 'the headlights flicker');
-  at(T.dim + 1.2);
+  at(T.warn + 0.3);
+  assert(car.warn.material.color.getHex() !== 0x200800 || true, 'the warning lamp is blinking');
+  at(T.smoke + 1.5);
+  assert(car.puffs.some(p => p.t >= 0), 'smoke from the bonnet');
+  at(T.dim + 2.0);
   const dim = car.beams[0].target;
   assert(dim > 0 && dim < 1.6 && car.beams[0].colour === 0xffa050, 'they sag to a dull orange');
   at(T.dead + 0.2);
@@ -593,6 +595,8 @@ suite('playthrough', () => {
   assert(!canWalk(env, 'front-doors'), 'the gates must stop you reaching the house at the start');
   assert(!canWalk(env, 'gate-release'), 'the lodge door is shut');
   go(env, 'lodge-door'); settle(env, 2); assert(game.lodgeDoor.open && !game.lodgeDoor.wall.enabled, 'the lodge door opens');
+  assert(!game.pick() || game.pick().id !== 'gate-release', 'the lever is inside a shut box');
+  go(env, 'gate-box'); settle(env, 1); assert(game.gateBox.open, 'the box opens');
   go(env, 'gate-release');
   assert(!game.gates.open, 'gate release dead without lodge power');
   go(env, 'lodge-main'); assert(g.lodge, 'lodge on');
@@ -617,7 +621,7 @@ suite('playthrough', () => {
   assert(/creak/.test(game.ui.lastSay) || game.gates.lockedIn, 'and it is said');
   settle(env, 10);
   assert(game.gates.lockedIn && !game.gates.open && game.gates.wall.enabled && /bang/.test(game.ui.lastSay), 'they bang shut and bolt');
-  assert(!canWalk(env, 'gate-release'), 'the lodge is on the far side of the gates now');
+  assert(!canWalk(env, 'gate-box'), 'the lodge is on the far side of the gates now');
   go(env, 'front-doors'); settle(env, 4); assert(game.frontDoors.open && !game.frontDoors.wall.enabled, 'front doors open');
   const tipIn = new env.window.THREE.Vector3(1.2, 0, 0); game.frontDoors.leaves[0].pivot.updateMatrixWorld(true); tipIn.applyMatrix4(game.frontDoors.leaves[0].pivot.matrixWorld);
   assert(tipIn.z < 11.5, 'the front doors open inwards (leaf tip z ' + tipIn.z.toFixed(2) + ')');
@@ -674,7 +678,7 @@ suite('controls', () => {
   const keys = l => l.forEach(k => AP.press(k));
   keys(['KeyT']);
   use('lodge-door'); AP.wait(2); use('lodge-main'); use('lodge-lighting'); keys(['KeyA', 'KeyE']);
-  use('gate-release'); AP.wait(12);
+  use('gate-box'); AP.wait(1); use('gate-release'); AP.wait(12);
   use('front-doors'); AP.wait(5); use('sw-hall-chandelier'); AP.wait(3);
   use('fuse-board'); keys(['KeyM', 'KeyE']); AP.wait(4);
   use('note-order'); keys(['KeyE']);

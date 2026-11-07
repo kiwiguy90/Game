@@ -1944,8 +1944,6 @@ BM.buildGrounds = function (B, game) {
   B.box('brick', -10, L.h + 0.9, 87.8, 8.4, 1.8, 0.2);
   B.furniture('darkWood', -8.0, 82.0, 0, 1.6, 0.78, 0.8, 'lodge desk');
   B.furniture('wood', -7.0, 86.6, 0, 0.6, 0.45, 0.6, 'lodge stool');
-  B.box('metalDark', -6.28, 1.4, 83.2, 0.1, 0.5, 0.35);  // gate release box
-  B.box(BM.Basic(0x6a1010), -6.22, 1.42, 83.2, 0.02, 0.12, 0.12);
   const lodgeLamp = B.fixture({ id: 'lodge-lamp', name: 'Lodge lamp', circuit: 'lodge', kind: 'incandescent', style: 'pendant', pos: [-10, 2.5, 84], ceiling: L.h, colour: 0xffc27a, target: 1.4, range: 8 });
   B.lightSwitch('sw-lodge', 'Lodge light', [-8.9, 1.4, 87.75], [0, -1], ['lodge-lamp']);
   B.fixture({ id: 'lodge-porch', name: 'Lodge porch lantern', circuit: 'lodge', on: false, kind: 'incandescent', style: 'lantern', pos: [-11.2, 2.4, 88.45], nz: 1, colour: 0xffb060, target: 0.9, range: 7 });
@@ -1999,14 +1997,30 @@ BM.buildGrounds = function (B, game) {
       grid.setLodge(true); g.audio.lever(); g.ui.say('A heavy clunk. Somewhere up the drive, something hums. Under the window, the estate lighting panel.');
     },
   });
-  B.interactable({
-    id: 'gate-release', label: () => game.gates.open ? 'Gate release (open)' : 'Press the gate release', pos: [-6.3, 1.4, 83.2], n: [-1, 0],
-    act: g => {
-      if (!grid.lodge) { g.ui.say('The button is dead. No power to the lodge.'); g.audio.click(); return; }
-      if (g.gates.open) { g.ui.say('The gates are open.'); return; }
-      g.openGates();
-    },
-  });
+  /* ---- the gate control box: a steel box on the wall; open its door, then pull the lever ---- */
+  {
+    const bx = -6.22, by = 1.45, bz = 83.2;
+    B.box('metalDark', bx + 0.08, by, bz, 0.16, 0.62, 0.42);                       // the box
+    B.box('black', bx - 0.005, by, bz, 0.01, 0.5, 0.32);                           // its dark inside
+    const door = new THREE.Group(); door.position.set(bx - 0.01, by, bz - 0.21); B.root.add(door);
+    B.box('metalDark', -0.01, 0, 0.21, 0.02, 0.62, 0.42, 0, door);
+    B.mesh(G.sphere, 'brass', -0.03, -0.05, 0.36, 0.025, 0, door);
+    door.traverse(o => { o.userData.dynamic = true; });
+    const lever = new THREE.Group(); lever.position.set(bx - 0.03, by - 0.04, bz); lever.rotation.order = 'YXZ'; B.root.add(lever);
+    B.mesh(G.post, 'iron', 0, 0.11, 0, 0.022, 0.22, 0.022, 0, lever); B.mesh(G.sphere, BM.M('fabricRed'), 0, 0.23, 0, 0.035, 0, lever);
+    const hub = B.mesh(G.cyl, 'brass', 0, 0, 0, 0.06, 0.03, 0.06, 0, lever); hub.rotation.x = Math.PI / 2; hub.updateMatrix();
+    lever.traverse(o => { o.userData.dynamic = true; });
+    game.gateBox = { door, lever, open: false, t: 0, leverT: 0 };
+    B.interactable({
+      id: 'gate-box', label: () => game.gateBox.open ? 'Close the gate control box' : 'Open the gate control box', pos: [bx - 0.04, by + 0.27, bz + 0.17], n: [-1, 0], approachDist: 0.85,
+      act: g => { g.gateBox.open = !g.gateBox.open; g.audio.latch(0.6); g.ui.say(g.gateBox.open ? 'The steel door swings open on a lever marked GATES: UP locked, DOWN released.' : 'You shut the box.', 3); },
+    });
+    B.interactable({
+      id: 'gate-release', label: () => !game.gateBox.open ? '' : game.gates.lockedIn ? 'Pull the lever (gates bolted from the house)' : game.gates.open ? 'Push the lever up: lock the gates' : 'Pull the lever down: release the gates',
+      pos: [bx - 0.06, by - 0.04, bz], n: [-1, 0], approachDist: 0.85, enabled: () => game.gateBox.open,
+      act: g => { if (!grid.lodge) { g.ui.say('The lever moves, but the gates do not. No power to the lodge.'); g.audio.click(); return; } g.gateLever(); },
+    });
+  }
   B.readable('note-lodge', "Gatekeeper's log", [
     '14 October 1974.',
     'The doctor\'s car again after dark. Mr Blackthorn says I am not to log it. I am logging it.',
@@ -3993,7 +4007,8 @@ BM.buildSwitchboards = function (B, game) {
     },
   });
   // the gate release gets a proper label too
-  B.mesh(G.plane, labelMat('GATE\nRELEASE', { w: 192, h: 128, size: 30 }), -6.36, 1.75, 83.2, 0.22, 0.15, 1, -Math.PI / 2);
+  B.mesh(G.plane, labelMat('GATES', { w: 192, h: 64, size: 34 }), -6.36, 1.86, 83.2, 0.26, 0.09, 1, -Math.PI / 2);
+  B.mesh(G.plane, labelMat('UP · LOCK\nDOWN · RELEASE', { w: 256, h: 96, size: 22, bg: '#2a2a2a', fg: '#e0d8c0', border: '#555' }), -6.235, 1.65, 83.2, 0.2, 0.075, 1, -Math.PI / 2);
 
   /* ---- the estate lighting panel ---- */
   board({
@@ -4069,7 +4084,7 @@ const G = BM.G;
 const CAR = { stopX: 2.0, z: 97.5, roadZ: 95.0, startX: -80, y: 0 };
 BM.CAR = CAR;
 /* timeline, seconds */
-const T = { arrive: 11.0, cough: 12.0, flicker: 12.6, dim: 14.0, dead: 16.0, fadeOut: 17.0, out: 18.0, end: 19.0 };
+const T = { warn: 6.0, smoke: 7.5, arrive: 11.0, cough: 11.6, dim: 12.6, dead: 15.6, fadeOut: 16.6, out: 17.6, end: 18.6 };
 BM.INTRO_T = T;
 
 BM.buildCar = function (B, game) {
@@ -4102,6 +4117,12 @@ BM.buildCar = function (B, game) {
   const wheel = add(G.ring, 'black', 0.38, 1.08, -0.2, 0.36, 0.36, 0.36, -0.4);
   add(G.post, 'black', 0.38, 1.0, -0.3, 0.03, 0.2, 0.03, 1.2);
   const dial = add(G.box, BM.Own(0x101010), 0.0, 1.07, -0.3, 0.16, 0.05, 0.02); // the radio's dial
+  // the instrument cluster behind the wheel, with the engine warning lamp
+  const cluster = add(G.box, BM.Own(0x0c1018), 0.38, 1.1, -0.42, 0.34, 0.1, 0.02);
+  const warn = add(G.box, BM.Own(0x200800), 0.46, 1.11, -0.425, 0.03, 0.03, 0.01);
+  // smoke from under the bonnet: a few soft puffs recycled as they rise
+  const puffs = [];
+  for (let i = 0; i < 14; i++) { const m = add(G.lowSphere, BM.Basic(0x9a9a98, { transparent: true, opacity: 0, depthWrite: false }), 0, 0.9, -2.0, 0.2); m.matrixAutoUpdate = true; puffs.push({ m, t: -1, seed: i * 0.37 }); }
   for (const sx of [-0.4, 0.4]) add(G.box, 'fabricRed', sx, 0.85, 0.55, 0.55, 0.5, 0.55);   // seats
   for (const [x, z] of [[-0.82, -1.4], [0.82, -1.4], [-0.82, 1.4], [0.82, 1.4]]) add(G.cyl, 'rubber', x, 0.33, z, 0.66, 0.24, 0.66, 0, Math.PI / 2);
   // lamps: headlight glass and red tail lights that show their state
@@ -4117,7 +4138,7 @@ BM.buildCar = function (B, game) {
   }));
 
   // parked: collision, and the car itself is something you can try
-  game.car = { group: car, heads, tails, dial, beams, parked: false };
+  game.car = { group: car, heads, tails, dial, cluster, warn, puffs, beams, parked: false };
   B.interactable({
     id: 'car', label: 'Your car', pos: [CAR.stopX, 1.0, CAR.z - 0.92], n: [0, -1],
     act: g => { g.audio.click(); g.audio.tone('sine', 60, 40, 0.15, 0.01, 0.12); g.ui.say('You try the key. A dry click from under the bonnet, then nothing. The battery is completely flat.'); },
@@ -4154,10 +4175,26 @@ BM.Intro = class {
       p.yaw = -Math.PI / 2 + look * 1.0;
       p.pitch = -0.04;
     }
-    // headlights: full, then flicker, then a dying orange, then out
+    // headlights: full while the engine runs, then the battery drains and they sag to orange and out
     let head = 1, flick = 0;
-    if (t >= T.flicker && t < T.dim) flick = 0.85;
-    if (t >= T.dim) head = Math.max(0, 1 - (t - T.dim) / (T.dead - T.dim));
+    if (t >= T.dim) { const u = (t - T.dim) / (T.dead - T.dim); head = Math.max(0, 1 - u * u); }
+    // the warning lamp blinks, then holds; the cluster dies with the battery
+    const warnOn = t >= T.warn && (t < T.warn + 3 ? ((t * 3) % 1) < 0.5 : true) && t < T.dead;
+    car.warn.material.color.setHex(warnOn ? 0xff7a10 : 0x200800);
+    car.cluster.material.color.setRGB(0.05 + 0.12 * head, 0.08 + 0.16 * head, 0.14 + 0.25 * head);
+    if (t >= T.warn && !this.said.warnPing) { this.said.warnPing = true; g.audio.warnPing && g.audio.warnPing(); }
+    // smoke from the bonnet, thicker as it goes on, drifting back over the roof in the wind
+    const smoking = t >= T.smoke && t < T.out;
+    for (const pf of car.puffs) {
+      if (pf.t < 0 && smoking && Math.random() < dt * 4) { pf.t = 0; pf.life = 1.6 + Math.random() * 1.2; pf.ox = (Math.random() - 0.5) * 0.6; }
+      if (pf.t >= 0) {
+        pf.t += dt; const u = pf.t / pf.life;
+        if (u >= 1) { pf.t = -1; pf.m.material.opacity = 0; continue; }
+        const lx = x + 2.1 - u * 1.6 * (speed > 1 ? 1 : 0.3) - (speed > 1 ? 0 : u * 0.4), ly = 0.95 + u * 1.3, lz = z + pf.ox + u * 0.4;
+        pf.m.position.set(lx, ly, lz); pf.m.position.applyMatrix4(car.group.matrixWorld.clone().invert());
+        pf.m.scale.setScalar(0.2 + u * 0.8); pf.m.material.opacity = 0.35 * Math.sin(u * Math.PI) * Math.min(1, (t - T.smoke) / 2);
+      }
+    }
     car.beams.forEach((l, i) => {
       l.on = head > 0.02 && t < T.dead;
       l.pos.x = x + 2.3; l.pos.z = z + (i ? 0.62 : -0.62);
@@ -4169,16 +4206,19 @@ BM.Intro = class {
     car.heads.forEach(m => m.material.color.setRGB(1.0 * glow, 0.92 * glow, 0.7 * glow * glow));
     car.tails.forEach(m => m.material.color.setRGB(0.12 + 0.6 * glow, 0.02, 0.02));
     car.dial.material.color.setRGB(0.6 * Math.min(1, this.radio * 3), 0.35 * Math.min(1, this.radio * 3), 0.05);
-    // sound: radio low, engine, the cough, the crackle, silence
-    this.radio = t < T.flicker ? 0.05 : t < T.dim ? 0.05 * (0.4 + 0.6 * BM.noise1(t * 14)) : Math.max(0, 0.05 * (1 - (t - T.dim) / 1.2));
-    this.engine = t < T.cough ? 0.16 * (0.5 + 0.5 * Math.min(1, speed / 6)) : Math.max(0, 0.16 * (1 - (t - T.cough) / 1.0));
-    this.engineRev = 0.6 + Math.min(1, speed / 8) * 0.6;
+    // sound: radio low; the engine labours once it is smoking, coughs and dies; the radio fades with the battery
+    this.radio = t < T.dim ? 0.05 : Math.max(0, 0.05 * head * (0.5 + 0.5 * BM.noise1(t * 14)));
+    const labour = t >= T.smoke ? 0.5 + 0.5 * BM.noise1(t * 7) : 1;
+    this.engine = t < T.cough ? 0.16 * (0.5 + 0.5 * Math.min(1, speed / 6)) * labour : Math.max(0, 0.16 * (1 - (t - T.cough) / 1.0));
+    this.engineRev = (0.6 + Math.min(1, speed / 8) * 0.6) * (t >= T.smoke && t < T.cough ? 0.85 + 0.15 * BM.noise1(t * 9) : 1);
     if (t >= T.cough && !this.said.cough) { g.audio.cough && g.audio.cough(); }
-    this.say('arrive', 'Blackthorn Lane, after midnight. Miles of forest and not another car. The radio is down low and the wipers can barely keep up.', 6);
-    if (t >= T.arrive - 1.5) this.say('gates', 'The headlights find the gates. Chained. Not a light anywhere up the drive.', 4);
+    this.say('arrive', 'Blackthorn Lane, after midnight. Miles of forest and not another car. The radio is down low and the wipers can barely keep up.', 5.5);
+    if (t >= T.warn) this.say('warn', 'An amber lamp starts blinking on the dash. The engine note changes.', 3);
+    if (t >= T.smoke + 0.8) this.say('smoke', 'Smoke, pale in the headlights, leaking from under the bonnet. You ease off and look for somewhere to pull in.', 5);
+    if (t >= T.arrive - 1.0) this.say('gates', 'The headlights find a pair of iron gates. You pull over onto the verge beside them.', 4);
     if (t >= T.cough) this.say('cough', 'The engine coughs once, twice — and dies.', 3);
-    if (t >= T.flicker + 0.5) this.say('lights', 'The headlights flicker, sag to a dull orange... and go out. The radio crackles away to nothing.', 5);
-    if (t >= T.dead) this.say('flat', 'You turn the key. A click. The battery is flat. You will have to walk.', 5);
+    if (t >= T.dim + 1.0) this.say('lights', 'The dash goes dark. The headlights sag to a dull orange, and the radio fades with them... and out.', 5);
+    if (t >= T.dead) this.say('flat', 'You turn the key. A click. The battery is flat, and the bonnet is still smoking. You will have to walk.', 5);
     // fade, then you are standing in the rain beside the car
     if (t >= T.fadeOut && t < T.out) g.ui.fade(Math.min(1, (t - T.fadeOut) / (T.out - T.fadeOut)));
     if (t >= T.out && !this.placed) { this.placed = true; this.place(); }
@@ -4191,6 +4231,8 @@ BM.Intro = class {
     car.beams.forEach(l => { l.on = false; l.flicker = 0; l.lightType = 'steady'; l.target = 2.6; l.pos.x = CAR.stopX + 2.3; l.pos.z = CAR.z + (car.beams.indexOf(l) ? 0.62 : -0.62); g.fx.moveLight(l); });
     car.heads.forEach(m => m.material.color.setRGB(0.12, 0.12, 0.12));
     car.tails.forEach(m => m.material.color.setRGB(0.12, 0.02, 0.02));
+    car.warn.material.color.setHex(0x200800); car.cluster.material.color.setHex(0x0c1018);
+    for (const pf of car.puffs) { pf.t = -1; pf.m.material.opacity = 0; }
     g.carWall.enabled = true; car.parked = true;
     g.teleport(BM.START.x, BM.START.y, BM.START.z, BM.START.yaw);
     g.player.pitch = 0;
@@ -5706,6 +5748,8 @@ class Synth {
     }
     this.burst(this.white, 'bandpass', f * 4, 3, gain * 0.5, 0.001, 0.05, when || 0);
   }
+  /* the engine warning: a soft electronic ping */
+  warnPing() { for (let i = 0; i < 3; i++) this.tone('sine', 1760, 1760, 0.12, 0.005, 0.25, i * 0.5); }
   /* the escapement of the tower clock: tick, tock */
   tick(v, tock) {
     if (!this.ctx || v <= 0) return;
@@ -6263,6 +6307,19 @@ class Game {
     if (a.switchedOn) this.ui.say(APPLIANCE_SAY[a.kind] || a.name + ': on.', 3.5);
   }
   lightFire() { this.lightHearth(this.fire); }
+  /* a thin wisp from under the bonnet for a while after you get out */
+  carSmoulder(dt) {
+    const car = this.car, c = car.group.position, inv = this._carInv || (this._carInv = car.group.matrixWorld.clone().invert());
+    for (const pf of car.puffs) {
+      if (pf.t < 0 && Math.random() < dt * 0.8) { pf.t = 0; pf.life = 2.5; pf.ox = (Math.random() - 0.5) * 0.4; }
+      if (pf.t >= 0) {
+        pf.t += dt; const u = pf.t / pf.life;
+        if (u >= 1) { pf.t = -1; pf.m.material.opacity = 0; continue; }
+        pf.m.position.set(c.x + 2.1 - u * 0.5, 0.95 + u * 1.2, c.z + pf.ox + u * 0.6).applyMatrix4(inv);
+        pf.m.scale.setScalar(0.15 + u * 0.5); pf.m.material.opacity = 0.18 * Math.sin(u * Math.PI);
+      }
+    }
+  }
   /* Fires need no electricity: a match, kindling, and they burn for the night. */
   lightHearth(f) {
     if (f.lit) { this.ui.say(f.name + ' is burning. It needs no electricity at all.'); return; }
@@ -6275,11 +6332,26 @@ class Game {
     if (c.lit) { this.audio.burst(this.audio.white, 'highpass', 3000, 2, 0.15, 0.002, 0.15); this.ui.say('You strike a match and the wick takes. A small warm light, and the shadows move.', 3); }
     else { this.audio.burst(this.audio.white, 'lowpass', 500, 1, 0.1, 0.002, 0.08); this.ui.say('You pinch out the candle.', 2); }
   }
+  /* the lever in the lodge's gate box: down releases the gates, up locks them again */
+  gateLever() {
+    const gates = this.gates;
+    if (gates.lockedIn) { this.audio.click(); this.ui.say('The lever goes down and comes back up on its spring. Out at the gates, nothing moves: the bolt is on the house side now.'); return; }
+    if (gates.escaping) { this.ui.say('The motor has them. Leave it.'); return; }
+    if (!gates.open && !gates.closing) { this.openGates(); return; }
+    if (gates.open && gates.t >= 1 && !gates.closing) {
+      gates.closing = true; gates.closeT = 0; gates.closeWait = 0; gates.lodgeLocked = true;
+      this.audio.lever();
+      const p = this.player; this.audio.gateCreak(0.6, GATE.close, Math.max(0.4, 1 - Math.hypot(p.x, p.z - 88) / 40));
+      this.ui.say('You push the lever up. Out at the lane the gates begin to swing shut.', 4);
+      return;
+    }
+    this.audio.click(); this.ui.say('The gates are still moving.');
+  }
   openGates() {
     if (this.gates.open) return;
     if (this.gates.lockedIn) { this.audio.click(); this.ui.say('The release clicks. Out at the gates, nothing moves: the bolt is on the house side now.'); return; }
-    this.gates.open = true; this.gates.t = 0; this.gates.wait = 0;
-    this.audio.clunk();
+    this.gates.open = true; this.gates.t = 0; this.gates.wait = 0; this.gates.lodgeLocked = false;
+    this.audio.lever();
     const p = this.player, d = Math.hypot(p.x, p.z - 88);
     this.audio.gateCreak(GATE.delay, GATE.swing, Math.max(0.3, 1 - d / 40));
     this.ui.say('Out by the lane the bolts shoot back, and the gates begin to swing inwards, groaning on their hinges.');
@@ -6452,6 +6524,7 @@ class Game {
     this.updateDoors(dt);
     this.updateStorm(dt);
     if (this.clock_) { this.clock_.update(dt); this.clock_.tickHammers(); }
+    if (this.car && this.car.parked && this.time < 90) this.carSmoulder(dt);
     this.grid.origin = this.player;
     this.grid.update(dt);
     this.updateDucks(dt);
@@ -6548,14 +6621,21 @@ class Game {
       // the leaves become solid again once they are mostly shut, unless you are standing in the gap
       if (u > 0.55 && !g.wall.enabled && !(Math.abs(p.z - 88) < 1.2 && Math.abs(p.x) < 3.8)) g.wall.enabled = true;
       if (u >= 1) {
-        g.closing = false; g.open = false; g.t = 0; g.lockedIn = true; g.wall.enabled = true;
+        g.closing = false; g.open = false; g.t = 0; g.wall.enabled = true;
         this.audio.gateBang(Math.max(0.35, 1 - Math.hypot(p.x, p.z - 88) / 60));
-        this.ui.say('They meet with a bang that goes away down the lane — and a bolt shoots home. Locked. From the house side.', 7);
+        if (g.lodgeLocked) { g.lodgeLocked = false; this.ui.say('They meet with a bang, and the bolt drops. Locked, from the lodge.', 4); }
+        else { g.lockedIn = true; this.ui.say('They meet with a bang that goes away down the lane — and a bolt shoots home. Locked. From the house side.', 7); }
       }
     }
     // walking out through the open gates is the end of it
     if (g.escaping && g.t >= 1 && !this.outro && !this.story.ended && p.z > 89.5 && Math.abs(p.x) < 3.4) this.startOutro();
     this.updateHingedDoors(dt);
+    const gb = this.gateBox;
+    if (gb) {
+      gb.t += ((gb.open ? 1 : 0) - gb.t) * Math.min(1, dt * 6); gb.door.rotation.y = -gb.t * 1.9;
+      const down = g.open || (g.closing && !g.lodgeLocked) || g.escaping;
+      gb.leverT += ((down ? 1 : 0) - gb.leverT) * Math.min(1, dt * 8); gb.lever.rotation.z = -gb.leverT * 2.6;
+    }
   }
   /* ---- the way out: you stop on the lane and look back, and the house goes dark one light at a time ---- */
   startOutro() {

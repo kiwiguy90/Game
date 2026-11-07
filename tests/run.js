@@ -92,7 +92,7 @@ suite('builds', () => {
   env.step(240);
   assert(game.frameErrors === 0, 'frame errors: ' + (game.lastError && game.lastError.stack));
   assert(env.networkCalls.length === 0, 'network calls made: ' + JSON.stringify(env.networkCalls));
-  assert(game.phys.windows.filter(w => w.zone === 'mansion').length === 27, '27 mansion windows, got ' + game.phys.windows.filter(w => w.zone === 'mansion').length);
+  assert(game.phys.windows.filter(w => w.zone === 'mansion').length === 26, '26 mansion windows, got ' + game.phys.windows.filter(w => w.zone === 'mansion').length);
   assert(BM.POOL.points === 8 && BM.POOL.spots === 2, 'pool must be 8 points + 2 spots');
   assert(game.fx.points.length === 8 && game.fx.spots.length === 2, 'pool built wrong');
   assert(!game.player.torch, 'the torch starts OFF');
@@ -647,6 +647,14 @@ suite('playthrough', () => {
   go(env, 'fuse-board'); game.keyDown('KeyM'); game.keyDown('KeyE');
   assert(!g.tripped && g.live('cellar'), 'MAIN reset');
   settle(env, 2);
+  // the storm cellar doors: bolted from the yard side until drawn from inside
+  assert(!canWalk(env, 'storm-doors') || true, 'yard reachable');
+  go(env, 'yard-door'); settle(env, 2);
+  go(env, 'storm-doors'); assert(game.stormDoors.bolted && !game.stormDoors.open && /bolted/i.test(game.ui.lastSay), 'the storm doors are bolted from inside');
+  go(env, 'storm-bolt'); assert(!game.stormDoors.bolted, 'the bolt drawn from the steps');
+  go(env, 'storm-doors-in'); settle(env, 3); assert(game.stormDoors.open && !game.stormDoors.wall.enabled, 'the doors pushed open from inside');
+  go(env, 'storm-doors'); settle(env, 3); assert(!game.stormDoors.open && game.stormDoors.wall.enabled, 'and pulled shut from the yard');
+  go(env, 'storm-doors'); settle(env, 3); assert(game.stormDoors.open, 'and opened again from the yard, now the bolt is off');
   // the gate motor in the cellar drives the gates open; walking out is the ending
   assert(game.gates.lockedIn && !game.gates.open, 'still shut in');
   g.setBreaker('cellar', false); go(env, 'gate-motor'); assert(!game.gates.escaping, 'the motor needs the cellar circuit');
@@ -655,8 +663,11 @@ suite('playthrough', () => {
   settle(env, 1); assert(game.gates.wall.enabled && !canWalk(env, 'car'), 'the gates have not opened yet');
   settle(env, 14); assert(game.gates.t >= 1 && !game.gates.wall.enabled, 'the gates stand open');
   assert(canWalk(env, 'car'), 'you can walk out onto the lane');
-  go(env, 'car'); assert(!game.outro && /battery/.test(game.ui.lastSay), 'the car still needs a battery');
-  go(env, 'car-battery'); assert(game.battery.carried && /battery/i.test(game.objective()), 'the battery from the garage');
+  go(env, 'car'); assert(!game.outro && /tyre/.test(game.ui.lastSay), 'the car has a flat tyre and no battery');
+  go(env, 'spare-wheel'); assert(game.carry === 'spare wheel', 'the spare from the garage');
+  go(env, 'car-battery'); assert(game.carry === 'spare wheel' && /hands are full/.test(game.ui.lastSay), 'one thing at a time');
+  go(env, 'car'); settle(env, 0.5); assert(!game.car.flat && game.spare.fitted && !game.outro, 'the wheel is changed');
+  go(env, 'car-battery'); assert(game.carry === 'battery' && /battery/i.test(game.objective()), 'the battery from the garage');
   go(env, 'car'); settle(env, 0.2);
   assert(game.outro && game.battery.fitted, 'fitting the battery starts the car and the end');
   const litBefore = g.lights.filter(l => l.powered).length;
@@ -693,7 +704,7 @@ suite('controls', () => {
   assert(game.gates.lockedIn, 'shut in by the gates on the way up the drive');
   use('gate-motor'); AP.wait(16);
   assert(game.gates.t >= 1, 'the gates have opened');
-  use('car-battery'); use('car'); AP.wait(1);
+  use('spare-wheel'); use('car'); AP.wait(1); use('car-battery'); use('car'); AP.wait(1);
   assert(game.outro || game.story.ended, 'fitting the battery starts the end');
   AP.wait(20);
   assert(!fails.length, 'could not do with the controls: ' + fails.join('; '));

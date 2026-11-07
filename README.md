@@ -28,11 +28,30 @@ requests. There is no build step.
 | Mouse | Click a row on the lighting panel to switch it |
 
 It begins in your own car, coming up Blackthorn Lane after midnight with the
-radio on low: an old abandoned country road through miles of pine forest,
-cracked tarmac, potholes full of rain, and timber power poles leaning along
-the verge with the street lights hung off their arms. The car stalls at the
-gates, the headlights flicker and die and the battery is flat; that is why you
-are here on foot. Press E, Space, Enter or Escape to skip the arrival.
+radio playing: an old abandoned country road through miles of pine forest,
+the bridge behind you under the river, the nearest town a hundred and fifty
+kilometres away, and no signal. A warning lamp comes on, smoke leaks from the
+bonnet, you pull over at the gates, the engine dies and the battery drains:
+the dash, the headlights and the radio fade out together. When you get out the
+tyre is flat too. Press E, Space, Enter or Escape to skip the arrival.
+
+The lodge's telephone is dead. The gate box in the lodge has a lever that
+releases the gates; past the contact in the drive they swing shut and bolt
+behind you. The way out is the gate motor switch in the cellar (Eleanor's
+journal in the attic tells you where), then the spare wheel and the car
+battery from the garage, carried one at a time to your car. Fit them, turn the
+key, and drive.
+
+Doors open and close (the front doors inwards, the lodge door, the kitchen,
+back and side doors, every room door). Sash windows slide up and let the rain
+in; curtains draw and open, and some rooms are found with them drawn. Every
+main room has a fireplace you can light and a candle you can light and snuff:
+when the storm takes the power, that is your light. Behind the house is a
+walled kitchen courtyard with two steel storm doors over steps down to the
+cellar, bolted from inside. The clock tower over the hall is electric: with
+the attic circuit on it ticks, chimes the quarters and strikes the hours, its
+dial lit from behind on its own switch; a ladder from the attic goes up to the
+clock room and the belfry.
 
 The lighting panel on the right of the screen has the two master switches, then
 every estate group and every room's lights, with what is on, lit, warming up or without supply. It

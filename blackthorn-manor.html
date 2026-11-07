@@ -56,7 +56,7 @@
 <div id="ending"><div id="ending-text"></div></div>
 <div id="title"><h1>BLACKTHORN MANOR</h1>
   <p>You have inherited a house that stopped in 1974. There is no one here to fight. There is only the dark, and the switches, and what the lights will show you.</p>
-  <div class="keys">W / S move · A / D turn · Shift run · Space jump · E interact · T torch · P phone<br>R / F look up and down · L lighting panel · 1–0 estate lights<br><br>Click to begin</div></div>
+  <div class="keys">W / S move · A / D turn · Shift run · Space jump · E interact · T torch · P phone<br>R / F look up and down · L lighting panel · O / I master switches · 1–0 estate lights<br><br>Click to begin</div></div>
 <script id="three-r128">/**
  * @license
  * Copyright 2010-2021 Three.js Authors
@@ -1128,6 +1128,7 @@ class Builder {
     this.levelName = 'ground';
     this.interactables = [];
     this.windows = phys.windows; this.doorways = phys.doorways; this.paths = phys.paths;
+    this.doors = [];
     this.fixtures = [];
     this.animated = [];
     this.readables = [];
@@ -1363,6 +1364,62 @@ class Builder {
     return rec;
   }
 
+  /* A real door in a doorway: one leaf, or two meeting in the middle. It
+     swings on its hinge(s), blocks the way while shut, and can be worked from
+     either side. o: id, axis ('x': the wall runs along x at z = c; 'z': along
+     z at x = c), at (centre along the wall), c, w, h, hinge ('low'|'high'|
+     'both'), swing (+1|-1: the side the free edge moves to, along the wall's
+     normal), mat, dur, sound ('creak'|'groan'), label, wallT. */
+  hingedDoor(o) {
+    const y0 = o.y0 !== undefined ? o.y0 : this.levelFloor(), h = o.h || 2.1, w = o.w, thick = o.thick || 0.07, axis = o.axis;
+    const hinges = o.hinge === 'both' ? [-1, 1] : [o.hinge === 'high' ? 1 : -1];
+    const leafW = o.hinge === 'both' ? w / 2 : w;
+    const leaves = [];
+    for (const hs of hinges) {
+      const pivot = new THREE.Group();
+      const along = o.at + hs * w / 2;
+      if (axis === 'x') pivot.position.set(along, y0, o.c); else pivot.position.set(o.c, y0, along);
+      this.root.add(pivot);
+      const sign = -hs; // the leaf runs from its hinge towards the door's centre
+      const lx = axis === 'x' ? sign * leafW / 2 : 0, lz = axis === 'x' ? 0 : sign * leafW / 2;
+      const sx = axis === 'x' ? leafW : thick, sz = axis === 'x' ? thick : leafW;
+      this.box(o.mat || 'darkWood', lx, h / 2, lz, sx, h, sz, 0, pivot);
+      // raised panels on both faces, a rail between, and a knob at the free edge
+      for (const face of [-1, 1]) {
+        const off = face * (thick / 2 + 0.012);
+        const px = axis === 'x' ? lx : off, pz = axis === 'x' ? off : lz;
+        const pw = leafW - 0.22;
+        for (const [py, ph] of [[h * 0.3, h * 0.42], [h * 0.76, h * 0.26]]) this.box(o.panelMat || 'panel', px, py, pz, axis === 'x' ? pw : 0.02, ph, axis === 'x' ? 0.02 : pw, 0, pivot);
+        const kx = axis === 'x' ? sign * (leafW - 0.12) : off * 1.6, kz = axis === 'x' ? off * 1.6 : sign * (leafW - 0.12);
+        this.mesh(G.sphere, o.knobMat || 'brass', kx, 1.0, kz, 0.06, 0, pivot);
+      }
+      pivot.traverse(m => { m.userData.dynamic = true; });
+      leaves.push({ pivot, sign });
+    }
+    const wt = o.wallT || 0.3;
+    const wall = axis === 'x'
+      ? this.phys.addWall(o.at - w / 2, o.at + w / 2, o.c - wt / 2, o.c + wt / 2, y0, y0 + h, { kind: 'door', tag: o.id })
+      : this.phys.addWall(o.c - wt / 2, o.c + wt / 2, o.at - w / 2, o.at + w / 2, y0, y0 + h, { kind: 'door', tag: o.id });
+    const door = {
+      id: o.id, leaves, wall, axis, at: o.at, c: o.c, w, wt, y0, swing: o.swing || -1, maxAngle: o.maxAngle || 1.75,
+      open: false, opened: false, t: 0, target: 0, moving: false, dur: o.dur || 1.6, sound: o.sound || 'creak', label: o.label || 'the door',
+      angle(a) { for (const l of this.leaves) l.pivot.rotation.y = (this.axis === 'x' ? -l.sign * this.swing : l.sign * this.swing) * a; },
+    };
+    this.doors.push(door);
+    if (o.interact !== false) {
+      for (const side of [-1, 1]) {
+        const n = axis === 'x' ? [0, side] : [side, 0];
+        const pos = axis === 'x' ? [o.at, y0 + 1.1, o.c + side * (wt / 2 + 0.05)] : [o.c + side * (wt / 2 + 0.05), y0 + 1.1, o.at];
+        this.interactable({
+          id: side === (o.outside || 1) ? o.id : o.id + '-in', kind: 'door', door, pos, n, approachDist: 0.95,
+          label: () => (door.open ? 'Close ' : 'Open ') + door.label,
+          act: g => g.toggleDoor(door),
+        });
+      }
+    }
+    return door;
+  }
+
   /* ---------------- interactables ---------------- */
   interactable(o) {
     const it = Object.assign({
@@ -1543,6 +1600,8 @@ BM.buildGrounds = function (B, game) {
   B.wall('z', L.x0, L.z0, L.z1, { t: 0.4, mat: 'plaster', matOut: 'brick', outSign: -1, y1: L.h });
   B.wall('z', L.x1, L.z0, L.z1, { t: 0.4, mat: 'plaster', matOut: 'brick', outSign: 1, y1: L.h });
   B.boxE('stone', L.x0 + 0.2, L.x1 - 0.2, 0, 0.04, L.z0 + 0.2, L.z1 - 0.2);
+  // the lodge door: a plain four-panel door, hinged on the left, opening into the room
+  game.lodgeDoor = B.hingedDoor({ id: 'lodge-door', axis: 'x', at: -10, c: 88, w: 1.2, h: 2.1, hinge: 'low', swing: -1, mat: 'shutter', panelMat: 'boards', dur: 1.4, sound: 'creak', label: 'the lodge door', wallT: 0.4 });
   P.rect(L.x0 - 0.4, L.x1 + 0.4, L.z0 - 0.4, L.z1 + 0.4, L.h + 0.2, L.h, 'lodge-roof');
   B.boxE('plaster', L.x0, L.x1, L.h, L.h + 0.2, L.z0, L.z1);
   for (const s of [-1, 1]) {
@@ -1852,23 +1911,9 @@ BM.buildMansion = function (B, game) {
   B.wall('z', 0, -12, -6, { mat: 'tile' });
   B.wall('z', 6, -12, -6, { mat: 'plaster' });
 
-  /* ---- the front doors: two leaves that open together on a long groan ---- */
-  const frontWall = P.addWall(-1.2, 1.2, 11.85, 12.15, 0, 3.2, { kind: 'door' });
-  const leaves = [];
-  for (const sx of [-1, 1]) {
-    const pivot = new THREE.Group(); pivot.position.set(sx * 1.2, 0, 12.1); B.root.add(pivot);
-    B.box('darkWood', -sx * 0.6, 1.6, 0, 1.2, 3.2, 0.1, 0, pivot);
-    B.box('panel', -sx * 0.6, 1.0, 0.06, 0.9, 1.2, 0.02, 0, pivot);
-    B.box('panel', -sx * 0.6, 2.4, 0.06, 0.9, 1.0, 0.02, 0, pivot);
-    B.mesh(G.ring, 'brass', -sx * 1.0, 1.3, 0.08, 0.18, 0.18, 0.18, 0, pivot);
-    pivot.traverse(o => { o.userData.dynamic = true; });
-    leaves.push(pivot);
-  }
-  game.frontDoors = { wall: frontWall, leaves, open: false, t: 0 };
-  B.interactable({
-    id: 'front-doors', kind: 'door', label: () => game.frontDoors.open ? '' : 'Open the front doors', pos: [0, 1.5, 12.25], n: [0, 1],
-    enabled: () => !game.frontDoors.open, act: g => g.openFrontDoors(),
-  });
+  /* ---- the front doors: two leaves that open inwards together on a long groan, and can be shut again ---- */
+  game.frontDoors = B.hingedDoor({ id: 'front-doors', axis: 'x', at: 0, c: 12.0, w: 2.4, h: 3.1, hinge: 'both', swing: -1, mat: 'darkWood', dur: 3.2, sound: 'groan', label: 'the front doors', wallT: 0.4, maxAngle: 1.7 });
+  B.mesh(G.ring, 'brass', -0.3, 1.5, 12.26, 0.18, 0.18, 0.18); B.mesh(G.ring, 'brass', 0.3, 1.5, 12.26, 0.18, 0.18, 0.18); // the knockers
   // porch steps and lanterns
   B.boxE('stone', -3, 3, 0, 0.06, 12.2, 15.2);
   for (const sx of [-1, 1]) {
@@ -4589,6 +4634,27 @@ class Synth {
   tink() { this.tone('sine', 2600, 2400, 0.06, 0.001, 0.05); }
   denied() { this.tone('square', 220, 200, 0.2, 0.01, 0.18); this.tone('square', 165, 150, 0.2, 0.01, 0.25, 0.2); }
   accept() { this.tone('sine', 660, 660, 0.15, 0.01, 0.12); this.tone('sine', 880, 880, 0.12, 0.01, 0.15, 0.12); }
+  /* a wooden door on dry hinges: a short stick-slip creak, higher and thinner than the gates */
+  doorCreak(dur, gain) {
+    if (!this.ctx) return;
+    const ctx = this.ctx, g0 = gain || 0.4, t = ctx.currentTime;
+    const o = ctx.createOscillator(); o.type = 'sawtooth';
+    o.frequency.setValueAtTime(16, t); o.frequency.linearRampToValueAtTime(9, t + dur);
+    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 12;
+    f.frequency.setValueAtTime(1700, t); f.frequency.linearRampToValueAtTime(2300, t + dur * 0.6); f.frequency.linearRampToValueAtTime(1400, t + dur);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t);
+    let tt = t;
+    while (tt < t + dur) { const seg = 0.12 + Math.random() * 0.3; g.gain.linearRampToValueAtTime((0.2 + Math.random() * 0.8) * 0.3 * g0, tt + seg * 0.5); g.gain.linearRampToValueAtTime(0.02 * g0, tt + seg); tt += seg; }
+    g.gain.linearRampToValueAtTime(0.0001, t + dur + 0.2);
+    o.connect(f); f.connect(g); g.connect(this.master); o.start(t); o.stop(t + dur + 0.4);
+  }
+  /* a door meeting its frame and the latch dropping */
+  latch(gain) {
+    const v = gain === undefined ? 1 : gain;
+    this.tone('sine', 120, 60, 0.35 * v, 0.004, 0.25);
+    this.burst(this.white, 'lowpass', 1200, 1, 0.3 * v, 0.002, 0.08);
+    this.burst(this.white, 'bandpass', 3200, 4, 0.2 * v, 0.001, 0.05, 0.09);
+  }
   /* the gates meeting: iron on iron, then the bolt */
   gateBang(v) {
     v = v === undefined ? 1 : v;
@@ -4900,7 +4966,7 @@ class UI {
       const dot = r.lit ? 'lit' : r.warming ? 'warm' : '';
       html += `<div class="r${r.live ? '' : ' dead'}" data-k="${r.k}"><span class="dot ${dot}"></span><span class="k">${r.key || ''}</span><span>${r.name}</span><span class="st ${r.on ? 'on' : 'off'}">${r.on ? 'ON' : 'OFF'}</span></div>`;
     }
-    html += '<div class="hint">Click to switch · 1–0 estate · L hide</div>';
+    html += '<div class="hint">Click to switch · O / I masters · 1–0 estate · L hide</div>';
     if (html !== this.lightsHtml) { el.innerHTML = html; this.lightsHtml = html; }
   }
   update(dt) {
@@ -5040,7 +5106,7 @@ class Game {
     if (!g.lodge) return 'The gates are locked. Try the gatekeeper\'s lodge, to the left of the gates.';
     if (!gates.open && !gates.lockedIn) return 'There is power at the lodge. Work the gate release — and the estate lighting panel under the window lights the grounds.';
     if (!gates.lockedIn) return 'Go up the drive to the house.';
-    if (!this.frontDoors.open) return 'The gates have shut and bolted behind you. There is nothing for it but the house.';
+    if (!this.frontDoors.opened) return 'The gates have shut and bolted behind you. There is nothing for it but the house.';
     if (!g.breakers.main && !g.stormHasTripped) return this.hallLit() ? 'The hall is lit. Find the fuse board for the rest of the house — try the pantry, at the back.' : 'It is dark. There is a light panel by the door.';
     if (g.tripped) return 'The storm has tripped MAIN. Go back down to the pantry fuse board and reset it.';
     if (!s.journalRead) return 'Look round the house. Eleanor\'s rooms are upstairs, and the attic above them.';
@@ -5066,6 +5132,8 @@ class Game {
       const ls = ids.map(id => g.light(id)).filter(l => l && !l.dead);
       return { on: ls.some(l => l.on), lit: ls.some(l => l.powered && l.fraction >= 0.95), warming: ls.some(l => (l.powered && l.fraction < 0.95) || l.waiting), live: ls.some(l => g.live(l.circuit)) || !ls.length };
     };
+    rows.push({ section: 'MASTER', supply: '', k: 'master:outside', key: 'O', name: 'OUTSIDE supply (lodge)', on: g.lodge, lit: g.lodge, warming: false, live: true });
+    rows.push({ section: 'MASTER', supply: '', k: 'master:inside', key: 'I', name: 'INSIDE supply (MAIN)', on: g.live('main'), lit: g.live('main'), warming: false, live: g.lodge });
     const short = { street: 'Street (lane)', gate: 'Gate', flood: 'Floodlights', drive: 'Drive lamps', garden: 'Garden', pool: 'Pool', pond: 'Pond', garage: 'Garage', shed: 'Shed', cemetery: 'Cemetery' };
     this.estateGroups.forEach(([k], i) => {
       const st = state(this.estateLights[k]);
@@ -5084,6 +5152,7 @@ class Game {
   lightPanelToggle(k) {
     if (k === 'estate-all') return this.setEstateAll(!this.estateGroups.every(([g]) => this.estateGroupOn(g)));
     const [kind, id] = k.split(':');
+    if (kind === 'master') return id === 'outside' ? this.masterOutside() : this.masterInside();
     if (kind === 'estate') return this.toggleEstate(id);
     if (kind === 'room' && this.byId[id]) return this.byId[id].act(this);
   }
@@ -5123,10 +5192,53 @@ class Game {
     this.audio.gateCreak(GATE.delay, GATE.swing, Math.max(0.3, 1 - d / 40));
     this.ui.say('Out by the lane the bolts shoot back, and the gates begin to swing inwards, groaning on their hinges.');
   }
-  openFrontDoors() {
-    if (this.frontDoors.open) return;
-    this.frontDoors.open = true; this.frontDoors.wall.enabled = false; this.frontDoors.t = 0;
-    this.audio.groan();
+  openFrontDoors() { if (!this.frontDoors.open) this.toggleDoor(this.frontDoors); }
+  /* Doors: work the handle and the leaf swings; shut, it blocks the way again. */
+  toggleDoor(door) {
+    if (door.moving) return;
+    door.moving = true; door.target = door.open ? 0 : 1;
+    const p = this.player, d = Math.hypot(door.at - (door.axis === 'x' ? p.x : p.z), door.c - (door.axis === 'x' ? p.z : p.x));
+    const v = Math.max(0.2, 1 - d / 20);
+    if (door.target) { if (door.sound === 'groan') this.audio.groan(); else this.audio.doorCreak(door.dur * 0.8, v); }
+    else this.audio.doorCreak(door.dur * 0.6, v * 0.7);
+  }
+  inDoorway(door) {
+    const p = this.player, r = BM.PLAYER.radius + 0.1;
+    const along = door.axis === 'x' ? p.x : p.z, across = door.axis === 'x' ? p.z : p.x;
+    return Math.abs(along - door.at) < door.w / 2 + r && Math.abs(across - door.c) < door.wt / 2 + r && p.y > door.y0 - 1 && p.y < door.y0 + 2.2;
+  }
+  updateHingedDoors(dt) {
+    for (const d of this.B.doors) {
+      if (!d.moving) continue;
+      const dir = d.target > d.t ? 1 : -1;
+      d.t = Math.max(0, Math.min(1, d.t + dir * dt / d.dur));
+      let a;
+      if (d.sound === 'groan' && dir > 0) {
+        // the front doors: a first heave to a crack, a pause, then the long swing
+        const t = d.t; a = (t < 0.35 ? (t / 0.35) * 0.2 : t < 0.42 ? 0.2 : 0.2 + ((t - 0.42) / 0.58) * 0.8) * d.maxAngle;
+      } else a = (1 - Math.cos(d.t * Math.PI)) / 2 * d.maxAngle;
+      d.angle(a);
+      if (d.t > 0.3 && d.wall.enabled) d.wall.enabled = false;
+      if (dir > 0 && d.t >= 1) { d.moving = false; d.open = true; d.opened = true; }
+      if (dir < 0 && d.t <= 0) {
+        if (this.inDoorway(d)) { d.t = 0.02; continue; } // it will not shut on you: it waits
+        d.moving = false; d.open = false; d.wall.enabled = true;
+        const p = this.player, dist = Math.hypot(d.at - (d.axis === 'x' ? p.x : p.z), d.c - (d.axis === 'x' ? p.z : p.x));
+        this.audio.latch(Math.max(0.2, 1 - dist / 20));
+      }
+    }
+  }
+  /* The master switches on the panel: the lodge main for everything outside, MAIN for the house. */
+  masterOutside() {
+    const g = this.grid; g.setLodge(!g.lodge); this.audio.lever();
+    this.ui.say(g.lodge ? 'OUTSIDE master: on. The lodge supply comes up with a clunk.' : 'OUTSIDE master: off. The lodge supply drops, and everything on it with it.');
+    return g.lodge;
+  }
+  masterInside() {
+    const g = this.grid;
+    if (!g.lodge) { this.audio.click(); this.ui.say('INSIDE master: nothing. The house is fed from the lodge, and the lodge is off.'); return false; }
+    if (g.live('main')) { g.setBreaker('main', false); this.audio.lever(); this.ui.say('INSIDE master: off. MAIN drops and the house goes dark around you.'); return false; }
+    g.throwMain(); return true;
   }
   throwGateMotor() {
     const gates = this.gates;
@@ -5218,6 +5330,8 @@ class Game {
     }
     if (code === 'KeyP') { ui.phone(); return; }
     if (code === 'KeyL') { ui.lightsVisible = !ui.lightsVisible; ui.lightsT = 0; return; }
+    if (code === 'KeyO' && !ui.mode) { this.masterOutside(); ui.lightsT = 0; return; }
+    if (code === 'KeyI' && !ui.mode) { this.masterInside(); ui.lightsT = 0; return; }
     { const i = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0'].indexOf(code);
       if (i >= 0 && !ui.mode && this.estateGroups[i]) { this.toggleEstate(this.estateGroups[i][0]); ui.lightsT = 0; return; } }
     if (ui.mode === 'phone' && (code === 'Escape' || code === 'KeyE')) { ui.close(); return; }
@@ -5347,13 +5461,7 @@ class Game {
     }
     // walking out through the open gates is the end of it
     if (g.escaping && g.t >= 1 && !this.outro && !this.story.ended && p.z > 89.5 && Math.abs(p.x) < 3.4) this.startOutro();
-    const fd = this.frontDoors;
-    if (fd.open && fd.t < 1) {
-      // two stages: a first heave to a crack, a pause, then the long swing
-      fd.t = Math.min(1, fd.t + dt / 3.2);
-      const t = fd.t, a = t < 0.35 ? (t / 0.35) * 0.35 : t < 0.42 ? 0.35 : 0.35 + ((t - 0.42) / 0.58) * 1.45;
-      fd.leaves[0].rotation.y = -a; fd.leaves[1].rotation.y = a;
-    }
+    this.updateHingedDoors(dt);
   }
   /* ---- the way out: you stop on the lane and look back, and the house goes dark one light at a time ---- */
   startOutro() {

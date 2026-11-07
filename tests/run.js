@@ -16,7 +16,8 @@ const LEVELS = { ground: 0, upper: 4.2, attic: 8.2, cellar: -3.2 };
 
 function openEverything(game) {
   const g = game.grid;
-  g.setLodge(true); game.openGates(); game.openFrontDoors(); g.throwMain();
+  g.setLodge(true); game.openGates(); g.throwMain();
+  for (const d of game.B.doors) if (!d.open) game.toggleDoor(d);
   game.story.journalRead = true;
   for (let i = 0; i < 400; i++) game.updateDoors(1 / 30);
   game.fx.updateAppliances(0, 0);
@@ -490,6 +491,16 @@ suite('hud', () => {
   assert(!r.on && !r.lit && game.byId['sw-attic'].leverOn === false, 'the panel row and the wall toggle agree');
   // number keys work the estate groups while walking about
   const before = game.estateGroupOn('pool'); game.keyDown('Digit6'); assert(game.estateGroupOn('pool') !== before, 'key 6 switches the pool lights');
+  // the master switches: outside is the lodge supply, inside is MAIN
+  game.keyDown('KeyO'); assert(!g.lodge, 'O drops the outside supply');
+  game.keyDown('KeyI'); assert(!g.lodge && !g.live('main'), 'inside cannot come up without the lodge');
+  game.keyDown('KeyO'); assert(g.lodge, 'O brings the outside supply back');
+  if (g.live('main')) game.keyDown('KeyI');
+  assert(!g.live('main'), 'I drops MAIN');
+  game.keyDown('KeyI'); assert(g.live('main'), 'I brings MAIN up');
+  game.lightPanelToggle('master:inside'); assert(!g.live('main') && g.lodge, 'the panel row drops MAIN alone');
+  game.lightPanelToggle('master:inside');
+  assert(game.lightPanelRows()[0].section === 'MASTER' && game.lightPanelRows()[1].on, 'the masters head the panel');
   // L hides and shows the panel
   game.keyDown('KeyL'); game.ui.renderLights(); assert(el.style.display === 'none', 'L hides the panel');
   game.keyDown('KeyL'); game.ui.renderLights(); assert(el.style.display === 'block', 'L shows it again');
@@ -580,9 +591,13 @@ suite('playthrough', () => {
   const env = H.load({ quiet: true });
   const { game } = env, g = game.grid;
   assert(!canWalk(env, 'front-doors'), 'the gates must stop you reaching the house at the start');
+  assert(!canWalk(env, 'gate-release'), 'the lodge door is shut');
+  go(env, 'lodge-door'); settle(env, 2); assert(game.lodgeDoor.open && !game.lodgeDoor.wall.enabled, 'the lodge door opens');
   go(env, 'gate-release');
   assert(!game.gates.open, 'gate release dead without lodge power');
   go(env, 'lodge-main'); assert(g.lodge, 'lodge on');
+  go(env, 'lodge-door-in'); settle(env, 2); assert(!game.lodgeDoor.open && game.lodgeDoor.wall.enabled, 'and shuts again from inside');
+  go(env, 'lodge-door-in'); settle(env, 2);
   go(env, 'lodge-lighting'); game.keyDown('KeyA'); game.keyDown('KeyE');
   settleLights(env);
   assert(game.estateLights.drive.every(id => g.light(id).powered || g.light(id).dead), 'drive lamps on from the lodge');
@@ -603,8 +618,11 @@ suite('playthrough', () => {
   settle(env, 10);
   assert(game.gates.lockedIn && !game.gates.open && game.gates.wall.enabled && /bang/.test(game.ui.lastSay), 'they bang shut and bolt');
   assert(!canWalk(env, 'gate-release'), 'the lodge is on the far side of the gates now');
-  go(env, 'front-doors'); assert(game.frontDoors.open, 'front doors open');
-  settle(env, 4);
+  go(env, 'front-doors'); settle(env, 4); assert(game.frontDoors.open && !game.frontDoors.wall.enabled, 'front doors open');
+  const tipIn = new env.window.THREE.Vector3(1.2, 0, 0); game.frontDoors.leaves[0].pivot.updateMatrixWorld(true); tipIn.applyMatrix4(game.frontDoors.leaves[0].pivot.matrixWorld);
+  assert(tipIn.z < 11.5, 'the front doors open inwards (leaf tip z ' + tipIn.z.toFixed(2) + ')');
+  go(env, 'front-doors-in'); settle(env, 4); assert(!game.frontDoors.open && game.frontDoors.wall.enabled, 'and can be shut from inside');
+  go(env, 'front-doors-in'); settle(env, 4);
   go(env, 'hall-panel'); settle(env, 3);
   assert(game.hallLit(), 'hall lit from the panel before the fuse board');
   assert(!g.live('ground'), 'the rest of the house still dark');
@@ -655,7 +673,7 @@ suite('controls', () => {
   const use = (id, o) => { const r = AP.goUse(id, o); if (!r.ok) fails.push(id + ': ' + r.why + ' ' + JSON.stringify(r.at || r.from || '')); return r; };
   const keys = l => l.forEach(k => AP.press(k));
   keys(['KeyT']);
-  use('lodge-main'); use('lodge-lighting'); keys(['KeyA', 'KeyE']);
+  use('lodge-door'); AP.wait(2); use('lodge-main'); use('lodge-lighting'); keys(['KeyA', 'KeyE']);
   use('gate-release'); AP.wait(12);
   use('front-doors'); AP.wait(5); use('hall-panel'); AP.wait(3);
   use('fuse-board'); keys(['KeyM', 'KeyE']); AP.wait(4);

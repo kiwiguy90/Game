@@ -18,11 +18,12 @@ requests. There is no build step.
 | Left Shift | Run (hold with W) |
 | A / D | Turn (tank controls) |
 | Space | Jump |
-| E | Interact / put down / close a panel |
+| E | Interact: switches, doors (open and close), documents, appliances |
 | T | Torch (starts off) |
 | P | Phone (objective and documents) |
 | R / F | Look up / down |
 | L | Show / hide the lighting panel |
+| O / I | Master switches: all outside supply (the lodge), all inside supply (MAIN) |
 | 1 – 0 | Switch an estate lighting group from anywhere (while no panel is open) |
 | Mouse | Click a row on the lighting panel to switch it |
 
@@ -33,8 +34,8 @@ the verge with the street lights hung off their arms. The car stalls at the
 gates, the headlights flicker and die and the battery is flat; that is why you
 are here on foot. Press E, Space, Enter or Escape to skip the arrival.
 
-The lighting panel on the right of the screen lists every estate group and
-every room's lights, with what is on, lit, warming up or without supply. It
+The lighting panel on the right of the screen has the two master switches, then
+every estate group and every room's lights, with what is on, lit, warming up or without supply. It
 works from anywhere, but a light still needs its supply: the lodge for the
 estate, the hall circuit or MAIN for the house.
 

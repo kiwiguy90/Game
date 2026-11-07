@@ -12,13 +12,12 @@ const assert = (cond, msg) => { if (!cond) throw new Fail(msg); };
 const near = (a, b, eps) => Math.abs(a - b) <= (eps || 1e-6);
 
 /* ------------------------------------------------------------ helpers -- */
-const LEVELS = { ground: 0, upper: 4.2, attic: 8.2, cellar: -3.2, hiveA: -30, hiveB: -38, hiveC: -46 };
+const LEVELS = { ground: 0, upper: 4.2, attic: 8.2, cellar: -3.2 };
 
 function openEverything(game) {
   const g = game.grid;
   g.setLodge(true); game.openGates(); game.openFrontDoors(); g.throwMain();
-  game.story.journalRead = true; game.tryBlastDoor();
-  g.startGenerator(); g.route('lifts', true); g.route('security', true); g.route('security', false); g.route('core', true);
+  game.story.journalRead = true;
   for (let i = 0; i < 400; i++) game.updateDoors(1 / 30);
   game.fx.updateAppliances(0, 0);
 }
@@ -236,19 +235,6 @@ suite('circuits', () => {
   game.lightFire();
   settle(env, 1);
   assert(game.fire.light.powered && game.fire.light.intensity > 0, 'the fire works with every breaker off');
-  // the Hive generator and routing
-  assert(!g.route('core', true).ok, 'no routing without the generator');
-  assert(g.lights.filter(l => l.circuit === 'battery').every(l => l.powered), 'emergency lighting on battery is always on');
-  g.startGenerator();
-  assert(g.route('platform', true).ok && g.route('labs', true).ok && g.route('dining', true).ok, 'three sectors');
-  const r4 = g.route('core', true);
-  assert(!r4.ok && r4.reason === 'capacity' && !g.routed.has('core'), 'a fourth is refused');
-  g.route('dining', false);
-  assert(!g.coreDoorUnsealed && !g.lasersLive, 'door sealed, lasers off');
-  g.route('security', true);
-  assert(g.coreDoorUnsealed && g.lasersLive, 'security unseals the door and powers the lasers');
-  g.route('security', false);
-  assert(g.coreDoorUnsealed && !g.lasersLive, 'door stays open, lasers die when security is cut');
   // old fittings fail: some blow (and stay dead), some lights stay flickering
   {
     const env2 = H.load({ quiet: true }), g2 = env2.game.grid;
@@ -291,7 +277,7 @@ suite('circuits', () => {
   // light types all exist
   for (const t of ['steady', 'pulse', 'subtlePulse', 'blink', 'flicker', 'strobe', 'shock', 'interference', 'rotor']) assert(typeof BM.LIGHT_TYPES[t] === 'function', 'light type ' + t);
   const kinds = new Set(g.lights.map(l => l.lightType));
-  for (const t of ['steady', 'pulse', 'subtlePulse', 'flicker', 'shock', 'interference', 'rotor']) assert(kinds.has(t), 'light type in use: ' + t);
+  for (const t of ['steady', 'subtlePulse', 'flicker']) assert(kinds.has(t), 'light type in use: ' + t);
   // the light record shape
   for (const k of ['name', 'room', 'circuit', 'kind', 'pos', 'colour', 'target', 'on', 'dead', 'flicker', 'blink', 'lightType']) assert(k in g.lights[0], 'light record field ' + k);
   return `${g.lights.length} fittings, ${deadAll.length} dead, ${g.appliances.length} appliances`;
@@ -364,7 +350,7 @@ suite('switches', () => {
   const controlled = new Set();
   for (const it of switches) for (const id of it.controls) controlled.add(id);
   for (const k in game.estateLights) for (const id of game.estateLights[k]) controlled.add(id);
-  const orphans = g.lights.filter(l => !controlled.has(l.id) && !l.circuit.startsWith('hive:') && !['battery', 'fire', 'generator', 'street', 'car'].includes(l.circuit) && !/-glow$/.test(l.id) && !(g.isHouseCircuit(l.circuit)));
+  const orphans = g.lights.filter(l => !controlled.has(l.id) && !l.circuit.startsWith('hive:') && !['fire', 'street', 'car'].includes(l.circuit) && !/-glow$/.test(l.id) && !(g.isHouseCircuit(l.circuit)));
   if (orphans.length) fails.push('lights nothing can switch: ' + orphans.map(l => l.id).join(', '));
   const houseLights = g.lights.filter(l => g.isHouseCircuit(l.circuit));
   const unswitched = houseLights.filter(l => !controlled.has(l.id) && !/-glow$/.test(l.id));
@@ -587,10 +573,6 @@ suite('appliances', () => {
   game.toggleAppliance(A('lodge-tv')); settle(env, 0.5);
   const otherTv = A('tv');
   assert(!tv.running && otherTv.object.material !== tv.object.material, 'switching one TV off leaves the other alone');
-  // the routing console lamps show each sector's own state
-  g.startGenerator(); g.route('lifts', true); g.route('core', true); game.fx.updateAppliances(0.016, 0);
-  const lampOn = game.consoleLamps.map(c => c.mesh.material.color.getHex() === 0x40ff70);
-  assert(JSON.stringify(lampOn) === JSON.stringify(BM.HIVE_SECTORS.map(s => g.routed.has(s))), 'console lamps match the routed sectors: ' + lampOn);
   return `${g.appliances.length} appliances (${lodge.length} in the lodge), ${game.phys.furniture.filter(f => f.room === 'lodge').length} pieces of lodge furniture`;
 });
 
@@ -613,6 +595,14 @@ suite('playthrough', () => {
   assert(game.gates.t === 1 && !game.gates.wall.enabled, 'gates fully open after the swing');
   leaf.updateMatrixWorld(); tip.set(3.4, 0, 0).applyMatrix4(leaf.matrixWorld);
   assert(tip.z < 87, 'the gates swing inwards, into the estate (leaf tip z ' + tip.z.toFixed(2) + ')');
+  // past the contact in the drive, the gates swing shut and bolt behind you
+  assert(canWalk(env, 'front-doors'), 'the drive is open to the house');
+  game.teleport(0, 0, 82, 0); settle(env, 0.2);
+  assert(game.gates.closing, 'the gates start to close once you are inside');
+  assert(/creak/.test(game.ui.lastSay) || game.gates.lockedIn, 'and it is said');
+  settle(env, 10);
+  assert(game.gates.lockedIn && !game.gates.open && game.gates.wall.enabled && /bang/.test(game.ui.lastSay), 'they bang shut and bolt');
+  assert(!canWalk(env, 'gate-release'), 'the lodge is on the far side of the gates now');
   go(env, 'front-doors'); assert(game.frontDoors.open, 'front doors open');
   settle(env, 4);
   go(env, 'hall-panel'); settle(env, 3);
@@ -624,7 +614,6 @@ suite('playthrough', () => {
   settle(env, 4);
   // read the story on the way up
   for (const id of ['note-solicitor', 'note-lease', 'note-drawing', 'note-order', 'note-margaret']) { go(env, id); game.keyDown('KeyE'); }
-  go(env, 'blast-door'); assert(!game.blastDoor.open, 'blast door locked before the journal');
   go(env, 'ladder-up'); settle(env, 1);
   assert(game.player.y > 8, 'in the attic');
   settle(env, 1);
@@ -635,32 +624,21 @@ suite('playthrough', () => {
   go(env, 'fuse-board'); game.keyDown('KeyM'); game.keyDown('KeyE');
   assert(!g.tripped && g.live('cellar'), 'MAIN reset');
   settle(env, 2);
-  go(env, 'blast-door'); assert(game.blastDoor.open, 'blast door opens after the journal');
-  settle(env, 3);
-  go(env, 'lift-house-down'); settle(env, 1);
-  assert(game.player.y < -29, 'down in the Hive');
-  go(env, 'routing-console'); game.keyDown('Digit2'); game.keyDown('KeyE');
-  assert(!g.routed.size, 'nothing routes without the generator');
-  go(env, 'generator-start'); assert(g.generator, 'generator running');
-  go(env, 'routing-console');
-  game.keyDown('Digit2'); game.keyDown('Digit4');
-  assert(g.routed.has('lifts') && g.routed.has('security') && g.coreDoorUnsealed, 'lifts + security: core seal released');
-  game.keyDown('Digit1'); game.keyDown('Digit3');
-  assert(g.routed.size === 3 && !g.routed.has('labs'), 'a fourth sector is refused');
-  game.keyDown('KeyE');
-  go(env, 'lift-hiveA-to-hiveC'); settle(env, 1);
-  assert(near(game.player.y, -46, 0.01), 'on Level C');
-  settle(env, 4);
-  assert(!canWalk(env, 'core-terminal'), 'lasers block the corridor while SECURITY is fed');
-  go(env, 'note-menu-b'); game.keyDown('KeyE');
-  go(env, 'lift-hiveC-to-hiveA'); settle(env, 1);
-  go(env, 'routing-console');
-  game.keyDown('Digit4'); game.keyDown('Digit1'); game.keyDown('Digit6'); game.keyDown('KeyE');
-  assert(!g.lasersLive && g.live('hive:core') && g.coreDoorUnsealed, 'security cut, core fed, door still open');
-  go(env, 'lift-hiveA-to-hiveC'); settle(env, 1);
-  settle(env, 4);
-  go(env, 'core-terminal');
-  assert(game.story.ended && /BLACKTHORN MANOR/.test(game.endingText), 'the ending');
+  // the gate motor in the cellar drives the gates open; walking out is the ending
+  assert(game.gates.lockedIn && !game.gates.open, 'still shut in');
+  g.setBreaker('cellar', false); go(env, 'gate-motor'); assert(!game.gates.escaping, 'the motor needs the cellar circuit');
+  g.setBreaker('cellar', true); go(env, 'gate-motor'); assert(game.gates.escaping && game.gates.open, 'the motor runs');
+  settle(env, 0.2); assert(game.audio.loops.motor && game.audio.levels.motor > 0, 'the motor can be heard from the cellar');
+  settle(env, 1); assert(game.gates.wall.enabled && !canWalk(env, 'car'), 'the gates have not opened yet');
+  settle(env, 14); assert(game.gates.t >= 1 && !game.gates.wall.enabled, 'the gates stand open');
+  assert(canWalk(env, 'car'), 'you can walk out onto the lane');
+  go(env, 'car', { noUse: true }); settle(env, 0.2);
+  assert(game.outro, 'walking out through the gates starts the end');
+  const litBefore = g.lights.filter(l => l.powered).length;
+  settle(env, 8);
+  assert(g.lights.filter(l => l.powered).length < litBefore / 3, 'the house goes dark behind you');
+  settle(env, 7);
+  assert(game.story.ended && /BLACKTHORN MANOR/.test(game.endingText) && /walked out/.test(game.endingText), 'the ending');
   assert(game.frameErrors === 0, 'no frame errors');
   return `${game.story.read.size} documents read on the way`;
 });
@@ -686,13 +664,12 @@ suite('controls', () => {
   assert(game.grid.tripped, 'storm trip in the attic');
   use('journal'); keys(['KeyE']); use('ladder-down'); AP.wait(2);
   use('fuse-board'); keys(['KeyM', 'KeyE']); AP.wait(2);
-  use('blast-door'); AP.wait(4); use('lift-house-down'); AP.wait(5);
-  use('generator-start'); use('routing-console'); keys(['Digit2', 'Digit4', 'KeyE']);
-  use('lift-hiveA-to-hiveC'); AP.wait(5);
-  assert(!AP.goUse('core-terminal', { noUse: true }).ok, 'the lasers bar the way while SECURITY is fed');
-  use('lift-hiveC-to-hiveA'); AP.wait(5);
-  use('routing-console'); keys(['Digit4', 'Digit6', 'KeyE']);
-  use('lift-hiveA-to-hiveC'); AP.wait(5); use('core-terminal'); AP.wait(1);
+  assert(game.gates.lockedIn, 'shut in by the gates on the way up the drive');
+  use('gate-motor'); AP.wait(16);
+  assert(game.gates.t >= 1, 'the gates have opened');
+  AP.goUse('car', { noUse: true }); // walking out through the gates hands control to the ending
+  assert(game.outro || game.story.ended, 'walking out starts the end');
+  AP.wait(16);
   assert(!fails.length, 'could not do with the controls: ' + fails.join('; '));
   assert(game.story.ended, 'reached the ending with the keyboard alone');
   assert(game.frameErrors === 0, 'frame errors');
@@ -719,7 +696,7 @@ suite('reachability', () => {
   }
   assert(!missing.length, 'unreachable: ' + missing.join(', '));
   assert(!badPick.length, 'cannot be selected from its approach: ' + badPick.join(', '));
-  for (const k of ['control', 'door', 'ladder', 'lift', 'readable']) assert(kinds[k] > 0, 'no ' + k + ' interactables');
+  for (const k of ['control', 'door', 'ladder', 'readable']) assert(kinds[k] > 0, 'no ' + k + ' interactables');
   return `${nodes.length} cells over ${Object.keys(perLevel).length} levels; ${game.interactables.length} items reached (${Object.entries(kinds).map(([k, v]) => v + ' ' + k).join(', ')})`;
 });
 
@@ -875,7 +852,7 @@ suite('random', () => {
     game.interact(); interactions++;
     const n = 1 + Math.floor(rnd() * 3);
     for (let k = 0; k < n; k++) { game.keyDown(keys[Math.floor(rnd() * keys.length)]); game.keyUp('KeyW'); game.keyUp('KeyA'); }
-    if (rnd() < 0.3) { const g = game.grid; [() => g.setLodge(rnd() < 0.7), () => g.toggleBreaker(BM.HOUSE_CIRCUITS[Math.floor(rnd() * 7)]), () => g.toggleRoute(BM.HIVE_SECTORS[Math.floor(rnd() * 6)]), () => g.startGenerator()][Math.floor(rnd() * 4)](); }
+    if (rnd() < 0.3) { const g = game.grid; [() => g.setLodge(rnd() < 0.7), () => g.toggleBreaker(BM.HOUSE_CIRCUITS[Math.floor(rnd() * 7)]), () => game.throwGateMotor(), () => game.openGates()][Math.floor(rnd() * 4)](); }
     if (i % 10 === 0) game.frame(1 / 30, 33); else game.update(1 / 30);
   }
   assert(game.frameErrors === 0, 'frame errors: ' + (game.lastError && game.lastError.stack));

@@ -132,7 +132,7 @@
     key('KeyW', false); key('KeyA', false); key('KeyD', false);
     return up ? p.y > 4.1 : p.y < 0.1;
   }
-  const levelOf = (y) => y > 7 ? 'attic' : y > 3 ? 'upper' : y > -1 ? 'ground' : y > -10 ? 'cellar' : 'hive';
+  const levelOf = (y) => y > 7 ? 'attic' : y > 3 ? 'upper' : y > -1 ? 'ground' : 'cellar';
   /* Walk to an interactable's approach spot, face it, and press E. */
   AP.goUse = function (id, opts) {
     opts = opts || {};
@@ -141,7 +141,7 @@
     const from = levelOf(g.player.y), to = levelOf(it.approach.y);
     const inHouse = Math.abs(g.player.x) < 18 && Math.abs(g.player.z) < 12;
     if ((from === 'ground' || from === 'cellar') && to === 'upper') stairs(true);
-    if (from === 'upper' && (to === 'ground' || to === 'cellar' || to === 'hive')) stairs(false);
+    if (from === 'upper' && (to === 'ground' || to === 'cellar')) stairs(false);
     let arrived = false;
     for (let attempt = 0; attempt < 6 && !arrived; attempt++) {
       const path = plan(it.approach) || plan(it.approach, 0, 0.3);
@@ -168,8 +168,8 @@
   AP.wait = (secs) => step(Math.round(secs * 60));
   AP.state = () => ({
     pos: [g.player.x, g.player.y, g.player.z].map(v => +v.toFixed(2)), zone: g.zoneAt(g.player.x, g.player.y, g.player.z),
-    lodge: g.grid.lodge, main: g.grid.live('main'), tripped: g.grid.tripped, journal: g.story.journalRead, gen: g.grid.generator,
-    routed: [...g.grid.routed], coreDoor: g.grid.coreDoorUnsealed, lasers: g.grid.lasersLive, ended: g.story.ended,
+    lodge: g.grid.lodge, main: g.grid.live('main'), tripped: g.grid.tripped, journal: g.story.journalRead,
+    gates: g.gates.lockedIn ? 'shut' : g.gates.escaping ? 'escaping' : g.gates.open ? 'open' : 'locked', ended: g.story.ended,
     objective: g.objective(), uiMode: g.ui.mode, frameErrors: g.frameErrors, lastError: g.lastError ? String(g.lastError.stack).slice(0, 300) : null,
     lit: g.grid.lights.filter(l => l.powered).length, blown: g.grid.lights.filter(l => l.failed === 'exploded').length, flickering: g.grid.lights.filter(l => l.failed === 'faulty').length,
     frames: AP.frames, stuck: AP.stuck,

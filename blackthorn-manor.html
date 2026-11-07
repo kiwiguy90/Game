@@ -98,9 +98,7 @@ class Events {
 BM.Events = Events;
 
 const HOUSE_CIRCUITS = ['main', 'hall', 'ground', 'east', 'west', 'attic', 'cellar'];
-const HIVE_SECTORS = ['platform', 'lifts', 'labs', 'security', 'dining', 'core'];
 BM.HOUSE_CIRCUITS = HOUSE_CIRCUITS;
-BM.HIVE_SECTORS = HIVE_SECTORS;
 
 /* --------------------------------------------------------------------------
    Light-type modulation. Each returns a multiplier for a light's intensity.
@@ -222,8 +220,8 @@ BM.Appliance = Appliance;
    The grid.
    house: lodge switch -> hall (immediately) and main (pantry fuse board)
           main -> ground/east/west/attic/cellar breakers
-   other supplies: street (council, always), battery (Hive emergency),
-          fire (no power needed), lodge, hive:<sector> (generator routing)
+   other supplies: street (council, always), fire (no power needed), lodge,
+          car (its own battery)
    -------------------------------------------------------------------------- */
 class PowerGrid {
   constructor(events, seed) {
@@ -233,10 +231,6 @@ class PowerGrid {
     this.breakers = { main: false, hall: true, ground: false, east: false, west: false, attic: false, cellar: false };
     this.tripped = false;          // storm trip in force
     this.stormHasTripped = false;  // it only happens once
-    this.generator = false;
-    this.routed = new Set();
-    this.capacity = 3;
-    this.coreDoorUnsealed = false;
     this.lights = [];
     this.byId = new Map();
     this.appliances = [];
@@ -256,14 +250,12 @@ class PowerGrid {
   live(c) {
     if (!c) return false;
     switch (c) {
-      case 'street': case 'battery': case 'fire': case 'always': return true;
+      case 'street': case 'fire': case 'always': return true;
       case 'lodge': return this.lodge;
       case 'car': return true; // the car's own battery: its lamps are switched by the intro
-      case 'generator': return this.generator;
       case 'hall': return this.lodge && !this.tripped && this.breakers.hall;
       case 'main': return this.lodge && !this.tripped && this.breakers.main;
     }
-    if (c.indexOf('hive:') === 0) return this.generator && this.routed.has(c.slice(5));
     if (HOUSE_CIRCUITS.indexOf(c) >= 0) return this.live('main') && this.breakers[c];
     return false;
   }
@@ -314,46 +306,12 @@ class PowerGrid {
     return true;
   }
 
-  /* ---- The Hive ---- */
-  startGenerator() {
-    if (this.generator) return false;
-    this.generator = true;
-    this.events.emit('hive:generator');
-    this.events.emit('power:changed');
-    return true;
-  }
-  /* The generator carries only three sectors; a fourth is refused. */
-  route(sector, on) {
-    if (HIVE_SECTORS.indexOf(sector) < 0) return { ok: false, reason: 'unknown' };
-    if (!this.generator) { this.events.emit('route:nogen'); return { ok: false, reason: 'generator' }; }
-    if (on && !this.routed.has(sector)) {
-      if (this.routed.size >= this.capacity) {
-        this.events.emit('route:refused', sector);
-        return { ok: false, reason: 'capacity' };
-      }
-      this.routed.add(sector);
-    } else if (!on) {
-      this.routed.delete(sector);
-    }
-    // SECURITY shares a bus with the core blast door (unseals, stays open)
-    // and the corridor laser grid (live only while SECURITY is fed).
-    if (this.routed.has('security') && !this.coreDoorUnsealed) {
-      this.coreDoorUnsealed = true;
-      this.events.emit('hive:coredoor');
-    }
-    this.events.emit('route:changed', { sector, on });
-    this.events.emit('power:changed');
-    return { ok: true };
-  }
-  toggleRoute(sector) { return this.route(sector, !this.routed.has(sector)); }
-  get lasersLive() { return this.live('hive:security'); }
-
   /* Old fittings: each power-up may blow the bulb or leave it flickering for good. */
   rollFailure(l, rng) {
     // a fitting that has already failed fails the same way again (its power may have been cut mid-start)
     if (!l.failed) {
       if (l.noFail || l.kind === 'bang' || l.kind === 'emergency' || l.kind === 'fire') return;
-      if (l.circuit === 'battery' || l.circuit === 'fire' || l.circuit === 'generator') return;
+      if (l.circuit === 'fire') return;
       if (rng() >= this.failureRate) return;
       l.failed = rng() < 0.5 ? 'exploded' : 'faulty';
     }
@@ -369,7 +327,7 @@ class PowerGrid {
   /* Which chain a light starts in: its estate group, its room in the house, else its supply and room. */
   chainOf(l) { return l.chain || (this.isHouseCircuit(l.circuit) ? 'house:' : l.circuit + ':') + l.room; }
   /* Lights that just come on, with no warm-up to wait for. */
-  instant(l) { return l.kind === 'emergency' || l.kind === 'fire' || l.circuit === 'car' || l.circuit === 'fire' || l.circuit === 'battery'; }
+  instant(l) { return l.kind === 'emergency' || l.kind === 'fire' || l.circuit === 'car' || l.circuit === 'fire'; }
 
   /* Old wiring brings its lights up one at a time: within a chain, the next
      light only starts once the one before it has reached full brightness
@@ -1117,9 +1075,6 @@ const MAT_DEFS = {
   soil: [0x2a1e16, 'gravel', 0.4, 2],
   statue: [0x9a988f, 'limestone', 0.5, 10],
   marble: [0xa8a6a0, 'limestone', 0.6, 60],
-  hiveWall: [0x9aa3a8, 'concrete', 0.35, 10],
-  hiveFloor: [0xffffff, 'grate', 0.8, 20],
-  hivePanel: [0xa9b4b8, 'metal', 0.5, 50],
   rubber: [0x1a1a1a, null, 0, 5],
   carPaint: [0x3c4a3a, null, 0, 120],
   chrome: [0xcfd4d8, null, 0, 150],
@@ -1164,7 +1119,7 @@ class Builder {
   constructor(scene, phys, grid) {
     this.scene = scene; this.phys = phys; this.grid = grid;
     this.zones = {};
-    for (const z of ['exterior', 'mansion', 'hive']) {
+    for (const z of ['exterior', 'mansion']) {
       const g = new THREE.Group(); g.name = 'zone:' + z; g.userData.zone = z;
       scene.add(g); this.zones[z] = g;
     }
@@ -1422,7 +1377,7 @@ class Builder {
     return it;
   }
   levelFloor() {
-    return { ground: 0, upper: 4.2, attic: 8.2, cellar: -3.2, hiveA: -30, hiveB: -38, hiveC: -46 }[this.levelName] || 0;
+    return { ground: 0, upper: 4.2, attic: 8.2, cellar: -3.2 }[this.levelName] || 0;
   }
   /* A wall switch you can see: a brass plate flush on the wall with a toggle
      that flips up (on) and down (off). `ids` are the fittings it controls. */
@@ -1552,12 +1507,17 @@ BM.buildGrounds = function (B, game) {
     pivot.traverse(o => { o.userData.dynamic = true; });
     gates.push(pivot);
   }
-  game.gates = { wall: gateWall, leaves: gates, open: false, t: 0 };
+  game.gates = { wall: gateWall, leaves: gates, open: false, t: 0, closing: false, lockedIn: false, escaping: false };
   B.interactable({
-    id: 'gates', label: () => game.gates.open ? '' : 'Gates: locked', pos: [0, 1.4, 88.2], n: [0, 1], kind: 'door',
+    id: 'gates', label: () => game.gates.open ? '' : game.gates.lockedIn ? 'Gates: shut and bolted' : 'Gates: locked', pos: [0, 1.4, 88.2], n: [0, 1], kind: 'door',
     enabled: () => !game.gates.open,
-    act: g => { g.ui.say('The gates are locked. A release is worked from the lodge.'); g.audio.rattle(); },
+    act: g => { g.ui.say(g.gates.lockedIn ? 'Shut, and bolted on the far side. You are not going out this way. Not yet.' : 'The gates are locked. A release is worked from the lodge.'); g.audio.rattle(); },
   });
+  // the closing contact let into the drive: a worn brass strip, and the cable duct to the gate post
+  B.room = 'drive';
+  B.box('brass', 0, 0.035, 85.0, 6.0, 0.012, 0.12);
+  B.box('metalDark', 3.2, 0.03, 86.5, 0.06, 0.01, 3.0);
+  B.room = 'grounds';
 
   /* ---- the lane's street lights (council supply; one is faulty) ---- */
   B.room = 'lane';
@@ -1658,10 +1618,10 @@ BM.buildGrounds = function (B, game) {
   });
   B.readable('note-lodge', "Gatekeeper's log", [
     '14 October 1974.',
-    'Lorries again after dark, no markings. Mr Blackthorn says they are for "the works under the orchard" and I am not to log them. I am logging them.',
-    '19 October. Six lorries out, none in. Then the men from London. The big house had every light burning all night, like a liner.',
-    '21 October. Told to lock the gates and go home and not come back. Miss Eleanor came down in the rain with no coat on and asked me if I had seen them bring anyone up. I said no. I am ashamed of that.',
-    'Main switch is on the left wall. Gate release by the door. God help whoever comes next.',
+    'The doctor\'s car again after dark. Mr Blackthorn says I am not to log it. I am logging it.',
+    '19 October. The solicitor from London. The big house had every light burning all night, like a liner.',
+    '21 October. Told to lock up and go home and not come back. Miss Eleanor came down the drive in the rain with no coat on and asked me to open the gates. I told her they shut from the house now and there was nothing I could do. I am ashamed of that.',
+    'Main switch is on the left wall. Gate release by the door: it draws the bolt, that is all it does. Mind the contact in the drive. God help whoever comes next.',
   ].join('\n\n'), [-8.4, 0.78, 82.1], [0, 1]);
 
   /* ---- avenue trees, box and flower beds ---- */
@@ -1998,7 +1958,7 @@ BM.buildMansion = function (B, game) {
   B.fixture({ id: 'dining-pendant', name: 'Dining chandelier', circuit: 'west', style: 'chandelier', pos: [-12, 3.0, 8.3], colour: 0xffc786, target: 1.8, range: 11 });
   B.fixture({ id: 'dining-sconce', name: 'Dining sconce', circuit: 'west', style: 'sconce', pos: [-17.7, 2.4, 5.0], nx: 1, colour: 0xffc786, target: 0.7, range: 6, dead: true });
   roomSwitch('sw-dining', 'Dining room lights', [-6.25, 1.4, 10.8], [-1, 0], ['dining-pendant', 'dining-sconce']);
-  B.readable('note-dining', 'Place card and menu', 'Dinner, Friday 18 October 1974\n\nConsommé · Sole Véronique · Pheasant · Syllabub\n\nGuests: Mr R. Haldane (Halcyon Research). Mr P. Voss (Ministry).\n\nThe card at the head of the table reads ELEANOR. Someone has crossed it out and written the name of a different chair.', [-12.0, 0.79, 8.62], [0, 1], { approachDist: 1.2 });
+  B.readable('note-dining', 'Place card and menu', 'Dinner, Friday 18 October 1974\n\nConsommé · Sole Véronique · Pheasant · Syllabub\n\nGuests: Dr R. Haldane. Mr P. Voss (solicitor).\n\nThe card at the head of the table reads ELEANOR. Someone has crossed it out and written the name of a different chair.', [-12.0, 0.79, 8.62], [0, 1], { approachDist: 1.2 });
   // ceiling fan (west circuit), stops where it stands
   const fanA = new THREE.Group(); fanA.position.set(-12, 3.7, 5.4); B.root.add(fanA);
   B.mesh(G.cyl, 'brass', 0, 0.12, 0, 0.18, 0.25, 0.18, 0, fanA);
@@ -2036,7 +1996,7 @@ BM.buildMansion = function (B, game) {
   roomSwitch('sw-drawing', 'Drawing room lights', [6.25, 1.4, 10.8], [1, 0], ['drawing-pendant', 'drawing-lamp']);
   B.readable('note-drawing', 'Letter, Edmund to Charles', [
     'Whitehall, 4 May 1962.',
-    'Charles — the Halcyon money has cleared. The orchard lease runs ninety-nine years and nobody will ask what is under an orchard.',
+    'Charles — the gates were the right idea. Nobody leaves and nobody asks, and a girl who cannot get to the village cannot tell the village anything.',
     'As to Eleanor. She is thirteen and she has started asking the men questions. You must make Margaret understand that a girl who frightens the staff is a girl who is unwell, and an unwell girl is not believed. Say she is not right. Say it often. In a family like ours the word for it is cursed, and people are very happy to use it.',
     '— E.',
   ].join('\n\n'), [12.4, 0.46, 7.65], [0, -1]);
@@ -2072,11 +2032,11 @@ BM.buildMansion = function (B, game) {
   B.fixture({ id: 'library-lamp', name: 'Reading lamp', circuit: 'east', kind: 'lamp', style: 'lamp', pos: [8.6, 1.5, -3.4], colour: 0xffb870, target: 0.7, range: 5 });
   B.furniture('wood', 8.6, -3.4, 0, 0.3, 1.05, 0.3, 'lamp stand');
   roomSwitch('sw-library', 'Library lights', [6.25, 1.4, 1.5], [1, 0], ['library-pendant', 'library-lamp']);
-  B.readable('note-lease', 'The lease, 1961', [
-    'THIS LEASE is made the 9th day of November 1961 between CHARLES ALBERT BLACKTHORN of Blackthorn Manor ("the Lessor") and HALCYON RESEARCH LIMITED ("the Lessee").',
-    'The Lessor demises unto the Lessee the subsoil of the land known as the Orchard, to a depth of two hundred feet, for a term of ninety-nine years, for the purposes of a facility of national importance.',
-    'The Lessor shall permit access by the Lessee at all hours and shall not inquire into the nature of the works.',
-    'Signed, C.A. Blackthorn. Witnessed, E.J. Blackthorn. Witnessed, M. Blackthorn.',
+  B.readable('note-lease', "The electrician's account, 1961", [
+    'PARDOE & SON, ELECTRICAL CONTRACTORS. To C.A. Blackthorn Esq., Blackthorn Manor. 9 November 1961.',
+    'To supplying and fitting one electric motor to the Lane gates, with closing contact let into the drive, so that the gates close of themselves upon any car or person passing in.',
+    'To one control switch for the same, fitted in the cellar as instructed, on the house supply, the gates to be opened from that switch and from nowhere else. The release in the lodge to draw the bolt only.',
+    'We would respectfully note that a gate which cannot be opened from the lodge is contrary to usual practice. Fitted as instructed. Paid, with thanks.',
   ].join('\n\n'), [12, 1.12, 0.08], [0, 1], { book: true });
 
   /* ---- BACK SITTING ROOM (west), with the television ---- */
@@ -2094,7 +2054,7 @@ BM.buildMansion = function (B, game) {
   B.fixture({ id: 'backsitting-lamp', name: 'Table lamp', circuit: 'west', kind: 'lamp', style: 'lamp', pos: [-7.0, 1.3, -3.4], colour: 0xffb870, target: 0.6, range: 5 });
   B.furniture('wood', -7.0, -3.4, 0, 0.5, 0.8, 0.5, 'side table');
   roomSwitch('sw-backsitting', 'Sitting room lights', [-6.25, 1.4, 3.6], [-1, 0], ['backsitting-pendant', 'backsitting-lamp']);
-  B.readable('note-newspaper', 'Newspaper, 22 October 1974', 'THE COUNTY GAZETTE\n\nBLACKTHORN GIRL "TO REST ABROAD"\n\nThe family of Blackthorn Manor confirmed last night that Miss Eleanor Blackthorn, 25, will travel to a private clinic in Switzerland "for her nerves". A spokesman for the family declined to comment on local rumours, describing their daughter as "troubled since childhood" and asking for privacy.\n\nIn other news, works at the Halcyon orchard site have concluded and the site is closed.', [-15.5, 0.87, -3.3], [0, 1]);
+  B.readable('note-newspaper', 'Newspaper, 22 October 1974', 'THE COUNTY GAZETTE\n\nBLACKTHORN GIRL "TO REST ABROAD"\n\nThe family of Blackthorn Manor confirmed last night that Miss Eleanor Blackthorn, 25, will travel to a private clinic in Switzerland "for her nerves". A spokesman for the family declined to comment on local rumours, describing their daughter as "troubled since childhood" and asking for privacy.', [-15.5, 0.87, -3.3], [0, 1]);
 
   /* ---- CORRIDOR / LOBBY (ground circuit) ---- */
   B.room = 'corridor';
@@ -2118,7 +2078,7 @@ BM.buildMansion = function (B, game) {
   const radio1 = grid.addAppliance({ id: 'radio-kitchen', name: 'Kitchen radio', kind: 'radio', circuit: 'ground', room: 'kitchen', pos: [-13.0, 1.05, -9.2], station: 0 });
   radio1.object = radio1Dial;
   B.interactable({ id: 'radio-kitchen-switch', label: () => radio1.switchedOn ? 'Radio: switch off' : 'Radio: switch on', pos: [-13.0, 1.0, -8.45], n: [0, 1], act: g => g.toggleAppliance(radio1) });
-  B.readable('note-cook', "Cook's note", "Mrs Blackthorn,\n\nI have done the trays for downstairs as asked but I will not carry them to the orchard door again. Forty-eight trays a night and the man at the door counts them. Last night there was a little girl's shoe on the step.\n\nI give my notice from Friday.\n\nAgnes Pell", [-11.1, 0.91, -9.0], [1, 0]);
+  B.readable('note-cook', "Cook's note", "Mrs Blackthorn,\n\nI have done the trays as asked but I will not carry them up to Miss Eleanor's door again. It is locked on the outside and she talks to me through it. Last night she asked me to tell the gatekeeper she is still here. I did not, and I have not slept.\n\nI give my notice from Friday.\n\nAgnes Pell", [-11.1, 0.91, -9.0], [1, 0]);
 
   /* ---- PANTRY: the fuse board ---- */
   B.room = 'pantry';
@@ -2211,7 +2171,7 @@ BM.buildMansion = function (B, game) {
   B.fixture({ id: 'bed1-lamp', name: 'Bedside lamp', circuit: 'west', kind: 'lamp', style: 'lamp', pos: [-14.3, 5.5, 11.3], colour: 0xffb870, target: 0.6, range: 5 });
   B.furniture('wood', -14.3, 11.3, 4.2, 0.5, 0.75, 0.5, 'bedside table');
   roomSwitch('sw-bed1', 'Bedroom lights', [-6.25, 5.6, 10.8], [-1, 0], ['bed1-pendant', 'bed1-lamp']);
-  B.readable('note-margaret', "Margaret's diary", "21 October 1974.\n\nThey closed it tonight. Haldane came up to the house to have it signed, and Charles signed, and Edmund signed, and I signed. Eleanor would not. She stood in the hall with the paper in her hand and said there are five hundred people down there, Mother, and they are still alive, and she tore it in half.\n\nCharles says the order does not need her name. It never did. They only wanted her to be one of us.\n\nI have told the vicar she is ill. God forgive me, it is easier.", [-9.3, 5.01, 4.6], [0, 1]);
+  B.readable('note-margaret', "Margaret's diary", "21 October 1974.\n\nThey signed it tonight. Haldane came up to the house with the papers, and Charles signed, and Edmund signed, and I signed. Eleanor would not. She stood in the hall with the paper in her hand and said you are not sending me anywhere, Mother, you are keeping me, you have kept me since I was thirteen, and she tore it in half.\n\nCharles says the order does not need her name. It never did. They only wanted her to be one of us.\n\nI have told the vicar she is ill. God forgive me, it is easier.", [-9.3, 5.01, 4.6], [0, 1]);
 
   /* ---- Bedroom 2 (guest) (east) ---- */
   B.room = 'bedroom2';
@@ -2226,7 +2186,7 @@ BM.buildMansion = function (B, game) {
   const radio2 = grid.addAppliance({ id: 'radio-guest', name: 'Guest room radio', kind: 'radio', circuit: 'east', room: 'bedroom2', pos: [9.0, 5.16, 4.5], station: 1 });
   radio2.object = radio2Dial;
   B.interactable({ id: 'radio-guest-switch', label: () => radio2.switchedOn ? 'Radio: switch off' : 'Radio: switch on', pos: [9.0, 5.1, 4.75], n: [0, 1], act: g => g.toggleAppliance(radio2) });
-  B.readable('note-haldane', 'Calling card', 'R. J. HALDANE\nHalcyon Research Limited\n\nOn the back, in pencil: "Bed made up for Voss. He will want to see the girl before he goes. Keep her in her room."', [12.6, 4.93, 8.45], [0, -1]);
+  B.readable('note-haldane', 'Calling card', 'R. J. HALDANE, M.D.\nHarley Street\n\nOn the back, in pencil: "Bed made up for Voss. He will want to see the girl before the papers go. Keep her in her room. Gates to stay shut."', [12.6, 4.93, 8.45], [0, -1]);
 
   /* ---- Eleanor's sitting room (west) ---- */
   B.room = "eleanor's sitting room";
@@ -2237,11 +2197,11 @@ BM.buildMansion = function (B, game) {
   B.fixture({ id: 'eleanor-pendant', name: "Eleanor's lamp", circuit: 'west', style: 'pendant', pos: [-12, 7.3, 0], ceiling: 8, colour: 0xffd29a, target: 1.2, range: 9 });
   B.fixture({ id: 'eleanor-lamp', name: 'Desk lamp', circuit: 'west', kind: 'lamp', style: 'lamp', pos: [-9.5, 5.45, 0.7], colour: 0xffb870, target: 0.6, range: 5 });
   roomSwitch('sw-eleanor', "Eleanor's room lights", [-6.25, 5.6, 3.6], [-1, 0], ['eleanor-pendant', 'eleanor-lamp']);
-  B.readable('note-order', 'The shutdown order (unsigned copy)', [
-    'MINISTRY OF DEFENCE — HALCYON / ORCHARD. SECRET.',
-    'ORDER TO DECOMMISSION. With effect from 2300 hours, 21 October 1974, the facility will be sealed at all levels and the supply withdrawn. Personnel remaining at the facility at that time: 504. No further action.',
-    'Lessor\'s consent: C.A. Blackthorn ✓   E.J. Blackthorn ✓   M. Blackthorn ✓   E. Blackthorn ________',
-    'Across the bottom, in ink, pressed so hard it has gone through: "504 is not a number of people you leave in the dark. I will not sign. — Eleanor"',
+  B.readable('note-order', 'Reception order (unsigned copy)', [
+    'IN THE MATTER OF ELEANOR MARY BLACKTHORN, aged 25, of Blackthorn Manor.',
+    'On the certificate of R.J. Haldane M.D. that the patient is of unsound mind and a danger to herself, the patient is to be received into private care at a place to be nominated by the family, with effect from 22 October 1974, and is not to leave it without the family\'s consent.',
+    'Consent: C.A. Blackthorn ✓   E.J. Blackthorn ✓   M. Blackthorn ✓   Patient: ________',
+    'Across the bottom, in ink, pressed so hard it has gone through: "I am not ill. I will not sign. You will have to keep the gates shut for ever. — Eleanor"',
   ].join('\n\n'), [-8.5, 4.97, 0.5], [1, 0]);
 
   /* ---- Portrait gallery (east): Eleanor's portrait turned to the wall ---- */
@@ -2314,9 +2274,9 @@ BM.buildMansion = function (B, game) {
   B.readable('journal', "Eleanor's journal", [
     'This is the last book. They are taking me "abroad" in the morning.',
     'If you are reading this, the lights are on, and you have come up here in the dark to find it, which is more than any of them ever did.',
-    'Under the cellar is a steel door. Behind it is a lift, and at the bottom is the place they built in the orchard. Halcyon called it the Hive. On the night of 21 October they withdrew the supply and sealed it with five hundred and four people still inside. Scientists, cooks, guards, the night shift, the children of the families who lived down there. My father signed, and my uncle, and my mother. I would not, and so I was the one who was cursed.',
-    'The door is held by a wheel lock. The combination is 2-1-1-0-7-4. The date, and the hour. They were not even imaginative about it.',
-    'There is a diesel generator on the first level. It cannot carry everything. Read the note by the console. Whatever you do, go down and look at them. Somebody has to.',
+    'You will have found out about the gates. My father had them wired in 1961, the year I was thirteen and started asking questions. A contact in the drive: anything that passes in, they shut behind, and bolt. I have heard that bang every day of my life. "Abroad" is this attic. "Cursed" was the easiest word they had.',
+    'They do not open from the lodge, whatever the man there believes. The release only draws the bolt. The motor is worked from one switch, in the cellar, by the boiler, on the house supply. He thought nobody would ever look for it there.',
+    'Put the house on. Go down and throw it. Then do not stop for anything: walk down the drive and out, and do not look back at the windows. Somebody should get out of here. It was never going to be me.',
     '— E.',
   ].join('\n\n'), [-14.0, 8.99, -2.1], [0, 1], { book: true });
 
@@ -2324,11 +2284,10 @@ BM.buildMansion = function (B, game) {
   B.levelName = 'cellar'; B.room = 'cellar';
   const CY = -3.2;
   B.floor('stone', -18, 18, -12, 2, CY, 0.3);
-  B.floor('stone', -1.5, 1.5, -24, -12, CY, 0.3);
   const CEL = { t: 0.4, mat: 'brick', y0: CY, y1: 0 };
   B.wall('x', 2, -18, 18, CEL);
   B.wall('z', -18, -12, 2, CEL); B.wall('z', 18, -12, 2, CEL);
-  B.wall('x', -12, -18, 18, CEL, [{ at: 0, w: 2.2, type: 'door', head: 2.6, id: 'blast-door', casing: 'metalDark' }]);
+  B.wall('x', -12, -18, 18, CEL);
   B.wall('z', -6, -12, 2, { mat: 'brick', y0: CY, y1: 0 }, [door(-4, 'd-cellar-w')]);
   B.wall('z', 6, -12, 2, { mat: 'brick', y0: CY, y1: 0 }, [door(-4, 'd-cellar-e')]);
   // wine racks, boiler, coal
@@ -2341,269 +2300,10 @@ BM.buildMansion = function (B, game) {
   B.fixture({ id: 'cellar-3', name: 'Cellar bulb', circuit: 'cellar', style: 'cage', pos: [12, -0.6, -5], colour: 0xffbb70, target: 0.9, range: 7, dead: true });
   B.fixture({ id: 'cellar-4', name: 'Cellar bulb', circuit: 'cellar', style: 'cage', pos: [12, -0.6, -1], colour: 0xffbb70, target: 0.8, range: 7 });
   roomSwitch('sw-cellar', 'Cellar lights', [17.75, -1.8, -9.2], [-1, 0], ['cellar-1', 'cellar-2', 'cellar-3', 'cellar-4']);
-  B.readable('note-halcyon', 'Notice on the cellar wall', 'HALCYON RESEARCH LTD\nORCHARD ACCESS — SERVICE LIFT\n\nAUTHORISED PERSONNEL ONLY\nThe family are reminded that under the terms of the lease they shall not inquire into the nature of the works.\n\nLift supply is taken from the house CELLAR circuit.', [-5.0, -1.8, -11.75], [0, 1], { plaque: true });
-  // the steel blast door
-  const blastWall = P.addWall(-1.1, 1.1, -12.15, -11.85, CY, CY + 2.6, { kind: 'door' });
-  const blast = B.box('metalDark', 0, CY + 1.3, -12, 2.2, 2.6, 0.3); blast.userData.dynamic = true;
-  const wheel = B.mesh(G.ring, 'chrome', 0, CY + 1.3, -11.82, 0.7, 0.7, 0.7); wheel.userData.dynamic = true;
-  game.blastDoor = { wall: blastWall, mesh: blast, wheel, open: false, t: 0 };
-  B.interactable({
-    id: 'blast-door', kind: 'door', label: () => game.blastDoor.open ? '' : 'Steel door (wheel lock)', pos: [0, CY + 1.3, -11.7], n: [0, 1],
-    enabled: () => !game.blastDoor.open, act: g => g.tryBlastDoor(),
-  });
-  // passage and the service lift
-  B.wall('z', -1.5, -24, -12, { mat: 'concrete', y0: CY, y1: 0, t: 0.3 });
-  B.wall('z', 1.5, -24, -12, { mat: 'concrete', y0: CY, y1: 0, t: 0.3 });
-  B.wall('x', -24, -1.5, 1.5, { mat: 'metal', y0: CY, y1: 0, t: 0.3 });
-  P.rect(-1.7, 1.7, -24.2, -12, 0, -0.3, 'passage-roof');
-  B.boxE('concrete', -1.7, 1.7, -0.3, 0, -24.2, -12);
-  B.fixture({ id: 'passage-1', name: 'Passage light', circuit: 'cellar', kind: 'fluorescent', style: 'tube', pos: [0, -0.45, -16], colour: 0xe8f0ff, target: 0.9, range: 7, ry: Math.PI / 2 });
-  B.fixture({ id: 'passage-2', name: 'Lift light', circuit: 'cellar', kind: 'fluorescent', style: 'tube', pos: [0, -0.45, -22], colour: 0xe8f0ff, target: 0.8, range: 6, ry: Math.PI / 2, flicker: 0.3 });
-  roomSwitch('sw-passage', 'Passage lights', [1.3, CY + 1.4, -13.5], [-1, 0], ['passage-1', 'passage-2']);
-  B.box(BM.Basic(0x2a3a2a), 1.32, CY + 1.4, -22.6, 0.04, 0.4, 0.25);
-  B.interactable({
-    id: 'lift-house-down', kind: 'lift', label: () => grid.live('cellar') ? 'Service lift: down' : 'Service lift (no power)', pos: [1.32, CY + 1.4, -22.6], n: [-1, 0],
-    links: [{ x: 0, y: -30, z: -22.6 }], requires: () => grid.live('cellar'),
-    act: g => g.ride('lift-house', { x: 0, y: -30, z: -22.6 }, 0, () => grid.live('cellar'), 'The lift is dead. The cellar circuit is off.'),
-  });
-};
-})();
-</script>
-<script id="bm-42-hive">
-/* ==========================================================================
-   BLACKTHORN MANOR — 6. THE HIVE
-   A: -30 arrival platform, transit carriage, administration, generator
-   B: -38 laboratories
-   C: -46 Dining Hall B (stasis pods), the laser corridor, the Core
-   Each sector has its own hue. Emergency lighting is battery and always on.
-   ========================================================================== */
-(function () {
-'use strict';
-const BM = window.BM;
-const G = BM.G;
-
-const HUE = {
-  emergency: 0xff1a10, platform: 0xffa133, labs: 0x5fe8ff, security: 0xff2222, dining: 0x9cff5a, core: 0x2a55ff, generator: 0xffd090,
-};
-BM.HUE = HUE;
-
-BM.buildHive = function (B, game) {
-  const P = B.phys, grid = B.grid;
-  B.zone = 'hive';
-  const levels = { hiveA: -30, hiveB: -38, hiveC: -46 };
-  const HW = (y) => ({ mat: 'hiveWall', y0: y, y1: y + 4.5, t: 0.3 });
-  game.interference = []; game.lasers = []; game.pods = [];
-
-  const emergency = (id, x, y, z, o) => B.fixture(Object.assign({
-    id, name: 'Emergency lamp', circuit: 'battery', kind: 'emergency', style: 'bulkhead', pos: [x, y, z],
-    colour: HUE.emergency, target: 0.7, range: 9, lightType: 'subtlePulse',
-  }, o || {}));
-
-  /* The shared shell on every level: lift room, lobby, side doors, north corridor. */
-  const shell = (name, y) => {
-    B.levelName = name;
-    B.floor('hiveFloor', -26, 46, -66, -20, y, 0.3);
-    P.rect(-26, 46, -66, -20, y + 4.7, y + 4.5, 'hive-ceiling-' + name).noOcclude = false;
-    B.boxE('concrete', -26, 46, y + 4.5, y + 4.7, -66, -20);
-    B.room = 'lift ' + name;
-    B.wall('z', -2, -62, -58, HW(y)); B.wall('z', 2, -62, -58, HW(y)); B.wall('x', -62, -2, 2, HW(y));
-    B.room = 'lobby ' + name;
-    B.wall('x', -58, -8, 8, Object.assign({ mat: 'hivePanel' }, HW(y)), [{ at: 0, w: 3, type: 'arch', head: 3.2, id: 'arch-lift-' + name }]);
-    B.wall('z', -8, -58, -46, Object.assign({ mat: 'hivePanel' }, HW(y)), [{ at: -52, w: 1.4, type: 'door', head: 2.4, id: 'door-w-' + name, casing: 'metalDark' }]);
-    B.wall('z', 8, -58, -46, Object.assign({ mat: 'hivePanel' }, HW(y)), [{ at: -52, w: 1.4, type: 'door', head: 2.4, id: 'door-e-' + name, casing: 'metalDark' }]);
-    B.wall('x', -46, -8, 8, Object.assign({ mat: 'hivePanel' }, HW(y)), [{ at: 0, w: 2.6, type: 'arch', head: 3.2, id: 'arch-north-' + name }]);
-    B.wall('z', -1.5, -46, -40, HW(y)); B.wall('z', 1.5, -46, -40, HW(y));
-    emergency('em-lobby-' + name, 0, y + 3.6, -46.2, { nz: -1 });
-    emergency('em-lift-' + name, 0, y + 3.6, -61.8, { nz: 1 });
-    B.box('hivePanel', 0, y + 3.9, -58.0, 3.4, 0.4, 0.4);
-    // lift buttons: west wall and east wall of the lift room
-    const dests = Object.keys(levels).filter(k => k !== name);
-    dests.forEach((d, i) => {
-      const sx = i === 0 ? -1 : 1;
-      const label = { hiveA: 'Level A (Administration)', hiveB: 'Level B (Laboratories)', hiveC: 'Level C (Dining Hall B)' }[d];
-      B.box(BM.Basic(0x30382a), sx * 1.82, y + 1.4, -60, 0.04, 0.42, 0.3);
-      B.interactable({
-        id: 'lift-' + name + '-to-' + d, kind: 'lift', label: () => grid.live('hive:lifts') ? 'Lift: ' + label : 'Lift (no power): ' + label,
-        pos: [sx * 1.82, y + 1.4, -60], n: [-sx, 0], requires: () => grid.live('hive:lifts'),
-        links: [{ x: 0, y: levels[d], z: -59.6 }],
-        act: g => g.ride('lift-hive', { x: 0, y: levels[d], z: -59.6 }, Math.PI, () => grid.live('hive:lifts'), 'The lift panel is dark. LIFTS is not being fed.'),
-      });
-    });
-  };
-
-  /* ======================= LEVEL A ======================= */
-  const A = levels.hiveA;
-  shell('hiveA', A);
-  // the service lift from the house arrives here
-  B.room = 'service lift';
-  B.wall('z', -2, -25, -20, HW(A)); B.wall('z', 2, -25, -20, HW(A)); B.wall('x', -20, -2, 2, HW(A));
-  B.box(BM.Basic(0x2a3a2a), 1.85, A + 1.4, -22.6, 0.04, 0.4, 0.25);
-  B.interactable({
-    id: 'lift-hive-up', kind: 'lift', label: () => grid.live('cellar') ? 'Service lift: up to the house' : 'Service lift (no power)', pos: [1.85, A + 1.4, -22.6], n: [-1, 0],
-    links: [{ x: 0, y: -3.2, z: -21.0 }], requires: () => grid.live('cellar'),
-    act: g => g.ride('lift-house', { x: 0, y: -3.2, z: -21.0 }, Math.PI, () => grid.live('cellar'), 'The lift will not move. The house cellar circuit is off.'),
-  });
-  emergency('em-service-lift', 0, A + 3.6, -20.2, { nz: 1 });
-  // arrival platform
-  B.room = 'arrival platform';
-  B.wall('x', -25, -22, -2, Object.assign({ mat: 'hivePanel' }, HW(A))); B.wall('x', -25, 2, 22, Object.assign({ mat: 'hivePanel' }, HW(A)));
-  B.wall('z', -22, -40, -25, HW(A)); B.wall('z', 22, -40, -25, HW(A));
-  B.wall('x', -40, -22, -1.5, HW(A)); B.wall('x', -40, 1.5, 22, HW(A));
-  B.boxE('black', -21.85, -21.8, A, A + 3.5, -37, -32); B.boxE('black', 21.8, 21.85, A, A + 3.5, -37, -32); // tunnel mouths
-  for (const z of [-35.6, -33.4]) B.boxE('chrome', -22, 22, A, A + 0.12, z - 0.06, z + 0.06);
-  for (let x = -21; x <= 21; x += 1.2) B.boxE('darkWood', x - 0.15, x + 0.15, A, A + 0.06, -36.2, -32.8);
-  B.boxE('limestone', -22, 22, A, A + 0.02, -31.4, -31.0); // platform edge line
-  // the transit carriage
-  B.furniture('metal', -4, -34.5, A + 0.15, 16, 3.0, 3.2, 'transit carriage');
-  for (let i = 0; i < 7; i++) {
-    const w = B.box(BM.Basic(0x3a2a10), -10.5 + i * 2.2, A + 2.0, -32.88, 1.4, 0.8, 0.02);
-    w.userData.dynamic = true; game.carriageWindows = game.carriageWindows || []; game.carriageWindows.push(w);
-  }
-  B.box('metalDark', -4, A + 3.25, -34.5, 16.2, 0.2, 3.3);
-  for (let i = 0; i < 4; i++) B.fixture({ id: 'platform-' + i, name: 'Platform lamp', circuit: 'hive:platform', kind: 'sodium', style: 'cage', pos: [-15 + i * 10, A + 4.1, -28.5], colour: HUE.platform, target: 1.8, range: 13 });
-  B.fixture({ id: 'carriage-light', name: 'Carriage light', circuit: 'hive:platform', kind: 'fluorescent', style: 'strip', pos: [-4, A + 2.9, -33.0], len: 14, colour: 0xffc070, target: 0.8, range: 8 });
-  emergency('em-platform-w', -21.8, A + 3.2, -30, { nx: 1 });
-  emergency('em-platform-e', 21.8, A + 3.2, -30, { nx: -1 });
-  B.readable('note-timetable', 'Transit timetable', 'ORCHARD TRANSIT — STAFF CARRIAGE\n\nDepart Platform A for Lower Works: 06.00, 14.00, 22.00\n\nNOTICE 21/10/74: ALL SERVICES SUSPENDED UNTIL FURTHER NOTICE. STAFF TO REMAIN AT POSTS.\n\nThe last line has been gone over again and again in biro until the paper tore.', [-21.82, A + 1.5, -27.5], [1, 0], { plaque: true });
-  // administration (the routing console)
-  B.room = 'administration';
-  B.wall('z', -24, -58, -46, HW(A)); B.wall('x', -46, -24, -8, HW(A)); B.wall('x', -58, -24, -8, HW(A));
-  B.furniture('hivePanel', -16, -57.5, A, 4.0, 1.1, 0.6, 'routing console');
-  B.box(BM.Basic(0x0c2a24), -16, A + 1.45, -57.75, 3.6, 0.6, 0.04).userData.screen = true;
-  game.consoleLamps = [];
-  BM.HIVE_SECTORS.forEach((s, i) => {
-    const l = B.box(BM.Own(0x220000), -17.75 + i * 0.7, A + 1.12, -57.25, 0.18, 0.04, 0.18);
-    l.userData.dynamic = true; game.consoleLamps.push({ mesh: l, sector: s });
-  });
-  B.interactable({ id: 'routing-console', label: 'Power routing console', pos: [-16, A + 1.15, -57.15], n: [0, 1], act: g => g.ui.openConsole() });
-  B.furniture('metalDark', -11, -50, A, 2.0, 0.76, 0.9, 'desk');
-  B.readable('note-routing', 'Note taped to the desk', [
-    'ROUTING — READ BEFORE SWITCHING (D.K. night shift)',
-    'The diesel will carry THREE sectors. Ask it for a fourth and it refuses. Emergency lamps are on the batteries and stay on whatever you do.',
-    'SECURITY is one bus. It feeds the CORE blast door and the corridor laser grid together. When SECURITY comes up the door seal releases — and it stays released, it is a one-way latch. But the grid is live for as long as SECURITY is fed. Nobody walks through that grid.',
-    'So: think about what order you do things in.',
-    'LIFTS for the lift. CORE for the Core itself. Everything else is lights.',
-  ].join('\n\n'), [-11.2, A + 0.77, -49.62], [0, 1]);
-  B.readable('note-roster', 'Shift roster, 21 October 1974', 'HALCYON / ORCHARD — PERSONNEL ON SITE 2200 HRS\n\nScientific: 61\nTechnical: 88\nSecurity: 40\nCatering and domestic: 52\nMedical: 19\nResidents (families of staff): 244, of whom children: 71\n\nTOTAL ON SITE: 504\n\nSigned off: R.J. Haldane. "All personnel accounted for."', [-23.82, A + 1.5, -50], [1, 0], { plaque: true });
-  emergency('em-admin', -16, A + 3.6, -46.2, { nz: -1 });
-  B.fixture({ id: 'admin-tube', name: 'Admin tube', circuit: 'hive:platform', kind: 'fluorescent', style: 'tube', pos: [-16, A + 4.35, -52], colour: 0xffd8a0, target: 1.2, range: 10 });
-  // the generator room
-  B.room = 'generator';
-  B.wall('z', 24, -58, -46, HW(A)); B.wall('x', -46, 8, 24, HW(A)); B.wall('x', -58, 8, 24, HW(A));
-  B.furniture('metalDark', 16, -52, A, 6.0, 2.6, 4.0, 'diesel generator');
-  B.mesh(G.cyl, 'metal', 16, A + 3.4, -52, 0.5, 1.6, 0.5);
-  { const fw = B.mesh(G.cyl, 'chrome', 14, A + 1.6, -49.95, 0.9, 0.08, 0.9); fw.rotation.x = Math.PI / 2; fw.updateMatrix(); }
-  B.box('brass', 12.9, A + 1.3, -52, 0.12, 0.5, 0.2);
-  B.fixture({ id: 'generator-lamp', name: 'Generator running lamp', circuit: 'generator', kind: 'incandescent', style: 'cage', pos: [16, A + 4.0, -48], colour: HUE.generator, target: 1.5, range: 11, lightType: 'subtlePulse' });
-  emergency('em-generator', 23.8, A + 3.2, -52, { nx: -1 });
-  B.interactable({
-    id: 'generator-start', label: () => grid.generator ? 'Generator (running)' : 'Start the diesel generator', pos: [12.9, A + 1.3, -52], n: [-1, 0],
-    act: g => g.startGenerator(),
-  });
-  B.readable('note-generator', 'Generator start procedure', 'DIESEL STANDBY SET\n\n1. Fuel cock ON (it is).\n2. Pull the start lever and hold.\n3. Go to the routing console in Administration.\n\nCapacity: THREE sectors maximum. Do not ask it for more; it will not give it.', [20, A + 1.5, -46.18], [0, -1], { plaque: true });
-
-  /* ======================= LEVEL B: LABORATORIES ======================= */
-  const Bv = levels.hiveB;
-  shell('hiveB', Bv);
-  for (const [room, x0, x1] of [['laboratory 1', -24, -8], ['laboratory 2', 8, 24]]) {
-    B.room = room;
-    B.wall('z', x0 < 0 ? x0 : x1, -58, -46, HW(Bv)); B.wall('x', -46, x0, x1, HW(Bv)); B.wall('x', -58, x0, x1, HW(Bv));
-    const cx = (x0 + x1) / 2;
-    for (const z of [-55, -49]) B.furniture('white', cx, z, Bv, 8, 0.9, 1.2, 'lab bench');
-    for (let i = 0; i < 5; i++) B.mesh(G.cyl, 'glass', cx - 3 + i * 1.5, Bv + 1.1, -55, 0.2, 0.4, 0.2);
-    B.fixture({ id: 'lab-tube-' + room, name: 'Laboratory tube', circuit: 'hive:labs', kind: 'fluorescent', style: 'tube', pos: [cx, Bv + 4.35, -52], colour: HUE.labs, target: 1.6, range: 11, len: 3 });
-    emergency('em-' + room, cx, Bv + 3.6, -46.2, { nz: -1 });
-  }
-  B.room = 'laboratory 1';
-  B.readable('note-labreport', 'Lab report', 'HALCYON / ORCHARD — RESPONSE STUDY 14\n\nSubjects continue to show the expected adaptation to long-term enclosure. Children adapt fastest.\n\nRecommendation: on decommissioning, the population should remain in situ under stasis pending a decision. Cost of maintaining stasis: one diesel set. Cost of the alternative: political.\n\nAddendum, handwritten: "Pending a decision" — there will be no decision. That is the decision.', [-16, Bv + 0.92, -48.35], [0, 1]);
-  B.room = 'laboratory 2';
-  B.readable('note-drawings', "Children's drawings", 'Crayon drawings pinned to a cork board. A sun. A tree with apples. A house with a lot of windows and every window coloured yellow.\n\nUnderneath, in an adult hand: "They have never seen the house. They draw it lit up because we told them that is where the lights come from."', [23.82, Bv + 1.5, -52], [-1, 0], { plaque: true });
-  // laboratory 3, to the north: the interference wall
-  B.room = 'laboratory 3';
-  B.wall('x', -40, -14, -1.5, HW(Bv)); B.wall('x', -40, 1.5, 14, HW(Bv));
-  B.wall('z', -14, -40, -26, HW(Bv)); B.wall('z', 14, -40, -26, HW(Bv)); B.wall('x', -26, -14, 14, HW(Bv));
-  B.furniture('metalDark', 0, -31, Bv, 6, 1.8, 2.0, 'apparatus');
-  const ifl = B.fixture({ id: 'lab3-interference', name: 'Monitor bank', circuit: 'hive:labs', kind: 'fluorescent', style: 'strip', pos: [0, Bv + 3.0, -26.4], len: 10, colour: HUE.labs, target: 1.4, range: 12, lightType: 'interference' });
-  const ip = B.mesh(G.plane, new THREE.ShaderMaterial({
-    uniforms: { time: { value: 0 }, level: { value: 0 }, colour: { value: new THREE.Color(HUE.labs) } },
-    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-    fragmentShader: 'uniform float time; uniform float level; uniform vec3 colour; varying vec2 vUv;\nvoid main(){ float b = 0.5 + 0.5 * sin(vUv.y * 38.0 - time * 6.0 + sin(vUv.x * 9.0 + time) * 1.5); b = pow(b, 6.0); float f = smoothstep(0.0, 0.25, vUv.y) * smoothstep(1.0, 0.6, vUv.y); gl_FragColor = vec4(colour * b * level * f, 1.0); }',
-    transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
-  }), 0, Bv + 2.2, -26.18, 26, 4.2, 1, Math.PI);
-  ip.userData.dynamic = true;
-  game.interference.push({ mesh: ip, light: ifl });
-  emergency('em-lab3', -13.8, Bv + 3.2, -33, { nx: 1 });
-  B.readable('note-memo', 'Memo', 'FROM: Haldane\nTO: All heads of section\n\nThe house will be told nothing. The family have signed. The daughter has not and will not, and is being dealt with.\n\nWhen the supply is withdrawn the stasis pods will hold on battery for some years. After that, it will not be our concern.', [13.82, Bv + 1.5, -36], [-1, 0], { plaque: true });
-
-  /* ======================= LEVEL C ======================= */
-  const C = levels.hiveC;
-  shell('hiveC', C);
-  // records (west)
-  B.room = 'records';
-  B.wall('z', -24, -58, -46, HW(C)); B.wall('x', -46, -24, -8, HW(C)); B.wall('x', -58, -24, -8, HW(C));
-  for (let i = 0; i < 5; i++) B.furniture('metalDark', -22 + i * 3, -57.4, C, 2.0, 2.2, 0.8, 'filing cabinets');
-  B.furniture('metalDark', -16, -50, C, 2.0, 0.76, 0.9, 'records desk');
-  B.readable('note-manifest', 'Personnel manifest', 'A ledger, five hundred and four lines long. Name, section, date of birth, pod number. The last column is headed DISPOSAL and every entry in it reads the same: "Remain."\n\nThe first entry is Abbott, Grace, catering, 1921. The last is Zielinski, Tomas, residents, 1969. He was five.', [-16.2, C + 0.77, -49.62], [0, 1], { book: true });
-  emergency('em-records', -16, C + 3.6, -46.2, { nz: -1 });
-  // Dining Hall B (north) with stasis pods
-  B.room = 'dining hall b';
-  B.wall('x', -40, -16, -1.5, HW(C)); B.wall('x', -40, 1.5, 16, HW(C));
-  B.wall('z', -16, -40, -24, HW(C)); B.wall('z', 16, -40, -24, HW(C)); B.wall('x', -24, -16, 16, HW(C));
-  for (const x of [-7, 0, 7]) B.furniture('white', x, -30, C, 2.0, 0.76, 8.0, 'canteen table');
-  for (const sx of [-1, 1]) for (let i = 0; i < 6; i++) {
-    const x = sx * 14.6, z = -38 + i * 2.6;
-    B.furniture('metalDark', x, z, C, 1.2, 0.3, 1.2, 'pod base');
-    B.mesh(G.cyl, 'podGlass', x, C + 1.4, z, 1.0, 2.2, 1.0);
-    const glow = B.mesh(G.cyl, BM.Basic(0x0b1a0e), x, C + 1.35, z, 0.55, 1.7, 0.55);
-    game.pods.push(glow);
-    B.mesh(G.sphere, 'metalDark', x, C + 2.55, z, 1.0, 0.4, 1.0);
-  }
-  game.podMaterial = game.pods[0].material;
-  for (let i = 0; i < 3; i++) B.fixture({ id: 'dining-b-' + i, name: 'Canteen tube', circuit: 'hive:dining', kind: 'fluorescent', style: 'tube', pos: [-7 + i * 7, C + 4.35, -30], colour: HUE.dining, target: 1.5, range: 11, len: 3, ry: Math.PI / 2, flicker: i === 1 ? 0.25 : 0 });
-  emergency('em-dining-w', -15.8, C + 3.2, -27, { nx: 1 });
-  emergency('em-dining-e', 15.8, C + 3.2, -27, { nx: -1 });
-  B.readable('note-menu-b', 'Menu, Dining Hall B', 'MONDAY 21 OCTOBER\n\nBreakfast: porridge, toast\nDinner: shepherd\'s pie, cabbage, jam roly-poly\nTea: bread and dripping, cocoa for the children\n\nLAST SITTING 2200 — ALL STAFF AND FAMILIES TO DINING HALL B FOR AN ANNOUNCEMENT', [0.5, C + 0.77, -26.3], [0, 1]);
-  B.readable('note-stasis', 'Stasis notice', 'INTERIM MEASURE\n\nPods hold on battery reserve. Do not open. Do not attempt revival without CORE supply.\n\nSomeone has written on each pod, in grease pencil, a name and a date of birth. They took the time to do that.', [-12, C + 1.5, -24.18], [0, -1], { plaque: true });
-  // the laser corridor (east) and the Core
-  B.room = 'laser corridor';
-  B.wall('x', -53.5, 8, 24, HW(C)); B.wall('x', -50.5, 8, 24, HW(C));
-  B.boxE('metalDark', 14, 18, C, C + 0.05, -53.35, -50.65);
-  const laserWall = P.addWall(14, 18, -53.35, -50.65, C, C + 2.6, { kind: 'laser', occludes: false });
-  game.laserWall = laserWall;
-  for (let i = 0; i < 5; i++) for (let k = 0; k < 4; k++) {
-    const beam = B.box(BM.Basic(0xff2020, { transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false }), 14.2 + i * 0.9, C + 0.3 + k * 0.6, -52, 0.02, 0.02, 2.7);
-    beam.userData.dynamic = true; game.lasers.push(beam);
-  }
-  B.box('metalDark', 14, C + 1.4, -53.3, 0.3, 2.8, 0.2); B.box('metalDark', 14, C + 1.4, -50.7, 0.3, 2.8, 0.2);
-  B.box('metalDark', 18.4, C + 1.4, -53.3, 0.3, 2.8, 0.2); B.box('metalDark', 18.4, C + 1.4, -50.7, 0.3, 2.8, 0.2);
-  B.fixture({ id: 'security-beacon-1', name: 'Security beacon', circuit: 'hive:security', kind: 'emergency', style: 'beacon', pos: [11, C + 4.25, -52], colour: HUE.security, target: 2.0, range: 10, lightType: 'rotor' });
-  B.fixture({ id: 'security-beacon-2', name: 'Security beacon', circuit: 'hive:security', kind: 'emergency', style: 'beacon', pos: [21, C + 4.25, -52], colour: HUE.security, target: 2.0, range: 10, lightType: 'rotor', phase: 0.5 });
-  B.fixture({ id: 'security-lobby', name: 'Security lamp', circuit: 'hive:security', kind: 'emergency', style: 'beacon', pos: [0, C + 4.25, -52], colour: HUE.security, target: 1.4, range: 10, lightType: 'shock' });
-  emergency('em-corridor', 9, C + 3.2, -50.62, { nz: -1 });
-  // core blast door
-  B.room = 'core';
-  B.wall('z', 24, -64, -40, HW(C), [{ at: -52, w: 2.6, type: 'door', head: 3.4, id: 'core-door', casing: 'metalDark' }]);
-  B.wall('z', 44, -64, -40, HW(C)); B.wall('x', -64, 24, 44, HW(C)); B.wall('x', -40, 24, 44, HW(C));
-  const coreWall = P.addWall(23.85, 24.15, -53.3, -50.7, C, C + 3.4, { kind: 'door' });
-  const coreDoor = B.box('metalDark', 24, C + 1.7, -52, 0.3, 3.4, 2.6); coreDoor.userData.dynamic = true;
-  game.coreDoor = { wall: coreWall, mesh: coreDoor, open: false, t: 0 };
-  B.interactable({
-    id: 'core-door', kind: 'door', label: () => grid.coreDoorUnsealed ? '' : 'Core blast door (sealed)', pos: [23.8, C + 1.5, -52], n: [-1, 0],
-    enabled: () => !grid.coreDoorUnsealed, act: g => g.ui.say('Sealed. A placard: SEAL RELEASES ON SECURITY BUS.'),
-  });
-  // the Core
-  B.furniture('metalDark', 34, -52, C, 3.2, 0.6, 3.2, 'core plinth');
-  const coreCol = B.mesh(G.cyl, BM.Basic(0x050a20), 34, C + 2.6, -52, 2.0, 4.0, 2.0);
-  coreCol.userData.dynamic = true; game.coreColumn = coreCol;
-  for (let i = 0; i < 4; i++) B.fixture({ id: 'core-' + i, name: 'Core lamp', circuit: 'hive:core', kind: 'incandescent', style: 'cage', pos: [28 + (i % 2) * 12, C + 4.1, -46 - Math.floor(i / 2) * 12], colour: HUE.core, target: 1.8, range: 13, lightType: i === 0 ? 'pulse' : 'subtlePulse' });
-  B.fixture({ id: 'core-heart', name: 'The Core', circuit: 'hive:core', kind: 'emergency', style: 'none', pos: [34, C + 2.6, -52], colour: HUE.core, target: 2.6, range: 16, lightType: 'pulse' });
-  emergency('em-core', 43.8, C + 3.2, -44, { nx: -1 });
-  B.furniture('hivePanel', 43.2, -52, C, 1.2, 1.1, 2.0, 'memorial terminal');
-  B.box(BM.Basic(0x081028), 42.58, C + 1.5, -52, 0.04, 0.6, 1.6);
-  B.interactable({
-    id: 'core-terminal', label: () => grid.live('hive:core') ? 'The Core terminal' : 'The Core terminal (dark)', pos: [42.5, C + 1.2, -52], n: [-1, 0],
-    act: g => g.coreTerminal(),
-  });
+  // a coal heap, and the gate motor's cable running up the wall from the box by the boiler
+  B.mesh(G.lowSphere, 'black', 8, CY + 0.35, -10.5, 2.6, 0.9, 2.2);
+  B.box('metalDark', 17.78, CY + 1.6, -5.5, 0.04, 3.2, 0.06);
+  B.box('metalDark', 17.78, CY + 3.15, -8.5, 0.04, 0.06, 6.0);
 };
 })();
 </script>
@@ -3730,12 +3430,22 @@ BM.buildSwitchboards = function (B, game) {
     },
   });
 
-  /* ---- the Hive routing console: name the sectors over their lamps ---- */
-  B.zone = 'hive'; B.levelName = 'hiveA'; B.room = 'administration';
-  BM.HIVE_SECTORS.forEach((s, i) => {
-    B.mesh(G.plane, labelMat(s.toUpperCase(), { w: 256, h: 64, size: 30, bg: '#14201c', fg: '#9ad8b8', border: '#4a6a5a', lit: true }), -17.75 + i * 0.7, -30 + 1.22, -57.72, 0.5, 0.11, 1, 0);
+  /* ---- the gate motor, in the cellar by the boiler: one big switch on the house supply ---- */
+  B.zone = 'mansion'; B.levelName = 'cellar'; B.room = 'cellar';
+  board({
+    n: [-1, 0], px: 17.8, pz: -5.5, y: -1.6, w: 0.7, h: 0.8, ceiling: 0, title: 'GATE MOTOR', danger: [-0.1, -1.95],
+    build: ({ lever, lamp, label, meter }) => {
+      lever(-0.1, -1.55, () => game.gates.escaping, true);
+      label(-0.1, -1.33, 'OPEN', 0.18, 0.05);
+      lamp(0.18, -1.55, () => grid.live('cellar'), 0x30ff60);
+      label(0.18, -1.7, 'SUPPLY', 0.14, 0.045, { w: 192, h: 56, size: 22 });
+      meter(0.18, -1.98, 'LOAD', () => game.gates.escaping && game.gates.t < 1 ? 0.9 : 0);
+    },
   });
-  B.mesh(G.plane, labelMat('SECTOR ROUTING — MAX 3', { w: 512, h: 64, size: 30, bg: '#14201c', fg: '#d8c890', border: '#8a7448', lit: true }), -16, -30 + 1.85, -57.72, 1.8, 0.14, 1, 0);
+  B.interactable({
+    id: 'gate-motor', label: () => game.gates.escaping ? 'Gate motor: running' : 'Gate motor switch', pos: [17.75, -1.6, -5.5], n: [-1, 0], kind: 'control', approachDist: 0.95,
+    act: g => g.throwGateMotor(),
+  });
 };
 })();
 </script>
@@ -4139,8 +3849,6 @@ BM.POOL = { points: POOL_POINTS, spots: POOL_SPOTS };
 const FOG = {
   exterior: { colour: new THREE.Color(0x222b36), density: 0.017 },   // cold blue-grey
   house: { colour: new THREE.Color(0x140c07), density: 0.06 },      // warm brown-black
-  hive: { colour: new THREE.Color(0x05211f), density: 0.050 },       // dark teal
-  core: { colour: new THREE.Color(0x040b33), density: 0.036 },       // deep blue
 };
 BM.FOG = FOG;
 
@@ -4396,7 +4104,7 @@ class FX {
     BM.wind.value = t;
 
     /* lightning */
-    if (game.storm && ctx.zone !== 'hive' && ctx.zone !== 'core') {
+    if (game.storm) {
       this.nextStrike -= dt;
       if (this.nextStrike <= 0) { this.strike(false); this.nextStrike = 9 + this.rnd() * 18; }
     }
@@ -4472,16 +4180,12 @@ class FX {
     this.mistMat.uniforms.time.value = t;
     this.mistMat.uniforms.flash.value = this.flash * outdoorFactor;
 
-    /* rotors, interference, sector visuals */
+    /* rotors */
     for (const r of this.rotors) {
       const on = r.l.intensity > 0.02;
       r.g.visible = on && ctx.visibleZones[r.l.zone];
       r.g.rotation.y = (t * 1.6 + r.l.phase) * Math.PI * 2;
       for (const b of r.g.children) b.material.opacity = on ? 0.18 : 0;
-    }
-    for (const ip of game.interference) {
-      ip.mesh.material.uniforms.time.value = t;
-      ip.mesh.material.uniforms.level.value = ip.light.target > 0 ? ip.light.intensity / ip.light.target : 0;
     }
     this.updateAppliances(dt, t);
     return chosen;
@@ -4545,18 +4249,6 @@ class FX {
       fl.scale.set(0.25, 0.3 + v * 0.6, 0.25);
       fl.visible = fire.lit;
     }
-    // Hive sector visuals
-    const live = s => grid.live('hive:' + s);
-    if (game.podMaterial) game.podMaterial.color.setHex(live('dining') ? 0x56d870 : 0x0b2a12);
-    for (const w of game.carriageWindows || []) w.material.color.setHex(live('platform') ? 0xffb85a : 0x1a1208);
-    for (const c of game.consoleLamps || []) c.mesh.material.color.setHex(grid.routed.has(c.sector) ? (grid.generator ? 0x40ff70 : 0x204020) : 0x300000);
-    if (game.coreColumn) {
-      const v = live('core') ? 0.55 + 0.45 * Math.sin(t * 2.2) : 0.05;
-      game.coreColumn.material.color.setRGB(0.08 * v, 0.2 * v, 1.0 * v);
-    }
-    const lasers = grid.lasersLive;
-    for (const b of game.lasers || []) { b.visible = lasers; b.material.opacity = 0.6 + 0.3 * Math.sin(t * 40); }
-    if (game.laserWall) game.laserWall.enabled = lasers;
   }
 
   /* Render one mirror per frame while the player is in the library. */
@@ -4815,7 +4507,7 @@ class Synth {
       v.src.detune.value = (i - 2) * 7;
       this.hum.push(v);
     }
-    this.loops.generator = this.toneLoop('square', 29, 'lowpass', 140);
+    this.loops.motor = this.toneLoop('square', 36, 'lowpass', 180);
     this.loops.fan = this.noiseLoop(this.white, 'bandpass', 600, 1.5);
     this.loops.radio = this.noiseLoop(this.white, 'bandpass', 2400, 2.5);
     this.loops.radioTone = this.toneLoop('triangle', 330, 'lowpass', 1500);
@@ -4826,9 +4518,6 @@ class Synth {
     this.loops.record = this.toneLoop('triangle', 262, 'lowpass', 1400);
     this.loops.recordBass = this.toneLoop('sine', 131, 'lowpass', 400);
     this.loops.fire = this.noiseLoop(this.brown, 'lowpass', 900, 0.8);
-    this.loops.laser = this.toneLoop('sine', 120, 'lowpass', 600);
-    this.loops.core = this.toneLoop('sine', 41, 'lowpass', 200);
-    this.loops.lift = this.toneLoop('sawtooth', 72, 'lowpass', 260);
     this.loops.engine = this.toneLoop('sawtooth', 38, 'lowpass', 240);
     this.enabled = true;
   }
@@ -4853,6 +4542,7 @@ class Synth {
   }
   set(loop, gain, pan) {
     const l = this.loops[loop]; if (!l) return;
+    (this.levels || (this.levels = {}))[loop] = gain;
     const t = this.ctx.currentTime;
     l.g.gain.setTargetAtTime(Math.max(0, gain), t, 0.08);
     if (l.p && pan !== undefined) l.p.pan.setTargetAtTime(Math.max(-1, Math.min(1, pan)), t, 0.08);
@@ -4897,9 +4587,17 @@ class Synth {
   lever() { this.clunk(); this.burst(this.white, 'bandpass', 500, 2, 0.4, 0.01, 0.35, 0.05); this.tone('sine', 60, 50, 0.3, 0.2, 1.6, 0.1); }
   bang(v) { v = v === undefined ? 1 : v; this.burst(this.white, 'highpass', 900, 0.6, 1.2 * v, 0.001, 0.12); this.burst(this.brown, 'lowpass', 600, 1, 0.8 * v, 0.002, 0.5); this.tone('square', 2400, 300, 0.2 * v, 0.001, 0.08); for (let i = 0; i < 4; i++) this.tone('sine', 3200 + i * 700, 3000 + i * 600, 0.05 * v, 0.001, 0.06, 0.08 + i * 0.07); }
   tink() { this.tone('sine', 2600, 2400, 0.06, 0.001, 0.05); }
-  zap() { this.tone('sawtooth', 1200, 80, 0.4, 0.002, 0.3); this.burst(this.white, 'bandpass', 2400, 3, 0.5, 0.001, 0.2); }
   denied() { this.tone('square', 220, 200, 0.2, 0.01, 0.18); this.tone('square', 165, 150, 0.2, 0.01, 0.25, 0.2); }
   accept() { this.tone('sine', 660, 660, 0.15, 0.01, 0.12); this.tone('sine', 880, 880, 0.12, 0.01, 0.15, 0.12); }
+  /* the gates meeting: iron on iron, then the bolt */
+  gateBang(v) {
+    v = v === undefined ? 1 : v;
+    this.burst(this.white, 'bandpass', 900, 1.5, 0.7 * v, 0.002, 0.5);
+    this.tone('sine', 110, 35, 0.6 * v, 0.004, 1.4);
+    this.burst(this.brown, 'lowpass', 200, 1, 0.5 * v, 0.01, 1.8);
+    this.tone('square', 240, 180, 0.3 * v, 0.005, 0.12, 1.1);   // the bolt
+    this.burst(this.white, 'highpass', 2500, 1, 0.3 * v, 0.001, 0.06, 1.1);
+  }
   rattle() { for (let i = 0; i < 5; i++) this.burst(this.white, 'bandpass', 1800 + i * 200, 4, 0.35, 0.002, 0.07, i * 0.06); }
   caw(pan, v) {
     // a crow: two or three harsh, nasal calls
@@ -4937,11 +4635,6 @@ class Synth {
       o.start(t); lfo.start(t); o.stop(t + dur + 0.1); lfo.stop(t + dur + 0.1);
     }
     this.clunk();
-  }
-  blastDoor() { this.tone('sawtooth', 60, 40, 0.4, 0.4, 2.4); this.burst(this.brown, 'lowpass', 300, 1, 0.8, 0.05, 2.2); for (let i = 0; i < 6; i++) this.tink(); }
-  generatorStart() {
-    for (let i = 0; i < 5; i++) this.burst(this.brown, 'lowpass', 220, 2, 0.7, 0.01, 0.12, i * 0.16);
-    this.tone('sawtooth', 20, 29, 0.4, 0.8, 1.2, 0.7);
   }
 
   /* The nearest lit fittings and how loud each hums (follows its brightness, so a flicker crackles). */
@@ -5006,7 +4699,6 @@ class Synth {
     this.set('rain', storm ? 0.2 * out + (zone === 'house' && p.y > 7.5 ? 0.15 : 0) : 0);
     this.set('rainLow', storm ? 0.25 * out : 0);
     this.set('wind', storm ? 0.12 * out + 0.04 : 0.02);
-    this.set('core', zone === 'core' && grid.live('hive:core') ? 0.35 : zone === 'hive' ? 0.05 : 0);
     // every lit fitting hums: the nearest ones get the voices
     this.humTargets = this.pickHums(p);
     const tNow = this.ctx.currentTime;
@@ -5053,13 +4745,12 @@ class Synth {
     this.set('radioTone', radio * 0.05, radioPos ? pan(radioPos) : 0);
     if (radio > 0 && Math.random() < dt * 5) this.loops.radioTone.src.frequency.setTargetAtTime([220, 247, 262, 294, 330, 349, 392][Math.floor(Math.random() * 7)], this.ctx.currentTime, 0.02);
     this.set('tv', tv * 0.06, tvPos ? pan(tvPos) : 0);
-    const gen = game.generatorPos;
-    this.set('generator', grid.generator && gen ? near(gen, 30) * 0.25 + (zone === 'hive' || zone === 'core' ? 0.04 : 0) : 0, gen ? pan(gen) : 0);
+    // the gate motor grinds while the gates are being driven open: loud at the gates, a thrum through the cellar
+    const gp = { x: 0, y: 0, z: 88 }, motor = game.gates.escaping && game.gates.t < 1;
+    this.set('motor', motor ? Math.max(near(gp, 40) * 0.3, zone === 'house' && p.y < -1 ? 0.08 : 0) : 0, pan(gp));
     this.set('fire', game.fire && game.fire.lit ? near(game.fire.light.pos, 9) * 0.3 : 0, game.fire ? pan(game.fire.light.pos) : 0);
     if (game.fire && game.fire.lit && Math.random() < dt * 6) { const v = near(game.fire.light.pos, 9); if (v > 0) this.burst(this.white, 'highpass', 2500, 1, 0.12 * v, 0.001, 0.03); }
-    this.set('laser', grid.lasersLive && game.laserWall ? near({ x: 16, y: -45, z: -52 }, 14) * 0.18 : 0);
-    this.set('lift', game.riding ? 0.22 : 0);
-    this.set('hum', (grid.live('main') && zone === 'house' ? 0.03 : 0) + (zone === 'hive' ? 0.03 : 0));
+    this.set('hum', grid.live('main') && zone === 'house' ? 0.03 : 0);
     // the arrival: your engine and your car radio, on low
     const intro = game.intro;
     this.set('engine', intro ? intro.engine : 0);
@@ -5091,7 +4782,7 @@ BM.Synth = Synth;
 const BM = window.BM;
 
 const START = { x: 0.6, y: 0, z: 95.6, yaw: 0 }; // on the lane beside your car, facing the gates
-const GATE = { delay: 1.0, swing: 9 };
+const GATE = { delay: 1.0, swing: 9, close: 7.5, escape: 12 };
 const APPLIANCE_SAY = {
   tv: 'The set warms up with a whine. Snow, and a grey hiss.',
   fan: 'The fan whirs up to speed.',
@@ -5135,7 +4826,7 @@ class UI {
       while (t && t !== this.el.lights && !(t.dataset && t.dataset.k)) t = t.parentNode;
       if (t && t.dataset && t.dataset.k) { this.game.lightPanelToggle(t.dataset.k); this.lightsT = 0; }
     });
-    this.mode = null;    // null | 'read' | 'fuse' | 'console' | 'phone' | 'title' | 'ending'
+    this.mode = null;    // null | 'read' | 'fuse' | 'estate' | 'phone' | 'title' | 'ending'
     this.msgT = 0;
     this.fadeV = 0;
   }
@@ -5179,17 +4870,6 @@ class UI {
     this.el.panelBody.innerHTML = rows + `<div class="row"><span class="key">A</span><span>ALL ON / ALL OFF</span><span></span><span></span></div>` +
       `<div class="hint">${grid.lodge ? 'Lodge supply: ON.' : 'Lodge supply: OFF. Throw the main switch first.'}<br>1–9, 0 to switch a group · A for everything · E to close</div>`;
   }
-  openConsole() {
-    this.mode = 'console'; this.el.panel.style.display = 'block';
-    this.el.panelTitle.textContent = 'HALCYON — POWER ROUTING';
-    this.renderConsole();
-  }
-  renderConsole() {
-    const g = this.game.grid;
-    this.el.panelBody.innerHTML = BM.HIVE_SECTORS.map((s, i) => `<div class="row"><span class="key">${i + 1}</span><span>${s.toUpperCase()}</span><span class="${g.routed.has(s) ? 'on' : 'off'}">${g.routed.has(s) ? 'FED' : '—'}</span></div>`).join('') +
-      `<div class="row"><span class="key"></span><span>EMERGENCY</span><span class="on">BATTERY</span></div>` +
-      `<div class="hint">${g.generator ? `Generator: RUNNING · load ${g.routed.size} / ${g.capacity}` : 'Generator: STOPPED'}${g.coreDoorUnsealed ? ' · CORE SEAL: RELEASED' : ' · CORE SEAL: HELD'}${g.lasersLive ? ' · GRID: LIVE' : ''}<br>1–6 to route · E to close</div>`;
-  }
   phone() {
     if (this.mode === 'phone') { this.close(); return; }
     this.mode = 'phone'; this.el.phone.style.display = 'block';
@@ -5226,7 +4906,6 @@ class UI {
   update(dt) {
     if (this.msgT > 0) { this.msgT -= dt; if (this.msgT <= 0) this.el.msg.style.opacity = '0'; }
     if (this.mode === 'fuse') this.renderFuse();
-    if (this.mode === 'console') this.renderConsole();
     if (this.mode === 'estate') this.renderEstate();
     this.lightsT -= dt;
     if (this.lightsT <= 0) { this.lightsT = 0.2; this.renderLights(); }
@@ -5272,7 +4951,6 @@ class Game {
     BM.buildGrounds(this.B, this);
     BM.buildCar(this.B, this);
     BM.buildMansion(this.B, this);
-    BM.buildHive(this.B, this);
     BM.buildAppliances(this.B, this);
     BM.buildHauntedGarden(this.B, this);
     BM.buildGothic(this.B, this);
@@ -5282,7 +4960,6 @@ class Game {
     this.interactables = this.B.interactables;
     this.byId = {};
     for (const it of this.interactables) this.byId[it.id] = it;
-    this.generatorPos = { x: 16, y: -28.5, z: -52 };
 
     this.audio = new BM.Synth(this);
     this.fx = new BM.FX(this);
@@ -5292,8 +4969,8 @@ class Game {
     this.applyQuality(this.quality.settings);
     this.wireEvents();
     this.stormTimer = -1;
-    this.riding = null;
     this.climbing = null;
+    this.outro = null;
     this.updateCamera();
     return this;
   }
@@ -5339,23 +5016,17 @@ class Game {
     });
     ev.on('power:trip', () => { this.fx.strike(true); this.audio.clunk(); this.ui.say('A white crack of lightning, right overhead — and every light in the house goes out.', 6); });
     ev.on('power:main', e => { this.audio.lever(); this.ui.say(e.reset ? 'MAIN goes back up with a clunk. The house comes back on around you.' : 'MAIN. A deep clunk through the walls, then fittings all over the house begin to stutter into life.', 6); });
-    ev.on('route:refused', s => { this.audio.denied(); this.ui.say('REFUSED. The generator will only carry three sectors. Drop one first.'); });
-    ev.on('route:nogen', () => { this.audio.denied(); this.ui.say('The console is on battery. Nothing will route until the generator runs.'); });
-    ev.on('hive:coredoor', () => { this.audio.blastDoor(); this.ui.say('Somewhere below, a heavy seal lets go with a boom. CORE SEAL: RELEASED.'); });
   }
 
   /* --------------------------------------------------- state queries ---- */
   zoneAt(x, y, z) {
-    if (y < -20) return (x > 24 && y < -40) ? 'core' : 'hive';
     if (y < -1) return 'house';
     if (x > -18.2 && x < 18.2 && z > -12.2 && z < 12.2) return 'house';
     return 'exterior';
   }
   visibleZones(y) {
-    if (this.riding) return { exterior: false, mansion: !this.riding.toHive, hive: this.riding.toHive };
-    if (y < -15) return { exterior: false, mansion: false, hive: true };
-    if (y < -1) return { exterior: false, mansion: true, hive: false };
-    return { exterior: true, mansion: true, hive: false };
+    if (y < -1) return { exterior: false, mansion: true };
+    return { exterior: true, mansion: true };
   }
   roomAt(x, y, z) {
     if (y > -1 && y < 3.5 && x > 6 && x < 18 && z > -4 && z < 4) return 'library';
@@ -5363,19 +5034,18 @@ class Game {
   }
   objective() {
     const g = this.grid, s = this.story;
-    if (s.ended) return 'It is done. They have been seen.';
+    const gates = this.gates;
+    if (s.ended) return 'You are out.';
+    if (gates.escaping) return gates.t < 1 ? 'The gate motor is running. Get down the drive.' : 'The gates are open. Walk out — and do not look back at the windows.';
     if (!g.lodge) return 'The gates are locked. Try the gatekeeper\'s lodge, to the left of the gates.';
-    if (!this.gates.open) return 'There is power at the lodge. Work the gate release — and the estate lighting panel under the window lights the grounds.';
-    if (!this.frontDoors.open) return 'Go up the drive to the house.';
+    if (!gates.open && !gates.lockedIn) return 'There is power at the lodge. Work the gate release — and the estate lighting panel under the window lights the grounds.';
+    if (!gates.lockedIn) return 'Go up the drive to the house.';
+    if (!this.frontDoors.open) return 'The gates have shut and bolted behind you. There is nothing for it but the house.';
     if (!g.breakers.main && !g.stormHasTripped) return this.hallLit() ? 'The hall is lit. Find the fuse board for the rest of the house — try the pantry, at the back.' : 'It is dark. There is a light panel by the door.';
     if (g.tripped) return 'The storm has tripped MAIN. Go back down to the pantry fuse board and reset it.';
     if (!s.journalRead) return 'Look round the house. Eleanor\'s rooms are upstairs, and the attic above them.';
-    if (!this.blastDoor.open) return 'The steel door in the cellar. Eleanor gave you the combination.';
-    if (!g.generator) return 'Find the diesel generator on Level A.';
-    if (!g.coreDoorUnsealed) return 'Read the note by the routing console. The Core is behind a sealed door on Level C.';
-    if (g.lasersLive) return 'The Core seal is released — but SECURITY also feeds the laser grid.';
-    if (!g.live('hive:core')) return 'Feed CORE, and LIFTS to get down to it.';
-    return 'Go down to the Core.';
+    if (!g.live('cellar')) return 'Eleanor\'s father wired the gates to a switch in the cellar, on the house supply. The cellar circuit must be on.';
+    return 'The gate motor switch is in the cellar, by the boiler. Throw it.';
   }
   hallLit() { return this.hallLights.some(id => { const l = this.grid.light(id); return l && l.powered; }); }
 
@@ -5446,6 +5116,7 @@ class Game {
   }
   openGates() {
     if (this.gates.open) return;
+    if (this.gates.lockedIn) { this.audio.click(); this.ui.say('The release clicks. Out at the gates, nothing moves: the bolt is on the house side now.'); return; }
     this.gates.open = true; this.gates.t = 0; this.gates.wait = 0;
     this.audio.clunk();
     const p = this.player, d = Math.hypot(p.x, p.z - 88);
@@ -5457,43 +5128,29 @@ class Game {
     this.frontDoors.open = true; this.frontDoors.wall.enabled = false; this.frontDoors.t = 0;
     this.audio.groan();
   }
-  tryBlastDoor() {
-    if (this.blastDoor.open) return;
-    if (!this.story.journalRead) { this.audio.rattle(); this.ui.say('A steel door with a wheel lock and six numbered dials. It will not move without the combination.'); return; }
-    this.blastDoor.open = true; this.blastDoor.wall.enabled = false; this.blastDoor.t = 0;
-    this.audio.blastDoor();
-    this.ui.say('2 – 1 – 1 – 0 – 7 – 4. The wheel turns. The door rolls aside on a gust of stale, cold air.');
-  }
-  startGenerator() {
-    if (this.grid.generator) { this.ui.say('The generator is running.'); return; }
-    this.grid.startGenerator(); this.audio.generatorStart();
-    this.ui.say('It coughs, catches, and settles into a heavy throb. Now the routing console.');
-  }
-  coreTerminal() {
-    if (!this.grid.live('hive:core')) { this.audio.denied(); this.ui.say('The terminal is dead. CORE is not being fed.'); return; }
-    this.endGame();
+  throwGateMotor() {
+    const gates = this.gates;
+    if (gates.escaping) { this.ui.say('The motor is running. Get up the stairs and down the drive.'); return; }
+    if (!this.grid.live('cellar')) { this.audio.denied(); this.ui.say('The switch is dead. The gate motor is on the house supply: MAIN, and the CELLAR circuit.'); return; }
+    if (!gates.lockedIn) { this.audio.click(); this.ui.say('The gates are open already.'); return; }
+    gates.escaping = true; gates.lockedIn = false; gates.closing = false;
+    gates.open = true; gates.t = 0; gates.wait = 0; gates.swing = GATE.escape;
+    this.audio.lever();
+    this.ui.say('A deep grinding starts up in the wall and travels away through the ground. Far off at the lane, the bolt draws, and the gates begin to open.', 7);
   }
   climb(dest, yaw) {
-    if (this.climbing || this.riding) return;
+    if (this.climbing) return;
     this.climbing = { dest, yaw, t: 0 };
     this.audio.step('wood');
-  }
-  ride(kind, dest, yaw, cond, refuse) {
-    if (this.riding || this.climbing) return false;
-    if (!cond()) { this.audio.denied(); this.ui.say(refuse); return false; }
-    this.riding = { kind, dest, yaw, t: 0, toHive: dest.y < -15, dur: this.headless ? 0.01 : 3.2 };
-    this.audio.clunk();
-    return true;
   }
   endGame() {
     this.story.ended = true;
     this.ui.mode = 'ending';
     const text = [
-      'The terminal wakes to a list. Five hundred and four names, scrolling.',
-      'One by one the pods along Dining Hall B take the current and their seals hiss. Their lamps come up — not the hard red of the batteries, but a warm, ordinary light, like a house with every window lit.',
-      'They were never cursed. They were signed away, on a Monday night in 1974, by a family that found it easier to call their daughter cursed than to say what they had done.',
-      'Eleanor would not sign. She spent the rest of her life outside the fence.',
-      'You put the lights on. You looked.',
+      'The gates stand open behind you. The house has gone dark, one light at a time, the way it came on.',
+      'Eleanor never got this far. Her father\'s gates shut on her the year she turned thirteen, and in her lifetime they did not open again. "Abroad" was the attic. "Cursed" was the easiest word they had.',
+      'They are still up there, in a way: every switch you threw tonight was a switch she was never allowed to touch.',
+      'You put the lights on. You looked. And you walked out.',
       'BLACKTHORN MANOR',
     ].join('\n\n');
     if (this.ui.el.ending) { this.ui.el.endingText.textContent = text; this.ui.el.ending.style.display = 'flex'; }
@@ -5540,6 +5197,7 @@ class Game {
     const ui = this.ui;
     if (ui.mode === 'title') { this.begin(); return; }
     if (this.intro) { if (['KeyE', 'Space', 'Enter', 'Escape'].includes(code) && this.intro.t > 0.6) this.intro.skip(); return; }
+    if (this.outro) return;
     if (ui.mode === 'ending') return;
     if (ui.mode === 'read') { if (code === 'KeyE' || code === 'Escape' || code === 'Space' || code === 'Enter') ui.close(); return; }
     if (ui.mode === 'fuse') {
@@ -5558,11 +5216,6 @@ class Game {
       else { const i = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0'].indexOf(code); if (i >= 0 && i < this.estateGroups.length) this.toggleEstate(this.estateGroups[i][0]); }
       return;
     }
-    if (ui.mode === 'console') {
-      if (code === 'KeyE' || code === 'Escape') ui.close();
-      else { const i = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6'].indexOf(code); if (i >= 0) { const r = this.grid.toggleRoute(BM.HIVE_SECTORS[i]); if (r.ok) this.audio.accept(); } }
-      return;
-    }
     if (code === 'KeyP') { ui.phone(); return; }
     if (code === 'KeyL') { ui.lightsVisible = !ui.lightsVisible; ui.lightsT = 0; return; }
     { const i = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0'].indexOf(code);
@@ -5570,7 +5223,7 @@ class Game {
     if (ui.mode === 'phone' && (code === 'Escape' || code === 'KeyE')) { ui.close(); return; }
     if (code === 'KeyT') { this.player.torch = !this.player.torch; this.audio.click(); }
     if (code === 'KeyE') this.interact();
-    if (code === 'Space' && this.player.grounded && !this.riding && !this.climbing) { this.player.vy = 4.3; this.player.grounded = false; }
+    if (code === 'Space' && this.player.grounded && !this.climbing) { this.player.vy = 4.3; this.player.grounded = false; }
   }
   keyUp(code) { this.keys[code] = false; }
   begin() {
@@ -5584,9 +5237,9 @@ class Game {
   update(dt) {
     this.time += dt; this.clock += dt;
     const p = this.player;
-    const frozen = this.ui.mode === 'read' || this.ui.mode === 'fuse' || this.ui.mode === 'console' || this.ui.mode === 'estate' || this.ui.mode === 'title' || this.ui.mode === 'ending';
+    const frozen = this.ui.mode === 'read' || this.ui.mode === 'fuse' || this.ui.mode === 'estate' || this.ui.mode === 'title' || this.ui.mode === 'ending';
     if (this.intro) this.intro.update(dt);
-    else if (this.riding) this.updateRide(dt);
+    else if (this.outro) this.updateOutro(dt);
     else if (this.climbing) this.updateClimb(dt);
     else if (!frozen) this.updatePlayer(dt);
     this.updateDoors(dt);
@@ -5603,7 +5256,7 @@ class Game {
     this.ui.update(dt);
     this.updateCamera();
     // prompt
-    if (!frozen && !this.riding && !this.climbing && !this.intro) {
+    if (!frozen && !this.climbing && !this.intro && !this.outro) {
       const it = this.pick();
       const label = it ? this.labelOf(it) : '';
       this.currentPick = it;
@@ -5626,7 +5279,6 @@ class Game {
     const y0 = p.y;
     if (fwd !== 0) {
       const hit = phys.move(p, f.x * fwd * speed * dt, f.z * fwd * speed * dt);
-      if (hit && hit.kind === 'laser') this.shock(f);
       p.bob += dt * (running ? 12 : 8); p.stepAcc += Math.abs(fwd) * speed * dt;
       if (p.stepAcc > (running ? 1.1 : 0.75) && p.grounded) { p.stepAcc = 0; this.audio.step(this.surfaceAt(p)); }
     }
@@ -5649,29 +5301,10 @@ class Game {
     if (p.y < -80) { p.x = p.safe.x; p.y = p.safe.y; p.z = p.safe.z; p.vy = 0; }
   }
   surfaceAt(p) {
-    if (p.y < -20) return 'metal';
     const z = this.zoneAt(p.x, p.y, p.z);
     if (z === 'house') return p.y < -1 ? 'stone' : 'wood';
     if (Math.abs(p.x) < 3.2 && p.z > 30) return 'gravel';
     return 'grass';
-  }
-  shock(f) {
-    if (this.time - (this.lastShock || -9) < 0.6) return;
-    this.lastShock = this.time;
-    this.audio.zap();
-    this.phys.move(this.player, -f.x * 0.8, -f.z * 0.8);
-    if (this.time - (this.lastShockSay || -9) > 4) { this.lastShockSay = this.time; this.ui.say('The grid spits and throws you back. It is live while SECURITY is fed.'); }
-  }
-  updateRide(dt) {
-    const r = this.riding, p = this.player;
-    r.t += dt;
-    const half = r.dur / 2;
-    this.ui.fade(Math.min(1, r.t < half ? r.t / 0.5 : (r.dur - r.t) / 0.5));
-    if (!r.moved && r.t >= half) {
-      r.moved = true; p.x = r.dest.x; p.y = r.dest.y; p.z = r.dest.z; p.yaw = r.yaw; p.vy = 0; p.grounded = true;
-      p.safe = { x: p.x, y: p.y, z: p.z };
-    }
-    if (r.t >= r.dur) { this.riding = null; this.ui.fade(0); this.audio.clunk(); }
   }
   updateClimb(dt) {
     const c = this.climbing, p = this.player;
@@ -5682,15 +5315,38 @@ class Game {
     if (c.t >= dur) { this.climbing = null; this.ui.fade(0); }
   }
   updateDoors(dt) {
-    const g = this.gates;
+    const g = this.gates, p = this.player;
     if (g.open && g.t < 1) {
       // bolts first, then a slow inward swing that drags and catches on the hinges
       g.wait = (g.wait || 0) + dt;
-      if (g.wait > GATE.delay) g.t = Math.min(1, g.t + dt / GATE.swing);
+      if (g.wait > GATE.delay) g.t = Math.min(1, g.t + dt / (g.swing || GATE.swing));
       const e = (1 - Math.cos(g.t * Math.PI)) / 2, a = (e + Math.sin(g.t * Math.PI * 7) * 0.012 * (1 - g.t)) * 1.65;
       g.leaves[0].rotation.y = a; g.leaves[1].rotation.y = -a;
       if (g.t > 0.45) g.wall.enabled = false;
+      if (g.escaping && g.t >= 1 && !g.saidOpen) { g.saidOpen = true; this.ui.say('The motor stops. Out at the lane, the gates stand wide.', 5); }
     }
+    // the contact in the drive: once you are inside, the gates swing shut behind you and bolt
+    if (g.open && g.t >= 1 && !g.lockedIn && !g.closing && !g.escaping && !this.story.ended && p.z < 85 && p.z > 70 && Math.abs(p.x) < 3.5) {
+      g.closing = true; g.closeT = 0; g.closeWait = 0;
+      this.audio.click();
+      this.audio.gateCreak(0.6, GATE.close, Math.max(0.4, 1 - Math.hypot(p.x, p.z - 88) / 40));
+      this.ui.say('Something clicks under your foot. Behind you, with a long creak, the gates begin to swing shut.', 6);
+    }
+    if (g.closing) {
+      g.closeWait += dt;
+      if (g.closeWait > 0.6) g.closeT = Math.min(1, g.closeT + dt / GATE.close);
+      const u = g.closeT, e = 1 - (1 - Math.cos(u * Math.PI)) / 2, a = (e + Math.sin(u * Math.PI * 9) * 0.01 * u) * 1.65;
+      g.leaves[0].rotation.y = a; g.leaves[1].rotation.y = -a;
+      // the leaves become solid again once they are mostly shut, unless you are standing in the gap
+      if (u > 0.55 && !g.wall.enabled && !(Math.abs(p.z - 88) < 1.2 && Math.abs(p.x) < 3.8)) g.wall.enabled = true;
+      if (u >= 1) {
+        g.closing = false; g.open = false; g.t = 0; g.lockedIn = true; g.wall.enabled = true;
+        this.audio.gateBang(Math.max(0.35, 1 - Math.hypot(p.x, p.z - 88) / 60));
+        this.ui.say('They meet with a bang that goes away down the lane — and a bolt shoots home. Locked. From the house side.', 7);
+      }
+    }
+    // walking out through the open gates is the end of it
+    if (g.escaping && g.t >= 1 && !this.outro && !this.story.ended && p.z > 89.5 && Math.abs(p.x) < 3.4) this.startOutro();
     const fd = this.frontDoors;
     if (fd.open && fd.t < 1) {
       // two stages: a first heave to a crack, a pause, then the long swing
@@ -5698,12 +5354,35 @@ class Game {
       const t = fd.t, a = t < 0.35 ? (t / 0.35) * 0.35 : t < 0.42 ? 0.35 : 0.35 + ((t - 0.42) / 0.58) * 1.45;
       fd.leaves[0].rotation.y = -a; fd.leaves[1].rotation.y = a;
     }
-    const bd = this.blastDoor;
-    if (bd.open && bd.t < 1) { bd.t = Math.min(1, bd.t + dt / 2.5); bd.mesh.position.x = bd.t * 2.3; bd.mesh.updateMatrix(); bd.wheel.position.x = bd.t * 2.3; bd.wheel.rotation.z = bd.t * 8; bd.wheel.updateMatrix(); }
-    const cd = this.coreDoor;
-    if (this.grid.coreDoorUnsealed && !cd.open) { cd.open = true; cd.wall.enabled = false; }
-    if (cd.open && cd.t < 1) { cd.t = Math.min(1, cd.t + dt / 3); cd.mesh.position.y = -46 + 1.7 + cd.t * 3.3; cd.mesh.updateMatrix(); }
   }
+  /* ---- the way out: you stop on the lane and look back, and the house goes dark one light at a time ---- */
+  startOutro() {
+    const p = this.player;
+    this.outro = { t: 0, step: 0, yaw0: p.yaw, fade: 0 };
+    this.ui.say('You are through. Behind you, the gates stand open, and above them the house burns with every window lit.', 6);
+  }
+  updateOutro(dt) {
+    const o = this.outro, p = this.player, g = this.grid;
+    o.t += dt;
+    p.x += (0.0 - p.x) * Math.min(1, dt * 1.5); p.z += (93.0 - p.z) * Math.min(1, dt * 1.5);
+    // turn to face the house
+    const want = 0; let d = want - p.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); // yaw 0 looks up the drive to the house
+    p.yaw += d * Math.min(1, dt * 1.2); p.pitch += (0.1 - p.pitch) * Math.min(1, dt * 1.2);
+    // the house goes dark from the top down, then the grounds from the house outwards
+    const STEPS = [
+      [2.5, () => this.darken(l => l.circuit === 'attic')],
+      [3.7, () => this.darken(l => l.circuit === 'west' || l.circuit === 'east')],
+      [4.9, () => this.darken(l => l.circuit === 'ground' || l.circuit === 'cellar')],
+      [6.1, () => this.darken(l => l.circuit === 'hall')],
+      [7.3, () => this.darken(l => l.circuit === 'lodge' && !this.estateLights.drive.includes(l.id) && !this.estateLights.gate.includes(l.id))],
+      [8.5, () => this.darken(l => this.estateLights.drive.includes(l.id))],
+      [9.7, () => this.darken(l => this.estateLights.gate.includes(l.id))],
+    ];
+    while (o.step < STEPS.length && o.t >= STEPS[o.step][0]) { STEPS[o.step][1](); this.audio.clunk(0.35); o.step++; }
+    if (o.t > 10.5) this.ui.fade(Math.min(1, (o.t - 10.5) / 2.5));
+    if (o.t > 13.5) { this.outro = null; this.endGame(); }
+  }
+  darken(pred) { for (const l of this.grid.lights) if (pred(l)) l.on = false; }
   updateStorm(dt) {
     const p = this.player, g = this.grid;
     const inAttic = p.y > 7.6 && Math.abs(p.x) < 18.5 && Math.abs(p.z) < 12.5;

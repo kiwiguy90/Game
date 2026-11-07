@@ -3,7 +3,8 @@
 A first-person atmospheric horror exploration game. You inherit a country house
 that stopped in 1974. There is no combat and nothing chases you: the whole game
 is finding electrical power and switching it on, and every light you restore
-shows you more of what the family did.
+shows you more of what the family did to their daughter. The gates shut and
+bolt behind you on the way in; getting them open again is the way out.
 
 ## Play
 
@@ -57,8 +58,7 @@ heaters that glow, a fridge whose compressor cycles, a radiogram, and electric
 clocks that stop when the power does. Walk up to one and press E to switch it.
 
 At the fuse board: `M` throws MAIN, `1`–`6` switch HALL, GROUND, EAST, WEST,
-ATTIC, CELLAR. At the routing console: `1`–`6` feed PLATFORM, LIFTS, LABS,
-SECURITY, DINING, CORE.
+ATTIC, CELLAR. The gate motor switch is in the cellar, on the CELLAR circuit.
 
 ## Tests
 
@@ -78,10 +78,10 @@ draw-call counts are what the renderer actually issues.
 | arrival | The old road, poles and forest; the car drives in, stalls, its lights die; you get out and walk; skippable |
 | hud | The side lighting panel switches estate groups and rooms from anywhere; number keys; L; walking and running speeds |
 | appliances | Lodge and house appliances: switching, boiling, cycling, clocks stopping, coming back by themselves |
-| circuits | Lodge → estate lights and hall → MAIN, start-up behaviours, storm trip, appliances, fire, generator limit, the SECURITY bus |
-| playthrough | The whole game from the lane to the ending, walking every leg by flood-fill under the current state |
+| circuits | Lodge → estate lights and hall → MAIN, start-up behaviours, storm trip, appliances, fire, blown and faulty bulbs |
+| playthrough | The whole game from the lane to the ending: the gates locking behind you, the storm, the gate motor, walking out; every leg walked by flood-fill under the current state |
 | controls | The whole game again, played only with the keyboard (an autopilot steers with A/D/W and presses E) |
-| reachability | Flood-fill over all seven levels: every switch, door, ladder, lift and readable can be reached and selected |
+| reachability | Flood-fill over all four levels: every switch, door, ladder and readable can be reached and selected |
 | doorways | Every wall gap walks through clear at full width, both directions |
 | paths | The drive and every garden path walk clear at full width |
 | furniture | No furniture penetrates a wall |
@@ -96,7 +96,7 @@ draw-call counts are what the renderer actually issues.
 The HTML holds one `<script>` per system, in load order:
 
 - `bm-10-power` — the electricity model. `PowerGrid` (circuits, breakers,
-  storm trip, Hive generator routing), `LightRecord` (every light is data),
+  storm trip), `LightRecord` (every light is data),
   start-up sequences and the nine light types.
 - `bm-20-physics` — collision as data: walls and furniture boxes, floor rects,
   ramps and arcs (the curved stairs), sliding movement, occlusion rays and the
@@ -104,7 +104,7 @@ The HTML holds one `<script>` per system, in load order:
 - `bm-30-build` — canonical geometry scaled per mesh, procedural textures
   mapped in world space, walls with real door and window openings, fittings
   and interactables.
-- `bm-40-grounds`, `bm-41-mansion`, `bm-42-hive`, `bm-43-appliances`, `bm-44-haunted` — the world,
+- `bm-40-grounds`, `bm-41-mansion`, `bm-43-appliances`, `bm-44-haunted` — the world,
   including the haunted garden (dead trees, yews, willow, blackthorn, ivy, crows).
 - `bm-45-gothic` — the Gothic Revival exterior: corner towers and spires, the clock
   tower, steep slate roof, gables, buttresses, window hoods, gargoyles, the porch;

@@ -2021,6 +2021,12 @@ BM.buildGrounds = function (B, game) {
       act: g => { if (!grid.lodge) { g.ui.say('The lever moves, but the gates do not. No power to the lodge.'); g.audio.click(); return; } g.gateLever(); },
     });
   }
+  // the gatekeeper's telephone: an extension from the house, dead these fifty years
+  B.box('black', -7.3, 0.84, 81.75, 0.22, 0.1, 0.22); B.box('black', -7.3, 0.93, 81.75, 0.2, 0.06, 0.07); B.box('black', -7.3, 0.9, 81.67, 0.06, 0.04, 0.05);
+  B.interactable({
+    id: 'lodge-phone', label: 'Pick up the telephone', pos: [-7.3, 0.95, 81.75], n: [0, 1], approachDist: 0.9,
+    act: g => { g.story.phoneTried = true; g.audio.click(); g.audio.tone('sine', 400, 400, 0.0, 0.01, 0.1); g.ui.say('Dead. Not a crackle, not a dial tone. The line comes down from the house, and nobody has paid for it since 1974.', 5); },
+  });
   B.readable('note-lodge', "Gatekeeper's log", [
     '14 October 1974.',
     'The doctor\'s car again after dark. Mr Blackthorn says I am not to log it. I am logging it.',
@@ -2185,6 +2191,19 @@ BM.buildGrounds = function (B, game) {
   B.box('glass', 30, 1.4, 2.4, 1.62, 0.4, 2.0);
   for (const [dx, dz] of [[-0.85, 1.2], [0.85, 1.2], [-0.85, 4.0], [0.85, 4.0]]) { const w = B.mesh(G.cyl, 'rubber', 30 + dx, 0.35, dz, 0.7, 0.25, 0.7); w.rotation.z = Math.PI / 2; w.updateMatrix(); }
   B.furniture('wood', 33.35, 5.5, 0, 0.7, 0.9, 2.4, 'workbench');
+  // on the bench, a car battery on charge: the gatekeeper kept the Rover's spare topped up
+  { const bat = new THREE.Group(); bat.position.set(33.3, 0.9, 6.1); B.root.add(bat);
+    B.box('black', 0, 0.1, 0, 0.26, 0.2, 0.17, 0, bat); B.box('black', 0, 0.2, 0, 0.26, 0.015, 0.17, 0, bat);
+    for (const dz of [-0.06, 0.06]) B.mesh(G.cyl, 'metalDark', 0.08, 0.225, dz, 0.03, 0.03, 0.03, 0, bat);
+    B.box(BM.Basic(0xd8c040), 0, 0.14, 0.086, 0.18, 0.06, 0.003, 0, bat);
+    bat.traverse(o => { o.userData.dynamic = true; });
+    game.battery = { mesh: bat, carried: false, fitted: false };
+    B.box('metalDark', 33.76, 1.45, 6.1, 0.14, 0.3, 0.26); B.box('iron', 33.55, 1.2, 6.14, 0.012, 0.5, 0.012); B.box('iron', 33.55, 1.2, 6.02, 0.012, 0.5, 0.012); // the charger on the wall and its leads
+    B.interactable({
+      id: 'car-battery', label: 'Take the car battery', pos: [33.3, 1.0, 6.1], n: [-1, 0], approachDist: 0.85, enabled: () => !game.battery.carried && !game.battery.fitted,
+      act: g => { g.battery.carried = true; g.battery.mesh.visible = false; g.audio.clunk(0.7); g.ui.say('Heavy, and the terminals are clean. The charger\'s needle was still over on the right: it has been trickle-charging for fifty years. Get it to the car.', 6); },
+    });
+  }
   B.fixture({ id: 'garage-tube', name: 'Garage tube', circuit: 'lodge', on: false, kind: 'fluorescent', style: 'tube', pos: [30, 2.85, 3], colour: 0xe6f2ff, target: 1.6, range: 10, ry: Math.PI / 2, len: 1.6 });
   B.fixture({ id: 'garage-lantern', name: 'Garage lantern', circuit: 'lodge', on: false, kind: 'incandescent', style: 'lantern', pos: [26.8, 2.3, 8.3], nz: 1, colour: 0xffb866, target: 0.9, range: 7 });
   game.estateLights.garage.push('garage-tube', 'garage-lantern');
@@ -4140,8 +4159,12 @@ BM.buildCar = function (B, game) {
   // parked: collision, and the car itself is something you can try
   game.car = { group: car, heads, tails, dial, cluster, warn, puffs, beams, parked: false };
   B.interactable({
-    id: 'car', label: 'Your car', pos: [CAR.stopX, 1.0, CAR.z - 0.92], n: [0, -1],
-    act: g => { g.audio.click(); g.audio.tone('sine', 60, 40, 0.15, 0.01, 0.12); g.ui.say('You try the key. A dry click from under the bonnet, then nothing. The battery is completely flat.'); },
+    id: 'car', label: () => game.battery && game.battery.carried ? 'Fit the battery' : 'Your car', pos: [CAR.stopX, 1.0, CAR.z - 0.92], n: [0, -1],
+    act: g => {
+      if (g.battery && g.battery.carried) { g.fitBattery(); return; }
+      g.audio.click(); g.audio.tone('sine', 60, 40, 0.15, 0.01, 0.12);
+      g.ui.say(g.story.phoneTried ? 'A dry click, then nothing. It needs a battery that holds a charge.' : 'You try the key. A dry click from under the bonnet, then nothing. The battery is completely flat.');
+    },
   });
   game.carWall = B.phys.addWall(CAR.stopX - 2.25, CAR.stopX + 2.25, CAR.z - 0.92, CAR.z + 0.92, 0, 1.5, { kind: 'furniture', tag: 'your car', enabled: false });
 };
@@ -4213,12 +4236,13 @@ BM.Intro = class {
     this.engineRev = (0.6 + Math.min(1, speed / 8) * 0.6) * (t >= T.smoke && t < T.cough ? 0.85 + 0.15 * BM.noise1(t * 9) : 1);
     if (t >= T.cough && !this.said.cough) { g.audio.cough && g.audio.cough(); }
     this.say('arrive', 'Blackthorn Lane, after midnight. Miles of forest and not another car. The radio is down low and the wipers can barely keep up.', 5.5);
+    if (t >= 2.5) this.say('road', 'No signal since the turning. The bridge three miles back is under the river; the nearest town is a hundred and fifty kilometres the other way.', 5);
     if (t >= T.warn) this.say('warn', 'An amber lamp starts blinking on the dash. The engine note changes.', 3);
     if (t >= T.smoke + 0.8) this.say('smoke', 'Smoke, pale in the headlights, leaking from under the bonnet. You ease off and look for somewhere to pull in.', 5);
     if (t >= T.arrive - 1.0) this.say('gates', 'The headlights find a pair of iron gates. You pull over onto the verge beside them.', 4);
     if (t >= T.cough) this.say('cough', 'The engine coughs once, twice — and dies.', 3);
     if (t >= T.dim + 1.0) this.say('lights', 'The dash goes dark. The headlights sag to a dull orange, and the radio fades with them... and out.', 5);
-    if (t >= T.dead) this.say('flat', 'You turn the key. A click. The battery is flat, and the bonnet is still smoking. You will have to walk.', 5);
+    if (t >= T.dead) this.say('flat', 'You turn the key. A click. The battery is flat, the bonnet is smoking, and there is not another light for miles. Except up there, behind the gates.', 6);
     // fade, then you are standing in the rain beside the car
     if (t >= T.fadeOut && t < T.out) g.ui.fade(Math.min(1, (t - T.fadeOut) / (T.out - T.fadeOut)));
     if (t >= T.out && !this.placed) { this.placed = true; this.place(); }
@@ -5663,6 +5687,11 @@ class Synth {
     this.loops.recordBass = this.toneLoop('sine', 131, 'lowpass', 400);
     this.loops.fire = this.noiseLoop(this.brown, 'lowpass', 900, 0.8);
     this.loops.engine = this.toneLoop('sawtooth', 38, 'lowpass', 240);
+    // the car radio: a song sequenced live through a small, tinny speaker
+    { const g = ctx.createGain(); g.gain.value = 0; const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = 0.7;
+      const f2 = ctx.createBiquadFilter(); f2.type = 'lowpass'; f2.frequency.value = 2600;
+      f.connect(f2); f2.connect(g); g.connect(this.master);
+      this.loops.song = { g, f, bus: f }; this.songBeat = 0; this.songNext = 0; }
     this.enabled = true;
   }
 
@@ -5748,6 +5777,27 @@ class Synth {
     }
     this.burst(this.white, 'bandpass', f * 4, 3, gain * 0.5, 0.001, 0.05, when || 0);
   }
+  /* The song on the car radio: a slow seventies ballad in A minor, scheduled a few beats ahead. */
+  songUpdate(level) {
+    if (!this.ctx || !this.loops.song) return;
+    const ctx = this.ctx, bus = this.loops.song.bus, BPM = 76, beat = 60 / BPM;
+    if (level <= 0.001) { this.songNext = 0; return; }
+    if (!this.songNext || this.songNext < ctx.currentTime - 1) { this.songNext = ctx.currentTime + 0.1; this.songBeat = 0; }
+    const CH = [[220, 261.6, 329.6], [174.6, 220, 261.6], [130.8, 164.8, 196], [196, 246.9, 293.7]]; // Am F C G
+    const MEL = [440, 0, 523.3, 493.9, 440, 0, 392, 0, 349.2, 0, 440, 0, 392, 349.2, 329.6, 0, 261.6, 0, 329.6, 392, 440, 0, 523.3, 0, 493.9, 0, 440, 392, 349.2, 0, 329.6, 0];
+    while (this.songNext < ctx.currentTime + 0.4) {
+      const b = this.songBeat, t = this.songNext, bar = Math.floor(b / 4) % 4, ch = CH[bar];
+      if (b % 2 === 0) { const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = ch[0] / 2; const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + beat * 1.8); o.connect(g); g.connect(bus); o.start(t); o.stop(t + beat * 2); }
+      if (b % 4 === 0) for (const f of ch) { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.09, t + 0.05); g.gain.exponentialRampToValueAtTime(0.0001, t + beat * 3.8); o.connect(g); g.connect(bus); o.start(t); o.stop(t + beat * 4); }
+      const m = MEL[b % MEL.length];
+      if (m) { const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = m; const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + beat * 0.95); o.connect(g); g.connect(bus); o.start(t); o.stop(t + beat); }
+      // the brush on the snare
+      if (b % 2 === 1) this.burst(this.white, 'highpass', 4000, 1, 0.05, 0.002, 0.08, t - ctx.currentTime);
+      this.songNext += beat; this.songBeat++;
+    }
+  }
+  /* the starter motor turning the engine over */
+  crank() { for (let i = 0; i < 6; i++) { this.tone('sawtooth', 90, 70, 0.25, 0.01, 0.12, i * 0.27); this.burst(this.brown, 'lowpass', 400, 1, 0.3, 0.01, 0.2, i * 0.27); } this.burst(this.brown, 'lowpass', 300, 1, 0.6, 0.05, 1.2, 1.7); }
   /* the engine warning: a soft electronic ping */
   warnPing() { for (let i = 0; i < 3; i++) this.tone('sine', 1760, 1760, 0.12, 0.005, 0.25, i * 0.5); }
   /* the escapement of the tower clock: tick, tock */
@@ -5947,9 +5997,12 @@ class Synth {
     this.set('engine', intro ? intro.engine : 0);
     if (intro) {
       this.loops.engine.src.frequency.setTargetAtTime(32 * (intro.engineRev || 1), this.ctx.currentTime, 0.2);
-      this.set('radio', intro.radio * 0.9, 0); this.set('radioTone', intro.radio, 0);
-      if (intro.radio > 0.01 && Math.random() < dt * 2.5) this.loops.radioTone.src.frequency.setTargetAtTime([196, 220, 247, 262, 294, 330, 262, 247][Math.floor(Math.random() * 8)], this.ctx.currentTime, 0.05);
+      this.set('radio', intro.radio * 0.5, 0);
     }
+    // the song on the car radio: during the arrival, and again when the car is running at the end
+    const songLevel = intro ? intro.radio * 7 : (game.outro && game.outro.car ? game.outro.radio * 7 : 0);
+    this.set('song', songLevel, 0); this.songUpdate(songLevel);
+    if (game.outro && game.outro.car) { this.set('engine', game.outro.engine || 0); this.loops.engine.src.frequency.setTargetAtTime(32 * (game.outro.rev || 1), this.ctx.currentTime, 0.2); }
     if (zone === 'exterior' && game.crows && game.crows.length && Math.random() < dt * 0.06) {
       const c = game.crows[Math.floor(Math.random() * game.crows.length)], v = near(c, 60);
       if (v > 0) this.caw(pan(c), 0.4 + v);
@@ -6231,8 +6284,10 @@ class Game {
     const g = this.grid, s = this.story;
     const gates = this.gates;
     if (s.ended) return 'You are out.';
-    if (gates.escaping) return gates.t < 1 ? 'The gate motor is running. Get down the drive.' : 'The gates are open. Walk out — and do not look back at the windows.';
-    if (!g.lodge) return 'The gates are locked. Try the gatekeeper\'s lodge, to the left of the gates.';
+    const bat = this.battery || {};
+    if (gates.escaping && bat.carried) return gates.t < 1 ? 'The gate motor is running. Get the battery down the drive to the car.' : 'The gates are open. Get the battery to the car and fit it.';
+    if (gates.escaping) return gates.t < 1 ? 'The gate motor is running. Get down the drive.' : 'The gates are open. Your car still needs a battery: the garage, by the house, has an old car in it.';
+    if (!g.lodge) return s.phoneTried ? 'The phone is dead. Try the lodge\'s main switch, on the left wall.' : 'The car is dead and the road is blocked both ways. The gatekeeper\'s lodge, to the left of the gates, might have a telephone.';
     if (!gates.open && !gates.lockedIn) return 'There is power at the lodge. Work the gate release — and the estate lighting panel under the window lights the grounds.';
     if (!gates.lockedIn) return 'Go up the drive to the house.';
     if (!this.frontDoors.opened) return 'The gates have shut and bolted behind you. There is nothing for it but the house.';
@@ -6240,7 +6295,7 @@ class Game {
     if (g.tripped) return 'The storm has tripped MAIN. Go back down to the pantry fuse board and reset it.';
     if (!s.journalRead) return 'Look round the house. Eleanor\'s rooms are upstairs, and the attic above them.';
     if (!g.live('cellar')) return 'Eleanor\'s father wired the gates to a switch in the cellar, on the house supply. The cellar circuit must be on.';
-    return 'The gate motor switch is in the cellar, by the boiler. Throw it.';
+    return bat.carried ? 'You have the battery. The gate motor switch is in the cellar, by the boiler. Throw it.' : 'The gate motor switch is in the cellar, by the boiler. And your car needs a battery: there is an old Rover in the garage.';
   }
   hallLit() { return this.hallLights.some(id => { const l = this.grid.light(id); return l && l.powered; }); }
 
@@ -6423,10 +6478,11 @@ class Game {
     this.story.ended = true;
     this.ui.mode = 'ending';
     const text = [
-      'The gates stand open behind you. The house has gone dark, one light at a time, the way it came on.',
+      'Three miles on, the lane ends at a river with no bridge in it. You stop on the bank with the engine running, the heater on, and the doors locked, and you wait for the light. By morning the water will be down. By morning somebody will come.',
+      'Behind you the house has gone dark, one light at a time, the way it came on.',
       'Eleanor never got this far. Her father\'s gates shut on her the year she turned thirteen, and in her lifetime they did not open again. "Abroad" was the attic. "Cursed" was the easiest word they had.',
       'They are still up there, in a way: every switch you threw tonight was a switch she was never allowed to touch.',
-      'You put the lights on. You looked. And you walked out.',
+      'You put the lights on. You looked. And you got out.',
       'BLACKTHORN MANOR',
     ].join('\n\n');
     if (this.ui.el.ending) { this.ui.el.endingText.textContent = text; this.ui.el.ending.style.display = 'flex'; }
@@ -6627,8 +6683,6 @@ class Game {
         else { g.lockedIn = true; this.ui.say('They meet with a bang that goes away down the lane — and a bolt shoots home. Locked. From the house side.', 7); }
       }
     }
-    // walking out through the open gates is the end of it
-    if (g.escaping && g.t >= 1 && !this.outro && !this.story.ended && p.z > 89.5 && Math.abs(p.x) < 3.4) this.startOutro();
     this.updateHingedDoors(dt);
     const gb = this.gateBox;
     if (gb) {
@@ -6638,31 +6692,71 @@ class Game {
     }
   }
   /* ---- the way out: you stop on the lane and look back, and the house goes dark one light at a time ---- */
+  /* The battery goes in, the car starts, and you drive: the end. */
+  fitBattery() {
+    if (!this.battery.carried || this.outro) return;
+    this.battery.carried = false; this.battery.fitted = true;
+    this.audio.clunk(0.9); this.audio.burst(this.audio.white, 'bandpass', 2000, 3, 0.2, 0.002, 0.15, 0.4);
+    this.ui.say('The clamps go on. You get in out of the rain, and turn the key.', 4);
+    this.startOutro();
+  }
   startOutro() {
-    const p = this.player;
-    this.outro = { t: 0, step: 0, yaw0: p.yaw, fade: 0 };
-    this.ui.say('You are through. Behind you, the gates stand open, and above them the house burns with every window lit.', 6);
+    const p = this.player, car = this.car, c = car.group.position;
+    this.outro = { t: 0, step: 0, car: true, radio: 0, engine: 0, rev: 1, x: c.x, z: c.z, yaw: -Math.PI / 2 };
+    this.carWall.enabled = false;
+    p.x = c.x - 0.45; p.z = c.z + 0.4; p.y = 1.22 - BM.PLAYER.eye; p.pitch = -0.04; p.yaw = -Math.PI / 2;
   }
   updateOutro(dt) {
-    const o = this.outro, p = this.player, g = this.grid;
+    const o = this.outro, p = this.player, g = this.grid, car = this.car;
     o.t += dt;
-    p.x += (0.0 - p.x) * Math.min(1, dt * 1.5); p.z += (93.0 - p.z) * Math.min(1, dt * 1.5);
-    // turn to face the house
-    const want = 0; let d = want - p.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); // yaw 0 looks up the drive to the house
-    p.yaw += d * Math.min(1, dt * 1.2); p.pitch += (0.1 - p.pitch) * Math.min(1, dt * 1.2);
+    const t = o.t;
+    // the dash wakes, the engine turns over and catches, the headlights come up, the radio comes back
+    const dash = Math.min(1, t / 1.5);
+    car.cluster.material.color.setRGB(0.05 + 0.12 * dash, 0.08 + 0.16 * dash, 0.14 + 0.25 * dash);
+    car.warn.material.color.setHex(t < 2.5 ? 0xff7a10 : 0x200800);
+    if (t > 1.0 && !o.cranked) { o.cranked = true; this.audio.crank && this.audio.crank(); }
+    o.engine = t < 1.0 ? 0 : t < 2.6 ? 0.08 : Math.min(0.2, 0.1 + (t - 2.6) * 0.03);
+    o.rev = t < 2.6 ? 0.5 + 0.3 * Math.sin(t * 20) : 0.8 + Math.min(1, Math.max(0, t - 6) / 8) * 0.7;
+    if (t > 2.6 && !o.said1) { o.said1 = true; this.ui.say('It catches. The heater, the lights, the wipers. And the radio, halfway through the same song.', 5); }
+    const head = Math.min(1, Math.max(0, (t - 2.0) / 2));
+    o.radio = Math.min(0.05, Math.max(0, (t - 2.6) / 3) * 0.05);
+    // turn in the lane and drive west, away from the gates
+    const turn = Math.min(1, Math.max(0, (t - 5) / 4)), drive = Math.max(0, t - 9);
+    o.yaw = -Math.PI / 2 + turn * turn * (3 - 2 * turn) * Math.PI;
+    const speed = Math.min(14, drive * 2.2);
+    o.x -= speed * dt * Math.max(0, Math.cos(o.yaw + Math.PI / 2) * -1); // along -x once turned
+    if (turn > 0 && turn < 1) { o.z += dt * 0.6; }
+    car.group.position.set(o.x, Math.sin(t * 9) * 0.006 * Math.min(1, speed / 3), o.z); car.group.rotation.y = o.yaw;
+    const fx = Math.sin(o.yaw + Math.PI / 2) * 0, cosY = -Math.sin(o.yaw), sinY = -Math.cos(o.yaw); // the car's nose direction in world
+    car.beams.forEach((l, i) => {
+      l.on = head > 0.02; l.target = 2.6 * head; l.colour = 0xfff0c8; l.flicker = 0; l.lightType = 'steady';
+      l.pos.x = o.x + cosY * 2.3 + sinY * (i ? -0.62 : 0.62) * -1; l.pos.z = o.z + sinY * 2.3 + cosY * (i ? 0.62 : -0.62);
+      l.dir = [cosY, -0.12, sinY];
+      this.fx.moveLight(l);
+    });
+    car.heads.forEach(m => m.material.color.setRGB(head, 0.92 * head, 0.7 * head * head));
+    car.tails.forEach(m => m.material.color.setRGB(0.12 + 0.6 * head, 0.02, 0.02));
+    car.dial.material.color.setRGB(0.6 * Math.min(1, o.radio * 20), 0.35 * Math.min(1, o.radio * 20), 0.05);
+    p.x = o.x + cosY * 0.0 - sinY * 0.45 * 0 + (cosY * -0.0) + (-sinY) * 0.45 * 0; // seat: stays with the car below
+    { const sx = -0.45, sz = 0.4; p.x = o.x + sx * -sinY * -1 * 0 + (cosY * 0) + (sx * (-sinY) * 0) + ( -sinY * sx * 0 ); }
+    // the seat in car space (x right, z back along the nose): world = pos + nose * (-sz) + right * sx
+    { const rx = -sinY, rz = cosY; p.x = o.x + cosY * -0.4 + rx * -0.45; p.z = o.z + sinY * -0.4 + rz * -0.45; p.y = 1.22 - BM.PLAYER.eye; }
+    p.yaw = Math.atan2(-cosY, -sinY) + 0; // look along the nose
+    p.yaw = -Math.atan2(cosY, -sinY) + Math.PI; p.pitch = -0.04;
+    if (t > 9.5 && !o.said2) { o.said2 = true, this.ui.say('The gates go by on the right, open, and the house above them with every window lit. You do not look back at the windows.', 6); }
     // the house goes dark from the top down, then the grounds from the house outwards
     const STEPS = [
-      [2.5, () => this.darken(l => l.circuit === 'attic')],
-      [3.7, () => this.darken(l => l.circuit === 'west' || l.circuit === 'east')],
-      [4.9, () => this.darken(l => l.circuit === 'ground' || l.circuit === 'cellar')],
-      [6.1, () => this.darken(l => l.circuit === 'hall')],
-      [7.3, () => this.darken(l => l.circuit === 'lodge' && !this.estateLights.drive.includes(l.id) && !this.estateLights.gate.includes(l.id))],
-      [8.5, () => this.darken(l => this.estateLights.drive.includes(l.id))],
-      [9.7, () => this.darken(l => this.estateLights.gate.includes(l.id))],
+      [9.5, () => this.darken(l => l.circuit === 'attic')],
+      [10.5, () => this.darken(l => l.circuit === 'west' || l.circuit === 'east')],
+      [11.5, () => this.darken(l => l.circuit === 'ground' || l.circuit === 'cellar')],
+      [12.5, () => this.darken(l => l.circuit === 'hall')],
+      [13.5, () => this.darken(l => l.circuit === 'lodge' && !this.estateLights.drive.includes(l.id) && !this.estateLights.gate.includes(l.id))],
+      [14.5, () => this.darken(l => this.estateLights.drive.includes(l.id))],
+      [15.5, () => this.darken(l => this.estateLights.gate.includes(l.id))],
     ];
     while (o.step < STEPS.length && o.t >= STEPS[o.step][0]) { STEPS[o.step][1](); this.audio.clunk(0.35); o.step++; }
-    if (o.t > 10.5) this.ui.fade(Math.min(1, (o.t - 10.5) / 2.5));
-    if (o.t > 13.5) { this.outro = null; this.endGame(); }
+    if (o.t > 15.5) this.ui.fade(Math.min(1, (o.t - 15.5) / 2.5));
+    if (o.t > 18.5) { this.outro = null; this.endGame(); }
   }
   darken(pred) { for (const l of this.grid.lights) if (pred(l)) l.on = false; }
   updateStorm(dt) {

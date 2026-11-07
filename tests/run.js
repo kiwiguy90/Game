@@ -596,6 +596,7 @@ suite('playthrough', () => {
   assert(!canWalk(env, 'gate-release'), 'the lodge door is shut');
   go(env, 'lodge-door'); settle(env, 2); assert(game.lodgeDoor.open && !game.lodgeDoor.wall.enabled, 'the lodge door opens');
   assert(!game.pick() || game.pick().id !== 'gate-release', 'the lever is inside a shut box');
+  go(env, 'lodge-phone'); assert(game.story.phoneTried && /Dead/.test(game.ui.lastSay), 'the telephone is dead');
   go(env, 'gate-box'); settle(env, 1); assert(game.gateBox.open, 'the box opens');
   go(env, 'gate-release');
   assert(!game.gates.open, 'gate release dead without lodge power');
@@ -654,13 +655,16 @@ suite('playthrough', () => {
   settle(env, 1); assert(game.gates.wall.enabled && !canWalk(env, 'car'), 'the gates have not opened yet');
   settle(env, 14); assert(game.gates.t >= 1 && !game.gates.wall.enabled, 'the gates stand open');
   assert(canWalk(env, 'car'), 'you can walk out onto the lane');
-  go(env, 'car', { noUse: true }); settle(env, 0.2);
-  assert(game.outro, 'walking out through the gates starts the end');
+  go(env, 'car'); assert(!game.outro && /battery/.test(game.ui.lastSay), 'the car still needs a battery');
+  go(env, 'car-battery'); assert(game.battery.carried && /battery/i.test(game.objective()), 'the battery from the garage');
+  go(env, 'car'); settle(env, 0.2);
+  assert(game.outro && game.battery.fitted, 'fitting the battery starts the car and the end');
   const litBefore = g.lights.filter(l => l.powered).length;
-  settle(env, 8);
+  settle(env, 5); assert(game.car.beams.every(l => l.powered) && game.outro.radio > 0.02, 'headlights up, the radio back');
+  settle(env, 11);
   assert(g.lights.filter(l => l.powered).length < litBefore / 3, 'the house goes dark behind you');
-  settle(env, 7);
-  assert(game.story.ended && /BLACKTHORN MANOR/.test(game.endingText) && /walked out/.test(game.endingText), 'the ending');
+  settle(env, 4);
+  assert(game.story.ended && /BLACKTHORN MANOR/.test(game.endingText) && /got out/.test(game.endingText), 'the ending');
   assert(game.frameErrors === 0, 'no frame errors');
   return `${game.story.read.size} documents read on the way`;
 });
@@ -689,9 +693,9 @@ suite('controls', () => {
   assert(game.gates.lockedIn, 'shut in by the gates on the way up the drive');
   use('gate-motor'); AP.wait(16);
   assert(game.gates.t >= 1, 'the gates have opened');
-  AP.goUse('car', { noUse: true }); // walking out through the gates hands control to the ending
-  assert(game.outro || game.story.ended, 'walking out starts the end');
-  AP.wait(16);
+  use('car-battery'); use('car'); AP.wait(1);
+  assert(game.outro || game.story.ended, 'fitting the battery starts the end');
+  AP.wait(20);
   assert(!fails.length, 'could not do with the controls: ' + fails.join('; '));
   assert(game.story.ended, 'reached the ending with the keyboard alone');
   assert(game.frameErrors === 0, 'frame errors');

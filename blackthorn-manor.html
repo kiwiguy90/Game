@@ -2021,10 +2021,10 @@ BM.buildGrounds = function (B, game) {
       act: g => { if (!grid.lodge) { g.ui.say('The lever moves, but the gates do not. No power to the lodge.'); g.audio.click(); return; } g.gateLever(); },
     });
   }
-  // the gatekeeper's telephone: an extension from the house, dead these fifty years
-  B.box('black', -7.3, 0.84, 81.75, 0.22, 0.1, 0.22); B.box('black', -7.3, 0.93, 81.75, 0.2, 0.06, 0.07); B.box('black', -7.3, 0.9, 81.67, 0.06, 0.04, 0.05);
+  // the gatekeeper's telephone on the wall by the door: an extension from the house, dead these fifty years
+  B.box('cream', -11.4, 1.5, 87.74, 0.2, 0.3, 0.1); B.box('black', -11.52, 1.5, 87.7, 0.05, 0.24, 0.06); B.mesh(G.disc, 'black', -11.37, 1.55, 87.68, 0.12).rotation.x = 0; B.box('black', -11.4, 1.2, 87.72, 0.01, 0.3, 0.01);
   B.interactable({
-    id: 'lodge-phone', label: 'Pick up the telephone', pos: [-7.3, 0.95, 81.75], n: [0, 1], approachDist: 0.9,
+    id: 'lodge-phone', label: 'Pick up the telephone', pos: [-11.4, 1.5, 87.68], n: [0, -1], approachDist: 0.9,
     act: g => { g.story.phoneTried = true; g.audio.click(); g.audio.tone('sine', 400, 400, 0.0, 0.01, 0.1); g.ui.say('Dead. Not a crackle, not a dial tone. The line comes down from the house, and nobody has paid for it since 1974.', 5); },
   });
   B.readable('note-lodge', "Gatekeeper's log", [

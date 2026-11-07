@@ -1461,7 +1461,7 @@ class Builder {
     return it;
   }
   levelFloor() {
-    return { ground: 0, upper: 4.2, attic: 8.2, cellar: -3.2 }[this.levelName] || 0;
+    return { ground: 0, upper: 4.2, attic: 8.2, cellar: -3.2, tower: 10.8, clock: 15.2, belfry: 21.0 }[this.levelName] || 0;
   }
   /* A wall switch you can see: a brass plate flush on the wall with a toggle
      that flips up (on) and down (off). `ids` are the fittings it controls. */
@@ -2323,13 +2323,25 @@ BM.buildMansion = function (B, game) {
   B.levelName = 'attic'; B.room = 'attic';
   // roof: two pitched planes, plus stepped occluders/colliders under them
   for (const s of [-1, 1]) {
-    const r = B.box('roof', 0, 10.0, s * 6.3, 37.2, 0.25, 13.2);
-    r.rotation.x = s * 0.278; r.updateMatrix();
-    const ri = B.box('wood', 0, 9.85, s * 6.3, 36, 0.05, 13.0);
-    ri.rotation.x = s * 0.278; ri.updateMatrix();
+    if (s < 0) {
+      const r = B.box('roof', 0, 10.0, s * 6.3, 37.2, 0.25, 13.2);
+      r.rotation.x = s * 0.278; r.updateMatrix();
+      const ri = B.box('wood', 0, 9.85, s * 6.3, 36, 0.05, 13.0);
+      ri.rotation.x = s * 0.278; ri.updateMatrix();
+    } else {
+      // the south plane leaves a gap for the clock tower's shaft (x -4..4, z 6.5 on)
+      for (const [x0, x1, zl] of [[-18.6, -4, 13.2], [4, 18.6, 13.2], [-4, 4, 6.5 / Math.cos(0.278)]]) {
+        const cz = zl === 13.2 ? 6.3 : 6.5 / 2, cy = zl === 13.2 ? 10.0 : 11.8 - 3.25 * Math.tan(0.278);
+        const r = B.box('roof', (x0 + x1) / 2, cy, cz, x1 - x0, 0.25, zl); r.rotation.x = 0.278; r.updateMatrix();
+        const ri = B.box('wood', (x0 + x1) / 2, cy - 0.15, cz, x1 - x0 - 0.2, 0.05, zl - 0.2); ri.rotation.x = 0.278; ri.updateMatrix();
+      }
+    }
     for (let i = 0; i < 6; i++) {
       const za = s * (12.6 - i * 2.1), zb = s * (12.6 - (i + 1) * 2.1);
-      P.addWall(-18.2, 18.2, za, zb, 8.2 + i * 0.6, 8.2 + (i + 1) * 0.6 + 0.4, { kind: 'wall' });
+      if (s > 0 && Math.min(za, zb) < 12.2 && Math.max(za, zb) > 6.5) {
+        P.addWall(-18.2, -4, za, zb, 8.2 + i * 0.6, 8.2 + (i + 1) * 0.6 + 0.4, { kind: 'wall' });
+        P.addWall(4, 18.2, za, zb, 8.2 + i * 0.6, 8.2 + (i + 1) * 0.6 + 0.4, { kind: 'wall' });
+      } else P.addWall(-18.2, 18.2, za, zb, 8.2 + i * 0.6, 8.2 + (i + 1) * 0.6 + 0.4, { kind: 'wall' });
     }
   }
   // gable ends
@@ -2956,25 +2968,39 @@ BM.buildGothic = function (B, game) {
   // the one lit attic window throws a faint light
   B.fixture({ id: 'gable-candle', name: 'Candle in the gable window', circuit: 'fire', kind: 'fire', style: 'none', pos: [-11, 11, 11.9], colour: 0xff9a3a, target: 0.35, range: 5, lightType: 'flicker', corona: 0.5, noFail: true });
 
-  /* ---- the central clock tower over the hall ---- */
-  const T = { x0: -4, x1: 4, z0: 6.5, z1: 12.45, top: 25 };
-  B.boxE('gothicStone', T.x0, T.x1, EAVES, T.top, T.z0, T.z1);
-  P.addWall(T.x0, T.x1, T.z0, T.z1, EAVES + 2.6, T.top, { kind: 'wall', structural: false });
+  /* ---- the central clock tower over the hall: hollow, and climbable from the attic ---- */
+  const T = { x0: -4, x1: 4, z0: 6.5, z1: 12.45, top: 25, base: 10.8, clock: 15.2, belfry: 21.0 };
+  BM.TOWER = T;
+  B.levelName = 'tower'; B.room = 'clock tower';
+  const TW = { t: 0.5, mat: 'gothicStone', y0: EAVES, y1: T.top };
+  B.wall('x', T.z1 - 0.25, T.x0, T.x1, TW);          // south: carries the dial
+  B.wall('x', T.z0 + 0.25, T.x0, T.x1, TW);          // north
+  B.wall('z', T.x0 + 0.25, T.z0, T.z1, TW);          // west
+  B.wall('z', T.x1 - 0.25, T.z0, T.z1, TW);          // east
+  const IX0 = T.x0 + 0.5, IX1 = T.x1 - 0.5, IZ0 = T.z0 + 0.5, IZ1 = T.z1 - 0.5; // the shaft inside: x -3.5..3.5, z 7..11.95
   {
     const F = face(B, 0, 1, 0, T.z1);
     F.box('gothicTrim', 0, 16.0, 0.08, 8.3, 0.22, 0.18);
     F.box('gothicTrim', 0, 21.3, 0.08, 8.3, 0.22, 0.18);
     lancet(F, -1.6, 12.2, 1.0, 2.8); lancet(F, 1.6, 12.2, 1.0, 2.8);
-    // the clock, stopped at 11:41
+    // the dial: an opal glass face in a stone ring, lit from behind when the dial lights are on
     { const ring = F.mesh(G.cyl, 'gothicTrim', 0, 18.6, 0.05, 3.2, 0.1, 3.2); ring.rotation.set(Math.PI / 2, F.ry, 0, 'YXZ'); ring.updateMatrix(); }
     const [cx, cz] = F.at(0, 0.14);
-    const dial = B.mesh(G.disc, 'paper', cx, 18.6, cz, 2.7); dial.updateMatrix();
+    const dialMat = BM.Own(0x3a3328);
+    const dial = B.mesh(G.disc, dialMat, cx, 18.6, cz, 2.7); dial.updateMatrix(); dial.userData.dynamic = true;
     for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; const m = B.box('black', cx + Math.sin(a) * 1.15, 18.6 + Math.cos(a) * 1.15, cz + 0.02, 0.08, 0.25, 0.02); m.rotation.z = -a; m.updateMatrix(); }
-    for (const [ang, len, w] of [[-(11 + 41 / 60) / 12 * Math.PI * 2, 0.75, 0.1], [-41 / 60 * Math.PI * 2, 1.15, 0.07]]) {
-      const m = B.box('black', cx - Math.sin(ang) * len / 2, 18.6 + Math.cos(ang) * len / 2, cz + 0.04, w, len, 0.02); m.rotation.z = ang; m.updateMatrix();
-    }
+    // the hands pivot at the dial's centre; they are driven by the clock
+    const hands = [[0.75, 0.1], [1.15, 0.07]].map(([len, w]) => {
+      const pivot = new THREE.Group(); pivot.position.set(cx, 18.6, cz + 0.04); B.root.add(pivot);
+      B.box('black', 0, len / 2, 0, w, len, 0.02, 0, pivot);
+      B.box('black', 0, -0.12, 0, w * 1.2, 0.24, 0.02, 0, pivot);
+      pivot.traverse(o => { o.userData.dynamic = true; });
+      return pivot;
+    });
+    B.mesh(G.sphere, 'black', cx, 18.6, cz + 0.05, 0.1).userData.dynamic = true;
     // belfry: louvred openings
     for (const l of [-1.6, 1.6]) { lancet(F, l, 22.0, 1.1, 2.0); for (let k = 0; k < 5; k++) F.box('boards', l, 22.3 + k * 0.4, 0.1, 1.1, 0.07, 0.1, 0.25); }
+    game.towerClock = { dial, dialMat, hands, time: 11 * 3600 + 41 * 60, running: false };
   }
   for (const [nx, nz, px, pz, len] of [[-1, 0, T.x0, (T.z0 + T.z1) / 2, 5.95], [1, 0, T.x1, (T.z0 + T.z1) / 2, 5.95]]) {
     const F = face(B, nx, nz, px, pz);
@@ -2990,6 +3016,106 @@ BM.buildGothic = function (B, game) {
   B.mesh(G.post, 'iron', 0, T.top + 12.4, (T.z0 + T.z1) / 2, 0.06, 1.8, 0.06);
   B.box('iron', 0, T.top + 12.9, (T.z0 + T.z1) / 2, 0.9, 0.05, 0.05);
   B.box('iron', 0.2, T.top + 13.2, (T.z0 + T.z1) / 2, 0.5, 0.3, 0.02); // the weathervane's pennant
+
+  /* ---- inside the tower ---- */
+  // the base room over the roof, reached by a ladder from the attic through a hatch
+  B.floor('boards', IX0, IX1, IZ0, IZ1, T.base, 0.2, [[-0.6, 0.6, IZ0, IZ0 + 1.0]]);
+  B.boxE('darkWood', -0.7, 0.7, T.base, T.base + 0.08, IZ0 - 0.1, IZ0 + 1.1);
+  B.levelName = 'attic';
+  for (let i = 0; i < 7; i++) B.box('wood', 0, 8.45 + i * 0.36, 6.2 + i * 0.17, 0.6, 0.05, 0.08);
+  for (const sx of [-0.32, 0.32]) { const r = B.box('wood', sx, 9.55, 6.75, 0.05, 2.9, 0.08); r.rotation.x = -0.4; r.updateMatrix(); }
+  B.interactable({
+    id: 'ladder-tower-up', kind: 'ladder', label: 'Climb up into the clock tower', pos: [0, 8.9, 6.1], n: [0, -1], approachDist: 0.85,
+    links: [{ x: 0, y: T.base, z: IZ0 + 1.5 }], act: g => g.climb({ x: 0, y: T.base, z: IZ0 + 1.5 }, Math.PI),
+  });
+  B.levelName = 'tower';
+  B.interactable({
+    id: 'ladder-tower-down', kind: 'ladder', label: 'Climb down to the attic', pos: [0, T.base + 0.5, IZ0 + 0.5], n: [0, 1], approachDist: 0.85,
+    links: [{ x: 0, y: 8.2, z: 5.6 }], act: g => g.climb({ x: 0, y: 8.2, z: 5.6 }, 0),
+  });
+  // a timber stair in two flights: along the south wall, a landing on the east, back along the north wall
+  const F1 = { x0: -3.2, x1: 2.4, z0: IZ1 - 1.1, z1: IZ1, ya: T.base, yb: 13.0 };
+  const F2 = { x0: -3.2, x1: 2.4, z0: IZ0, z1: IZ0 + 1.1, ya: 13.0, yb: T.clock };
+  const stairs = (f, dir) => {
+    P.ramp(f.x0, f.x1, f.z0, f.z1, 'x', dir > 0 ? f.ya : f.yb, dir > 0 ? f.yb : f.ya, f.ya - 0.3, 'tower stair');
+    const n = 14, run = (f.x1 - f.x0) / n, rise = (f.yb - f.ya) / n;
+    for (let i = 0; i < n; i++) {
+      const x = dir > 0 ? f.x0 + run * (i + 0.5) : f.x1 - run * (i + 0.5), y = f.ya + rise * i;
+      B.box('boards', x, y + rise / 2 - 0.02, (f.z0 + f.z1) / 2, run + 0.02, rise, f.z1 - f.z0);
+    }
+  };
+  stairs(F1, 1); stairs(F2, -1);
+  P.rect(2.4, IX1, IZ0, IZ1, 13.0, 12.7, 'tower landing'); B.boxE('boards', 2.4, IX1, 12.7, 13.0, IZ0, IZ1);
+  // rails on the open sides, and posts
+  const rail = (x0, x1, z0, z1, ya, yb) => {
+    P.addWall(x0, x1, z0, z1, Math.min(ya, yb), Math.max(ya, yb) + 1.0, { kind: 'rail', tag: 'stair rail', occludes: false });
+    const n = Math.max(2, Math.round((x1 - x0) / 0.9));
+    for (let i = 0; i <= n; i++) { const u = i / n; B.box('darkWood', x0 + (x1 - x0) * u, ya + (yb - ya) * u + 0.5, (z0 + z1) / 2, 0.06, 1.0, 0.06); }
+    const m = B.box('darkWood', (x0 + x1) / 2, (ya + yb) / 2 + 0.98, (z0 + z1) / 2, Math.hypot(x1 - x0, yb - ya), 0.07, 0.07);
+    m.rotation.z = Math.atan2(yb - ya, x1 - x0); m.updateMatrix();
+  };
+  rail(F1.x0 + 1.0, F1.x1, F1.z0 - 0.08, F1.z0, F1.ya + 1.0 * (F1.yb - F1.ya) / (F1.x1 - F1.x0), F1.yb); // open at the foot, where you step on
+  B.box('darkWood', 2.45, 13.5, (IZ0 + IZ1) / 2, 0.06, 1.0, IZ1 - IZ0 - 2.2); P.addWall(2.42, 2.48, IZ0 + 1.1, IZ1 - 1.1, 13.0, 14.0, { kind: 'rail', occludes: false });
+  // the clock room, with the stair coming up through a hole along the north side
+  B.levelName = 'clock'; B.room = 'clock room';
+  B.floor('boards', IX0, IX1, IZ0, IZ1, T.clock, 0.25, [[-3.5, 3.5, IZ0, IZ0 + 1.1], [-0.3, 0.3, 9.9, 10.5], [2.3, 3.5, 8.5, 9.7]]);
+  rail(-1.9, 3.5, IZ0 + 1.1, IZ0 + 1.18, T.clock, T.clock); // round the stairwell, open where the stair arrives
+  // the mechanism: a flatbed turret clock on a timber frame, its pendulum through the floor, its weights in a trunk
+  for (const [x, z] of [[-0.7, 9.8], [0.7, 9.8], [-0.7, 10.7], [0.7, 10.7]]) B.box('boards', x, T.clock + 0.4, z, 0.12, 0.8, 0.12);
+  B.box('metalDark', 0, T.clock + 0.86, 10.25, 1.7, 0.12, 1.1);
+  B.box('metalDark', 0, T.clock + 1.05, 10.25, 1.4, 0.3, 0.16);
+  for (const [x, r] of [[-0.45, 0.28], [0.05, 0.2], [0.5, 0.32]]) { const w = B.mesh(G.cyl, 'brass', x, T.clock + 1.15, 10.25, r * 2, 0.04, r * 2); w.rotation.x = Math.PI / 2; w.updateMatrix(); }
+  B.mesh(G.cyl, 'brass', -0.2, T.clock + 1.35, 10.25, 0.16, 0.05, 0.16).rotation.x = Math.PI / 2;
+  B.furniture('boards', -3.2, 8.75, T.base, 0.5, T.clock + 1.8 - T.base, 0.5, 'weight trunk');
+  { const pend = new THREE.Group(); pend.position.set(0, T.clock + 1.2, 10.2); B.root.add(pend);
+    B.mesh(G.post, 'iron', 0, -1.1, 0, 0.025, 2.2, 0.025, 0, pend); B.mesh(G.cyl, 'brass', 0, -2.15, 0, 0.3, 0.1, 0.3, 0, pend);
+    pend.traverse(o => { o.userData.dynamic = true; }); game.towerClock.pendulum = pend; }
+  // the motion rod to the dial
+  B.mesh(G.post, 'iron', 0.6, T.clock + 1.85, 10.25, 0.03, 1.5, 0.03);
+  B.box('iron', 0.3, 18.6, 11.1, 0.6, 0.03, 0.03); B.box('iron', 0, 18.6, 11.5, 0.03, 0.03, 0.9);
+  B.furniture('wood', 2.6, 11.2, T.clock, 0.45, 0.5, 0.45, "winder's stool");
+  B.mesh(G.cyl, 'brass', -2.4, T.clock + 0.1, 11.4, 0.1, 0.2, 0.1); // the oil can
+  B.box('iron', -1.0, T.clock + 1.6, 11.85, 0.5, 0.05, 0.05); B.box('iron', -1.2, T.clock + 1.42, 11.85, 0.05, 0.36, 0.05); // the winding crank on its hook
+  B.readable('note-clock', "Clockwinder's card", 'BLACKTHORN MANOR — TOWER CLOCK\nPardoe & Son, Electrical & Horological.\n\nMovement converted to electric drive 1961: it keeps time while the house supply is on and stops dead when it is off. Quarters on the four small bells, hours on the great bell.\n\nDial lamps behind the glass: switch by the stairhead. Mind the pendulum.\n\nWound and oiled: 21 Oct 1974. — T.P.', [-2.0, T.clock + 0.9, 11.7], [0, -1], { plaque: true });
+  // the dial lamps behind the opal glass, and the glow they throw out over the forecourt
+  B.fixture({ id: 'clock-dial-1', name: 'Dial lamp', circuit: 'attic', kind: 'incandescent', style: 'bulkhead', pos: [-1.3, 18.2, IZ1 - 0.06], nz: -1, colour: 0xffd8a0, target: 1.0, range: 7, on: false });
+  B.fixture({ id: 'clock-dial-2', name: 'Dial lamp', circuit: 'attic', kind: 'incandescent', style: 'bulkhead', pos: [1.3, 18.2, IZ1 - 0.06], nz: -1, colour: 0xffd8a0, target: 1.0, range: 7, on: false });
+  B.fixture({ id: 'clock-face', name: 'Clock face', circuit: 'attic', kind: 'incandescent', style: 'none', pos: [0, 18.6, T.z1 + 0.2], colour: 0xffe2b0, target: 1.6, range: 18, spot: true, dir: [0, -0.35, 1], on: false, noFail: true, corona: 0.8 });
+  B.lightSwitch('sw-clock-dial', 'Clock dial lights', [-1.6, T.clock + 1.4, IZ0 + 1.55], [0, 1], ['clock-dial-1', 'clock-dial-2', 'clock-face']);
+  B.fixture({ id: 'clock-room-bulb', name: 'Clock room bulb', circuit: 'attic', style: 'cage', pos: [0, T.clock + 2.6, 9.0], colour: 0xffc070, target: 0.9, range: 7 });
+  B.fixture({ id: 'tower-base-bulb', name: 'Tower stair bulb', circuit: 'attic', style: 'cage', pos: [0, T.base + 2.4, 9.5], colour: 0xffc070, target: 0.9, range: 8, flicker: 0.15 });
+  B.lightSwitch('sw-clock-room', 'Tower lights', [-2.2, T.clock + 1.4, IZ0 + 1.55], [0, 1], ['clock-room-bulb', 'tower-base-bulb', 'belfry-bulb']);
+  // a ladder on up to the belfry
+  for (let i = 0; i < 12; i++) B.box('wood', 2.9, T.clock + 0.4 + i * 0.4, 9.1, 0.6, 0.05, 0.08);
+  B.box('wood', 2.58, T.clock + 2.6, 9.1, 0.05, 5.2, 0.08); B.box('wood', 3.22, T.clock + 2.6, 9.1, 0.05, 5.2, 0.08);
+  B.interactable({
+    id: 'ladder-belfry-up', kind: 'ladder', label: 'Climb to the belfry', pos: [2.9, T.clock + 1.3, 9.1], n: [0, 1], approachDist: 0.85,
+    links: [{ x: 2.9, y: T.belfry, z: 10.4 }], act: g => g.climb({ x: 2.9, y: T.belfry, z: 10.4 }, Math.PI),
+  });
+  B.levelName = 'belfry'; B.room = 'belfry';
+  B.floor('boards', IX0, IX1, IZ0, IZ1, T.belfry, 0.2, [[2.3, 3.5, 8.5, 9.7]]);
+  B.interactable({
+    id: 'ladder-belfry-down', kind: 'ladder', label: 'Climb down to the clock room', pos: [2.9, T.belfry + 0.5, 9.1], n: [0, 1], approachDist: 0.85,
+    links: [{ x: 2.9, y: T.clock, z: 10.4 }], act: g => g.climb({ x: 2.9, y: T.clock, z: 10.4 }, Math.PI),
+  });
+  P.addWall(2.3, 3.5, 8.4, 8.5, T.belfry, T.belfry + 1, { kind: 'rail', occludes: false }); P.addWall(2.2, 2.3, 8.4, 9.7, T.belfry, T.belfry + 1, { kind: 'rail', occludes: false });
+  B.box('darkWood', 2.9, T.belfry + 0.5, 8.45, 1.2, 1.0, 0.06); B.box('darkWood', 2.25, T.belfry + 0.5, 9.1, 0.06, 1.0, 1.3);
+  B.boxE('boards', IX0, IX1, T.top - 0.25, T.top, IZ0, IZ1); // the ceiling under the spire
+  // the bells: four quarter bells on a beam, and the great hour bell with its hammer
+  B.box('boards', 0, T.belfry + 3.0, 8.0, 6.4, 0.3, 0.3);
+  for (const x of [-2.4, -0.8, 0.8, 2.4]) { const b = B.mesh(G.cone, 'brass', x, T.belfry + 2.55, 8.0, 0.5, 0.55, 0.5); b.rotation.x = Math.PI; b.updateMatrix(); B.mesh(G.sphere, 'brass', x, T.belfry + 2.85, 8.0, 0.14); }
+  for (const x of [-3.0, 3.0]) B.box('boards', x, T.belfry + 1.5, 8.0, 0.3, 3.0, 0.3);
+  B.box('boards', 0, T.belfry + 3.3, 10.3, 1.6, 0.4, 0.4);
+  for (const x of [-0.6, 0.6]) B.box('boards', x, T.belfry + 1.65, 10.3, 0.3, 3.3, 0.3);
+  { const bell = B.mesh(G.cone, 'brass', 0, T.belfry + 2.45, 10.3, 1.1, 1.3, 1.1); bell.rotation.x = Math.PI; bell.updateMatrix();
+    B.mesh(G.sphere, 'brass', 0, T.belfry + 3.05, 10.3, 0.3);
+    const hammer = new THREE.Group(); hammer.position.set(0.9, T.belfry + 2.9, 10.3); B.root.add(hammer);
+    B.mesh(G.post, 'iron', 0, -0.5, 0, 0.04, 1.0, 0.04, 0, hammer); B.box('iron', 0, -1.0, 0, 0.18, 0.16, 0.16, 0, hammer);
+    hammer.traverse(o => { o.userData.dynamic = true; });
+    game.towerClock.hammer = hammer; game.towerClock.bellPos = { x: 0, y: T.belfry + 2.4, z: 10.3 }; game.towerClock.mechPos = { x: 0, y: T.clock + 1.2, z: 10.25 };
+  }
+  B.fixture({ id: 'belfry-bulb', name: 'Belfry bulb', circuit: 'attic', style: 'cage', pos: [-1.5, T.belfry + 2.2, 9.6], colour: 0xffc070, target: 0.8, range: 7, flicker: 0.25 });
+  B.levelName = 'ground'; B.room = 'exterior';
 
   /* ---- four octagonal corner towers with slate spires ---- */
   const tower = (cx, cz) => {
@@ -4535,6 +4661,107 @@ class LightLook {
 BM.LightLook = LightLook;
 })();
 </script>
+<script id="bm-53-clock">
+/* ==========================================================================
+   BLACKTHORN MANOR — 5c. THE TOWER CLOCK
+   The clock over the hall stopped at 11:41 on the night the house was shut.
+   It is electric: with the attic circuit live it catches, ticks and runs
+   (fast: four minutes to the real one, so the night moves), the hands turn,
+   and it chimes the Westminster quarters on four small bells and strikes
+   the hours on the great bell. The storm trip stops it dead. The opal dial
+   glows when its lamps are switched on.
+   ========================================================================== */
+(function () {
+'use strict';
+const BM = window.BM;
+
+const RATE = 4;               // clock seconds per real second
+const QUARTER = 900;
+/* the Westminster quarters: five phrases on four bells (G#, F#, E, B) */
+const NOTES = { gs: 415.3, fs: 370.0, e: 329.6, b: 246.9 };
+const PHRASES = [['gs', 'fs', 'e', 'b'], ['e', 'gs', 'fs', 'b'], ['e', 'fs', 'gs', 'e'], ['gs', 'e', 'fs', 'b'], ['b', 'fs', 'gs', 'e']];
+const QUARTERS = { 1: [0], 2: [1, 2], 3: [3, 4, 0], 0: [1, 2, 3, 4] };
+const HOUR_BELL = 164.8;      // the great bell: E, an octave down
+
+class TowerClock {
+  constructor(game) {
+    this.game = game; this.c = game.towerClock;
+    this.c.running = false; this.c.ever = false;
+    this.quarter = Math.floor(this.c.time / QUARTER);
+    this.tickT = 0; this.tock = false; this.hammerT = 0;
+    this.chimes = 0; this.strikes = 0; this.log = [];
+  }
+  get powered() { return this.game.grid.live('attic'); }
+  /* How loud the tower is from where the player stands: carried across the whole estate. */
+  hearing(pos) {
+    const p = this.game.player, d = Math.hypot(pos.x - p.x, pos.y - p.y - 1.6, pos.z - p.z);
+    let v = Math.max(0.06, 1 - d / 170);
+    const inTower = p.y > 10 && Math.abs(p.x) < 4 && p.z > 6.5 && p.z < 12.5;
+    if (!inTower && this.game.zoneAt(p.x, p.y, p.z) === 'house') v *= 0.45;
+    return v;
+  }
+  update(dt) {
+    const c = this.c, g = this.game, audio = g.audio;
+    const was = c.running; c.running = this.powered;
+    if (c.running && !was) {
+      audio.clunk(0.6 * this.hearing(c.mechPos));
+      if (!c.ever) { c.ever = true; g.ui.say('Somewhere above the hall a heavy mechanism catches, and begins to tick.', 5); }
+      g.events.emit('clock:start');
+    }
+    if (!c.running && was) g.events.emit('clock:stop');
+    if (c.running) {
+      c.time += dt * RATE;
+      const q = Math.floor(c.time / QUARTER);
+      if (q !== this.quarter) { this.quarter = q; this.chime(q % 4, Math.floor(c.time / 3600) % 12 || 12); }
+      // the escapement, heard close to
+      this.tickT += dt;
+      if (this.tickT >= 1.0) {
+        this.tickT -= 1.0; this.tock = !this.tock;
+        const p = g.player, d = Math.hypot(c.mechPos.x - p.x, c.mechPos.y - p.y - 1.6, c.mechPos.z - p.z);
+        if (d < 16) audio.tick(Math.max(0, 1 - d / 16) * (p.y > 10 ? 1 : 0.4), this.tock);
+      }
+    }
+    // the hands and the pendulum
+    const t = c.time % 43200;
+    c.hands[0].rotation.z = -(t / 43200) * Math.PI * 2;
+    c.hands[1].rotation.z = -((t % 3600) / 3600) * Math.PI * 2;
+    if (c.pendulum) { c.pendulum.rotation.z = c.running ? Math.sin(g.time * Math.PI * 2 / 1.5) * 0.09 : c.pendulum.rotation.z * (1 - Math.min(1, dt * 2)); }
+    // the hammer kicks when the great bell is struck
+    if (this.hammerT > 0) { this.hammerT -= dt; c.hammer.rotation.z = -0.55 * Math.max(0, Math.sin(Math.min(1, this.hammerT / 0.25) * Math.PI)); }
+    // the opal dial glows with its lamps
+    const l = g.grid.light('clock-dial-1'), k = l && l.target > 0 ? Math.min(1, l.intensity / l.target) : 0;
+    c.dialMat.color.setRGB(0.23 + 0.77 * k, 0.2 + 0.7 * k, 0.16 + 0.5 * k);
+  }
+  /* The quarter chime, then the hour on the great bell. */
+  chime(quarter, hour) {
+    const g = this.game, audio = g.audio, v = this.hearing(this.c.bellPos);
+    let when = 0.4;
+    for (const ph of QUARTERS[quarter]) {
+      for (const n of PHRASES[ph]) { audio.bell(NOTES[n], 0.5 * v, when, 2.6); when += 0.9; }
+      when += 0.5;
+    }
+    this.chimes++;
+    g.events.emit('clock:chime', { quarter, hour });
+    if (quarter === 0) {
+      when += 1.5;
+      for (let i = 0; i < hour; i++) { audio.bell(HOUR_BELL, 0.9 * v, when, 5.5); this.strikeAt(when); when += 2.4; }
+      this.strikes += hour;
+      g.ui.say(hour === 12 ? 'Midnight. Above the house, the great bell begins to strike twelve.' : `The clock tower strikes ${['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'][hour - 1]}.`, 6);
+    } else if (this.chimes === 1) g.ui.say('From the tower over the hall, four notes carry across the grounds: the clock chimes the quarter.', 5);
+    this.log.push({ quarter, hour });
+  }
+  strikeAt(when) {
+    // the hammer's swing is scheduled in game time
+    (this.pendingStrikes = this.pendingStrikes || []).push(this.game.time + when);
+  }
+  tickHammers() {
+    const ps = this.pendingStrikes; if (!ps || !ps.length) return;
+    while (ps.length && ps[0] <= this.game.time) { ps.shift(); this.hammerT = 0.25; }
+  }
+}
+BM.TowerClock = TowerClock;
+})();
+</script>
 <script id="bm-55-optimize">
 /* ==========================================================================
    BLACKTHORN MANOR — 9. PERFORMANCE
@@ -4825,6 +5052,27 @@ class Synth {
   tink() { this.tone('sine', 2600, 2400, 0.06, 0.001, 0.05); }
   denied() { this.tone('square', 220, 200, 0.2, 0.01, 0.18); this.tone('square', 165, 150, 0.2, 0.01, 0.25, 0.2); }
   accept() { this.tone('sine', 660, 660, 0.15, 0.01, 0.12); this.tone('sine', 880, 880, 0.12, 0.01, 0.15, 0.12); }
+  /* A bell: a strike, then the partials of a cast bell dying away at their own rates. */
+  bell(f, gain, when, decay) {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime + (when || 0), D = decay || 3;
+    const partials = [[0.5, 0.55, 1.6], [1.0, 1.0, 1.0], [1.19, 0.35, 0.7], [1.5, 0.45, 0.8], [2.0, 0.6, 0.55], [2.51, 0.22, 0.4], [3.0, 0.12, 0.3], [4.2, 0.06, 0.2]];
+    const out = ctx.createGain(); out.gain.value = 1; out.connect(this.master);
+    for (const [r, a, dk] of partials) {
+      const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = f * r;
+      const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.0002, gain * a * 0.5), t + 0.006);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + D * dk);
+      o.connect(g); g.connect(out); o.start(t); o.stop(t + D * dk + 0.1);
+    }
+    this.burst(this.white, 'bandpass', f * 4, 3, gain * 0.5, 0.001, 0.05, when || 0);
+  }
+  /* the escapement of the tower clock: tick, tock */
+  tick(v, tock) {
+    if (!this.ctx || v <= 0) return;
+    this.burst(this.white, 'bandpass', tock ? 1900 : 2600, 6, 0.35 * v, 0.001, 0.045);
+    this.tone('square', tock ? 180 : 240, tock ? 120 : 160, 0.12 * v, 0.001, 0.05);
+  }
   /* a wooden door on dry hinges: a short stick-slip creak, higher and thinner than the gates */
   doorCreak(dur, gain) {
     if (!this.ctx) return;
@@ -5221,6 +5469,7 @@ class Game {
     this.audio = new BM.Synth(this);
     this.fx = new BM.FX(this);
     this.fx.look = new BM.LightLook(this.fx, this);
+    this.clock_ = this.towerClock ? new BM.TowerClock(this) : null;
     this.ui = new UI(this);
     this.optStats = BM.optimize(this);
     this.quality = new BM.Quality(s => this.applyQuality(s), this.opts.quality !== undefined ? this.opts.quality : 2);
@@ -5551,6 +5800,7 @@ class Game {
     else if (!frozen) this.updatePlayer(dt);
     this.updateDoors(dt);
     this.updateStorm(dt);
+    if (this.clock_) { this.clock_.update(dt); this.clock_.tickHammers(); }
     this.grid.origin = this.player;
     this.grid.update(dt);
     this.updateDucks(dt);

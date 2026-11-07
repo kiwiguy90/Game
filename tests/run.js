@@ -12,7 +12,7 @@ const assert = (cond, msg) => { if (!cond) throw new Fail(msg); };
 const near = (a, b, eps) => Math.abs(a - b) <= (eps || 1e-6);
 
 /* ------------------------------------------------------------ helpers -- */
-const LEVELS = { ground: 0, upper: 4.2, attic: 8.2, cellar: -3.2 };
+const LEVELS = { ground: 0, upper: 4.2, attic: 8.2, cellar: -3.2, tower: 10.8, clock: 15.2, belfry: 21.0 };
 
 function openEverything(game) {
   const g = game.grid;

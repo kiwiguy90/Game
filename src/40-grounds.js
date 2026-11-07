@@ -107,7 +107,7 @@ BM.buildGrounds = function (B, game) {
     { at: -10, w: 1.2, type: 'door', id: 'lodge-door' }, { at: -12.4, w: 1.0, type: 'window', id: 'lodge-window-s', sill: 1.0, head: 2.3 }]);
   B.wall('x', 80, L.x0, L.x1, { t: 0.4, mat: 'plaster', matOut: 'brick', outSign: -1, y1: L.h }, [
     { at: -10, w: 1.2, type: 'window', id: 'lodge-window-n', sill: 1.0, head: 2.3 }]);
-  B.wall('z', L.x0, L.z0, L.z1, { t: 0.4, mat: 'plaster', matOut: 'brick', outSign: -1, y1: L.h });
+  B.wall('z', L.x0, L.z0, L.z1, { t: 0.4, mat: 'plaster', matOut: 'brick', outSign: -1, y1: L.h }, [{ at: 83.05, w: 0.9, type: 'door', head: 2.1, id: 'lodge-back' }]);
   B.wall('z', L.x1, L.z0, L.z1, { t: 0.4, mat: 'plaster', matOut: 'brick', outSign: 1, y1: L.h });
   B.boxE('stone', L.x0 + 0.2, L.x1 - 0.2, 0, 0.04, L.z0 + 0.2, L.z1 - 0.2);
   // the lodge door: a plain four-panel door, hinged on the left, opening into the room

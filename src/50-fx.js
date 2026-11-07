@@ -133,7 +133,7 @@ class FX {
       fragmentShader: [
         'uniform float flash; uniform vec4 carBox; varying vec3 vW; varying float vA; varying vec3 vL;',
         'bool inside(vec4 b, float top){ return vW.x > b.x && vW.x < b.y && vW.z > b.z && vW.z < b.w && vW.y < top; }',
-        'void main(){ if (inside(vec4(-18.4,18.4,-12.4,12.4), 12.0) || inside(vec4(-14.4,-5.6,79.6,88.4), 5.2) || inside(vec4(25.7,34.3,-2.3,8.3), 3.3) || inside(vec4(-32.2,-26.8,-4.2,2.2), 2.8) || inside(carBox, 1.6)) discard;',
+        'void main(){ if (inside(vec4(-18.4,18.4,-12.4,12.4), 12.0) || inside(vec4(-17.6,-5.6,79.6,88.4), 5.2) || inside(vec4(25.7,34.3,-2.3,8.3), 3.3) || inside(vec4(-32.2,-26.8,-4.2,2.2), 2.8) || inside(carBox, 1.6)) discard;',
         'if (vW.y < 0.0) discard;',
         'gl_FragColor = vec4((vec3(0.42,0.48,0.58) * (0.10 + flash) + vL * 0.7) * vA, 1.0); }',
       ].join('\n'),

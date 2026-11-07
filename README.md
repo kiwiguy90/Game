@@ -80,6 +80,14 @@ clocks that stop when the power does. Walk up to one and press E to switch it.
 At the fuse board: `M` throws MAIN, `1`–`6` switch HALL, GROUND, EAST, WEST,
 ATTIC, CELLAR. The gate motor switch is in the cellar, on the CELLAR circuit.
 
+## Building
+
+The game is written in `src/` (one file per system, loaded in name order) and
+assembled into the single `blackthorn-manor.html` with Three.js r128 from
+`vendor/` inlined:
+
+    python3 src/assemble.py blackthorn-manor.html
+
 ## Tests
 
 ```

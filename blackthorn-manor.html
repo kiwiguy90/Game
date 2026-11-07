@@ -1115,6 +1115,33 @@ BM.Basic = Basic;
 BM.Own = (colour) => new THREE.MeshBasicMaterial({ color: colour });
 
 /* ---------------- builder ---------------- */
+/* A printed label: dark text on cream card (or engraved brass). */
+const LABELS = {};
+function labelMat(text, o) {
+  o = o || {};
+  const key = text + JSON.stringify(o);
+  if (LABELS[key]) return LABELS[key];
+  const c = document.createElement('canvas'); c.width = o.w || 256; c.height = o.h || 64;
+  const g = c.getContext('2d');
+  g.fillStyle = o.bg || '#e2d6b4'; g.fillRect(0, 0, c.width, c.height);
+  g.strokeStyle = o.border || '#3a2a18'; g.lineWidth = 4; g.strokeRect(3, 3, c.width - 6, c.height - 6);
+  g.fillStyle = o.fg || '#1a1410';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  const lines = text.split('\n');
+  let size = o.size || Math.min(40, Math.floor((c.height - 12) / lines.length * 0.8));
+  // shrink until the longest line fits inside the border
+  g.font = 'bold ' + size + 'px "Courier New", monospace';
+  while (size > 8 && Math.max(...lines.map(l => g.measureText(l).width)) > c.width - 20) { size--; g.font = 'bold ' + size + 'px "Courier New", monospace'; }
+  lines.forEach((l, i) => g.fillText(l, c.width / 2, c.height / 2 + (i - (lines.length - 1) / 2) * size * 1.15));
+  if (o.bolt) { g.fillStyle = o.fg; g.beginPath(); g.moveTo(40, 20); g.lineTo(24, 70); g.lineTo(38, 70); g.lineTo(26, 112); g.lineTo(58, 56); g.lineTo(44, 56); g.lineTo(56, 20); g.fill(); }
+  const t = new THREE.CanvasTexture(c);
+  // a lit display label glows on its own; a card label needs light to be read
+  const m = o.lit ? new THREE.MeshBasicMaterial({ map: t }) : new THREE.MeshPhongMaterial({ map: t, shininess: o.shiny || 10, specular: 0x222222 });
+  m.userData.unique = true;
+  return LABELS[key] = m;
+}
+BM.labelMat = labelMat;
+
 class Builder {
   constructor(scene, phys, grid) {
     this.scene = scene; this.phys = phys; this.grid = grid;
@@ -1462,6 +1489,9 @@ class Builder {
     this.mesh(G.sphere, 'brass', 0, 0, 0.04, 0.011, 0, lever);
     this.root.add(lever);
     lever.traverse(m => { m.userData.dynamic = true; });
+    // an engraved strip above the switch says what it works
+    const text = (typeof it.label === 'function' ? it.label() : it.label || '').replace(/ lights?$/i, '').toUpperCase();
+    if (text) this.mesh(G.plane, BM.labelMat(text, { w: 256, h: 48, size: 22, bg: '#8a6a2c', fg: '#241808', border: '#5a4418' }), fx + n.x * 0.012, p.y + 0.072, fz + n.z * 0.012, 0.17, 0.032, 1, ry);
     it.switchVisual = { lever, ids, ry };
     it.controls = ids;
     it.leverOn = ids.some(id => { const l = this.grid.light(id); return l && l.on && !l.dead; });
@@ -1990,9 +2020,9 @@ BM.buildMansion = function (B, game) {
   game.hallLights = hallIds;
   // three switches on one board by the front door: the porch lanterns, the wall lights, the chandelier
   const sconces = hallIds.filter(id => id !== 'hall-chandelier');
-  roomSwitch('sw-porch', 'Porch lanterns', [1.9, 1.4, 11.77], [0, -1], ['porch-1', 'porch1']);
+  roomSwitch('sw-porch', 'Porch lanterns', [1.8, 1.4, 11.77], [0, -1], ['porch-1', 'porch1']);
   roomSwitch('sw-hall-sconces', 'Hall wall lights', [2.0, 1.4, 11.77], [0, -1], sconces);
-  roomSwitch('sw-hall-chandelier', 'Hall chandelier', [2.1, 1.4, 11.77], [0, -1], ['hall-chandelier']);
+  roomSwitch('sw-hall-chandelier', 'Hall chandelier', [2.2, 1.4, 11.77], [0, -1], ['hall-chandelier']);
   B.readable('note-solicitor', "Solicitor's letter", [
     'Harrow & Lisle, Solicitors. 3 March.',
     'Dear Sir or Madam, we write regarding the estate of the late Miss A. Blackthorn, who has named you as sole beneficiary of Blackthorn Manor.',
@@ -3337,32 +3367,7 @@ BM.buildDressing = function (B, game) {
 const BM = window.BM;
 const G = BM.G;
 
-/* A printed label: dark text on cream card (or engraved brass). */
-const LABELS = {};
-function labelMat(text, o) {
-  o = o || {};
-  const key = text + JSON.stringify(o);
-  if (LABELS[key]) return LABELS[key];
-  const c = document.createElement('canvas'); c.width = o.w || 256; c.height = o.h || 64;
-  const g = c.getContext('2d');
-  g.fillStyle = o.bg || '#e2d6b4'; g.fillRect(0, 0, c.width, c.height);
-  g.strokeStyle = o.border || '#3a2a18'; g.lineWidth = 4; g.strokeRect(3, 3, c.width - 6, c.height - 6);
-  g.fillStyle = o.fg || '#1a1410';
-  g.textAlign = 'center'; g.textBaseline = 'middle';
-  const lines = text.split('\n');
-  let size = o.size || Math.min(40, Math.floor((c.height - 12) / lines.length * 0.8));
-  // shrink until the longest line fits inside the border
-  g.font = 'bold ' + size + 'px "Courier New", monospace';
-  while (size > 8 && Math.max(...lines.map(l => g.measureText(l).width)) > c.width - 20) { size--; g.font = 'bold ' + size + 'px "Courier New", monospace'; }
-  lines.forEach((l, i) => g.fillText(l, c.width / 2, c.height / 2 + (i - (lines.length - 1) / 2) * size * 1.15));
-  if (o.bolt) { g.fillStyle = o.fg; g.beginPath(); g.moveTo(40, 20); g.lineTo(24, 70); g.lineTo(38, 70); g.lineTo(26, 112); g.lineTo(58, 56); g.lineTo(44, 56); g.lineTo(56, 20); g.fill(); }
-  const t = new THREE.CanvasTexture(c);
-  // a lit display label glows on its own; a card label needs light to be read
-  const m = o.lit ? new THREE.MeshBasicMaterial({ map: t }) : new THREE.MeshPhongMaterial({ map: t, shininess: o.shiny || 10, specular: 0x222222 });
-  m.userData.unique = true;
-  return LABELS[key] = m;
-}
-BM.labelMat = labelMat;
+const labelMat = BM.labelMat;
 
 BM.buildSwitchboards = function (B, game) {
   const grid = B.grid;
@@ -3439,10 +3444,6 @@ BM.buildSwitchboards = function (B, game) {
       meter(-0.05, 1.3, 'AMPS', () => grid.lodge ? Math.min(1, grid.lights.filter(l => l.powered).length / 140) : 0);
     },
   });
-  // the hall's three switches are named on a little engraved strip above them
-  B.zone = 'mansion'; B.room = 'hall';
-  B.mesh(G.plane, labelMat('PORCH · WALL · LAMP', { w: 384, h: 56, size: 24, bg: '#8a6a2c', fg: '#241808', border: '#5a4418' }), 2.0, 1.5, 11.785, 0.3, 0.04, 1, Math.PI);
-  B.zone = 'exterior'; B.room = 'lodge';
   // the gate release gets a proper label too
   B.mesh(G.plane, labelMat('GATE\nRELEASE', { w: 192, h: 128, size: 30 }), -6.36, 1.75, 83.2, 0.22, 0.15, 1, -Math.PI / 2);
 
@@ -3960,7 +3961,7 @@ class FX {
     this.beam = new THREE.Mesh(beamGeo, new THREE.ShaderMaterial({
       uniforms: { level: { value: 0 } },
       vertexShader: 'varying float vZ; varying vec3 vN; varying vec3 vV; void main(){ vZ = -position.z / 13.0; vec4 mv = modelViewMatrix * vec4(position,1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }',
-      fragmentShader: 'uniform float level; varying float vZ; varying vec3 vN; varying vec3 vV; void main(){ float edge = pow(abs(dot(vN, vV)), 1.6); float fall = pow(clamp(1.0 - vZ, 0.0, 1.0), 2.2); gl_FragColor = vec4(vec3(1.0,0.95,0.85) * edge * fall * 0.10 * level, 1.0); }',
+      fragmentShader: 'uniform float level; varying float vZ; varying vec3 vN; varying vec3 vV; void main(){ float edge = pow(abs(dot(vN, vV)), 2.2); float fall = pow(clamp(1.0 - vZ, 0.0, 1.0), 2.4); gl_FragColor = vec4(vec3(1.0,0.95,0.85) * edge * fall * 0.085 * level, 1.0); }',
       transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
     }));
     this.beam.position.set(0.18, -0.12, 0.1);
@@ -4006,18 +4007,24 @@ class FX {
     }
     const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.BufferAttribute(rp, 3));
     this.rain = new THREE.LineSegments(rg, new THREE.ShaderMaterial({
-      uniforms: { time: { value: 0 }, origin: { value: new THREE.Vector3() }, flash: { value: 0 }, carBox: { value: new THREE.Vector4(0, 0, 0, 0) } },
+      uniforms: {
+        time: { value: 0 }, origin: { value: new THREE.Vector3() }, flash: { value: 0 }, carBox: { value: new THREE.Vector4(0, 0, 0, 0) },
+        lp: { value: Array.from({ length: 10 }, () => new THREE.Vector3()) }, lc: { value: Array.from({ length: 10 }, () => new THREE.Vector3()) }, lr: { value: new Float32Array(10) },
+      },
       vertexShader: [
-        'uniform float time; uniform vec3 origin; varying vec3 vW; varying float vA;',
+        'uniform float time; uniform vec3 origin; uniform vec3 lp[10]; uniform vec3 lc[10]; uniform float lr[10]; varying vec3 vW; varying float vA; varying vec3 vL;',
         'void main(){ vec3 p = position; p.y = mod(p.y - time * 16.0 - origin.y, 26.0) + origin.y - 6.0; p.x = mod(p.x + time * 1.5 - origin.x + 22.0, 44.0) + origin.x - 22.0; p.z = mod(p.z - origin.z + 22.0, 44.0) + origin.z - 22.0;',
-        'vW = p; vA = 0.5 + 0.5 * fract(position.x * 13.7); gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0); }',
+        'vW = p; vA = 0.5 + 0.5 * fract(position.x * 13.7);',
+        // the streaks nearest a lamp take its colour: rain is only seen where it is lit
+        'vL = vec3(0.0); for (int i = 0; i < 10; i++) { if (lr[i] > 0.0) { float w = clamp(1.0 - distance(p, lp[i]) / lr[i], 0.0, 1.0); vL += lc[i] * w * w; } }',
+        'gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0); }',
       ].join('\n'),
       fragmentShader: [
-        'uniform float flash; uniform vec4 carBox; varying vec3 vW; varying float vA;',
+        'uniform float flash; uniform vec4 carBox; varying vec3 vW; varying float vA; varying vec3 vL;',
         'bool inside(vec4 b, float top){ return vW.x > b.x && vW.x < b.y && vW.z > b.z && vW.z < b.w && vW.y < top; }',
         'void main(){ if (inside(vec4(-18.4,18.4,-12.4,12.4), 12.0) || inside(vec4(-14.4,-5.6,79.6,88.4), 5.2) || inside(vec4(25.7,34.3,-2.3,8.3), 3.3) || inside(vec4(-32.2,-26.8,-4.2,2.2), 2.8) || inside(carBox, 1.6)) discard;',
         'if (vW.y < 0.0) discard;',
-        'gl_FragColor = vec4(vec3(0.42,0.48,0.58) * (0.16 + flash) * vA, 1.0); }',
+        'gl_FragColor = vec4((vec3(0.42,0.48,0.58) * (0.10 + flash) + vL * 0.7) * vA, 1.0); }',
       ].join('\n'),
       transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
     }));
@@ -4217,12 +4224,13 @@ class FX {
       col[i * 3] = this._tmpColour.r * a; col[i * 3 + 1] = this._tmpColour.g * a; col[i * 3 + 2] = this._tmpColour.b * a;
       size[i] = a > 0.01 ? (l.kind === 'fire' ? 0.5 : 0.35 + 0.12 * l.target) : 0;
       const glow = l.target > 0 ? Math.min(1.4, l.intensity / l.target) : 0;
-      if (l.bulb) l.bulb.material.color.setHex(l.colour).multiplyScalar(glow > 0.02 ? 0.25 + glow : 0.08);
-      if (l.bulbBox) l.bulbBox.material.color.setHex(l.colour).multiplyScalar(glow > 0.02 ? 0.2 + glow : 0.06);
+      if (l.bulb) l.bulb.material.color.setHex(l.colour).multiplyScalar(glow > 0.02 ? 0.3 + 0.75 * Math.min(1, glow) : 0.07);
+      if (l.bulbBox) l.bulbBox.material.color.setHex(l.colour).multiplyScalar(glow > 0.02 ? 0.25 + 0.75 * Math.min(1, glow) : 0.06);
       if (l.scorch) l.scorch.visible = l.scorched;
     }
     this.coronaGeo.attributes.colour.needsUpdate = true;
     this.coronaGeo.attributes.csize.needsUpdate = true;
+    if (this.look) this.look.update(dt, ctx);
 
     /* rain and mist */
     const outdoorsVisible = ctx.visibleZones.exterior;
@@ -4352,6 +4360,179 @@ class FX {
   }
 }
 BM.FX = FX;
+})();
+</script>
+<script id="bm-52-lightlook">
+/* ==========================================================================
+   BLACKTHORN MANOR — 5b. THE LOOK OF LIGHT
+   Only ten real lights exist, so everything else that says "light" is
+   faked cheaply and drawn in one go: lit windows glowing from outside with
+   a spill on the wall below, pools of light on the ground under every
+   outdoor lamp, a halo of lamp colour in the rain, and a hot spot in the
+   torch beam. All the glowing quads share one geometry, one texture atlas
+   and one draw call; only their colours change from frame to frame.
+   ========================================================================== */
+(function () {
+'use strict';
+const BM = window.BM;
+
+/* The atlas: left half a pool of light on wet ground, right half a lit window. */
+function glowAtlas() {
+  const c = document.createElement('canvas'); c.width = 512; c.height = 256;
+  const g = c.getContext('2d');
+  const rnd = BM.mulberry32(5);
+  g.clearRect(0, 0, 512, 256);
+  // the pool: a soft disc, broken up by the stones and the wet
+  const pool = g.createRadialGradient(128, 128, 0, 128, 128, 126);
+  pool.addColorStop(0, 'rgba(255,255,255,0.95)'); pool.addColorStop(0.35, 'rgba(255,255,255,0.55)');
+  pool.addColorStop(0.7, 'rgba(255,255,255,0.16)'); pool.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = pool; g.fillRect(0, 0, 256, 256);
+  g.globalCompositeOperation = 'destination-out';
+  for (let i = 0; i < 1400; i++) { const r = 1 + rnd() * 3; g.fillStyle = 'rgba(0,0,0,' + (0.15 + rnd() * 0.35) + ')'; g.fillRect(rnd() * 256, rnd() * 256, r, r * 0.6); }
+  g.globalCompositeOperation = 'source-over';
+  // the window: a warm rectangle with a vignette, curtain folds, a glazing bar
+  const win = g.createLinearGradient(256, 0, 512, 0);
+  win.addColorStop(0, 'rgba(255,255,255,0.0)'); win.addColorStop(0.08, 'rgba(255,255,255,0.9)'); win.addColorStop(0.92, 'rgba(255,255,255,0.9)'); win.addColorStop(1, 'rgba(255,255,255,0.0)');
+  g.fillStyle = win; g.fillRect(256, 0, 256, 256);
+  const vert = g.createLinearGradient(0, 0, 0, 256);
+  vert.addColorStop(0, 'rgba(0,0,0,0.5)'); vert.addColorStop(0.1, 'rgba(0,0,0,0)'); vert.addColorStop(0.9, 'rgba(0,0,0,0)'); vert.addColorStop(1, 'rgba(0,0,0,0.5)');
+  g.globalCompositeOperation = 'destination-out'; g.fillStyle = vert; g.fillRect(256, 0, 256, 256);
+  for (let i = 0; i < 7; i++) { g.fillStyle = 'rgba(0,0,0,' + (0.12 + rnd() * 0.2) + ')'; g.fillRect(256 + 14 + i * 34 + rnd() * 10, 0, 6 + rnd() * 8, 256); }
+  g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(256, 124, 256, 6); g.fillRect(382, 0, 5, 256);
+  g.globalCompositeOperation = 'source-over';
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+  return t;
+}
+const UV_POOL = [0.01, 0.01, 0.49, 0.99], UV_WINDOW = [0.51, 0.01, 0.99, 0.99];
+
+class LightLook {
+  constructor(fx, game) {
+    this.fx = fx; this.game = game;
+    const grid = game.grid, B = game.B, P = game.phys;
+    this.quads = []; // { kind, colour hex, scale, ... }
+    const pos = [], uv = [], col = [], idx = [];
+    const _c = new THREE.Color();
+    const quad = (corners, uvr, hex) => {
+      const i = pos.length / 3;
+      for (const c of corners) pos.push(c[0], c[1], c[2]);
+      uv.push(uvr[0], uvr[1], uvr[2], uvr[1], uvr[2], uvr[3], uvr[0], uvr[3]);
+      _c.setHex(hex); for (let k = 0; k < 4; k++) col.push(0, 0, 0);
+      idx.push(i, i + 1, i + 2, i, i + 2, i + 3);
+      return i;
+    };
+
+    /* ---- pools of light under every outdoor lamp ---- */
+    this.pools = [];
+    for (const l of grid.lights) {
+      if (l.zone !== 'exterior' || l.circuit === 'car' || l.kind === 'fire' || l.pos.y < 0.4 || l.corona === 0) continue;
+      const h = l.pos.y, d = l.dir || [0, -1, 0];
+      const r = Math.max(1.4, Math.min(7.5, h * (l.spot ? 1.1 : 0.95)));
+      const cx = l.pos.x + (l.spot ? d[0] * h * 0.9 : 0), cz = l.pos.z + (l.spot ? d[2] * h * 0.9 : 0);
+      const y = P.support(cx, cz, h) + 0.06;
+      const i = quad([[cx - r, y, cz - r], [cx + r, y, cz - r], [cx + r, y, cz + r], [cx - r, y, cz + r]], UV_POOL, l.colour);
+      this.pools.push({ l, i, gain: l.kind === 'sodium' ? 0.5 : 0.42 });
+    }
+
+    /* ---- lit windows: a glow in the opening, and a spill on the wall below ---- */
+    this.windows = [];
+    const inside = (w, l) => (l.pos.x - w.x) * w.nx + (l.pos.z - w.z) * w.nz < -0.2;
+    for (const w of B.windows) {
+      const litBy = [];
+      for (const l of grid.lights) {
+        if (l.zone !== w.zone || l.kind === 'fire' && l.corona === 0) continue;
+        if (w.zone === 'exterior' && l.room !== w.room) continue;
+        if (!inside(w, l) || Math.abs(l.pos.y - w.y) > 2.8) continue;
+        const dx = l.pos.x - w.x, dz = l.pos.z - w.z, dist = Math.sqrt(dx * dx + dz * dz);
+        if (dist > 11) continue;
+        if (P.occluded(l.pos.x, l.pos.y, l.pos.z, w.x - w.nx * 0.35, w.y, w.z - w.nz * 0.35, 0.25)) continue;
+        litBy.push({ l, k: Math.max(0.15, 1 - dist / 11) });
+      }
+      if (!litBy.length) continue;
+      // the pane, just outside the glass, facing out
+      const ux = w.nz, uz = -w.nx; // along the wall
+      const hw = w.w / 2 - 0.03, hh = w.h / 2 - 0.03, ox = w.x + w.nx * 0.05, oz = w.z + w.nz * 0.05;
+      const pane = quad([[ox - ux * hw, w.y - hh, oz - uz * hw], [ox + ux * hw, w.y - hh, oz + uz * hw], [ox + ux * hw, w.y + hh, oz + uz * hw], [ox - ux * hw, w.y + hh, oz - uz * hw]], UV_WINDOW, 0xffd090);
+      // the spill: on the outer face of the wall, from the sill downwards
+      const sx = w.x + w.nx * 0.215, sz = w.z + w.nz * 0.215, sw = w.w * 0.9, top = w.sill - 0.02, bot = w.sill - 1.5;
+      const spill = quad([[sx - ux * sw, bot, sz - uz * sw], [sx + ux * sw, bot, sz + uz * sw], [sx + ux * sw * 0.55, top, sz + uz * sw * 0.55], [sx - ux * sw * 0.55, top, sz - uz * sw * 0.55]], UV_POOL, 0xffd090);
+      this.windows.push({ w, litBy, pane, spill });
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    geo.setAttribute('colour', new THREE.Float32BufferAttribute(col, 3));
+    geo.setIndex(idx);
+    this.colours = geo.attributes.colour;
+    this.mesh = new THREE.Mesh(geo, new THREE.ShaderMaterial({
+      uniforms: { map: { value: glowAtlas() } },
+      vertexShader: 'attribute vec3 colour; varying vec3 vC; varying vec2 vUv; void main(){ vC = colour; vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: 'uniform sampler2D map; varying vec3 vC; varying vec2 vUv; void main(){ vec4 t = texture2D(map, vUv); gl_FragColor = vec4(vC * t.a, 1.0); }',
+      transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.FrontSide,
+    }));
+    this.mesh.frustumCulled = false;
+    this.mesh.renderOrder = 8;
+    this.mesh.userData.dynamic = true; this.mesh.userData.fxOneOff = true; // one shared quad mesh, built once
+    fx.scene.add(this.mesh);
+
+    /* ---- the torch's hot spot: a narrow second beam inside the wide one ---- */
+    this.hot = new THREE.SpotLight(0xfff2dc, 0, 22, 0.17, 0.8, 2);
+    fx.camera.add(this.hot); this.hot.position.set(0.18, -0.12, 0.1);
+    this.hot.target = fx.torch.target;
+    const coreGeo = new THREE.CylinderGeometry(0.75, 0.04, 12, 16, 1, true);
+    coreGeo.translate(0, -6, 0); coreGeo.rotateX(Math.PI / 2);
+    this.core = new THREE.Mesh(coreGeo, fx.beam.material.clone());
+    this.core.position.copy(fx.beam.position); this.core.rotation.copy(fx.beam.rotation);
+    this.core.frustumCulled = false; this.core.userData.dynamic = true; this.core.userData.fxOneOff = true;
+    fx.camera.add(this.core);
+
+    this._c = new THREE.Color();
+  }
+
+  /* Colour a quad: all four corners the same. */
+  paint(i, hex, k) {
+    const c = this._c.setHex(hex), a = this.colours.array;
+    for (let v = 0; v < 4; v++) { a[(i + v) * 3] = c.r * k; a[(i + v) * 3 + 1] = c.g * k; a[(i + v) * 3 + 2] = c.b * k; }
+  }
+
+  update(dt, ctx) {
+    const fx = this.fx, grid = this.game.grid, vis = ctx.visibleZones;
+    for (const p of this.pools) {
+      const l = p.l, k = l.target > 0 && vis[l.zone] ? Math.min(1.5, l.intensity / l.target) * p.gain : 0;
+      this.paint(p.i, l.colour, k);
+    }
+    for (const w of this.windows) {
+      let g = 0;
+      for (const e of w.litBy) { const l = e.l; if (l.target > 0) g += Math.min(1.3, l.intensity / l.target) * e.k; }
+      g = Math.min(1, g);
+      // a lit window is seen from outside only; the pane faces out and the exterior must be drawn
+      if (!vis.exterior) g = 0;
+      this.paint(w.pane, 0xffd090, g * 0.95);
+      this.paint(w.spill, 0xffc880, g * 0.32);
+    }
+    this.colours.needsUpdate = true;
+
+    // the torch: the hot spot rides with the wide beam
+    this.hot.intensity = fx.torch.intensity * 0.6;
+    this.core.material.uniforms.level.value = fx.beam.material.uniforms.level.value * 1.6;
+    this.core.visible = fx.beam.visible;
+
+    // the rain takes the colour of the nearest lamps
+    const u = fx.rain.material.uniforms;
+    if (u.lp) {
+      const lp = u.lp.value, lc = u.lc.value, lr = u.lr.value;
+      for (let i = 0; i < fx.assigned.length; i++) {
+        const l = fx.assigned[i];
+        if (!l || l.zone !== 'exterior') { lr[i] = 0; continue; }
+        lp[i].set(l.pos.x, l.pos.y, l.pos.z);
+        this._c.setHex(l.colour); const k = Math.min(1.5, l.intensity / Math.max(0.01, l.target)) * 0.9;
+        lc[i].set(this._c.r * k, this._c.g * k, this._c.b * k);
+        lr[i] = l.range * 0.9;
+      }
+    }
+  }
+}
+BM.LightLook = LightLook;
 })();
 </script>
 <script id="bm-55-optimize">
@@ -5039,6 +5220,7 @@ class Game {
 
     this.audio = new BM.Synth(this);
     this.fx = new BM.FX(this);
+    this.fx.look = new BM.LightLook(this.fx, this);
     this.ui = new UI(this);
     this.optStats = BM.optimize(this);
     this.quality = new BM.Quality(s => this.applyQuality(s), this.opts.quality !== undefined ? this.opts.quality : 2);

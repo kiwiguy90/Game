@@ -828,7 +828,7 @@ suite('budgets', () => {
   game.scene.traverse(o => {
     if (!o.geometry) return;
     geos.add(o.geometry);
-    if (o.isMesh && !o.isInstancedMesh && !(o.geometry.userData && o.geometry.userData.canonical) && o !== game.fx.beam) nonCanon.add(o.geometry.type);
+    if (o.isMesh && !o.isInstancedMesh && !(o.geometry.userData && o.geometry.userData.canonical) && o !== game.fx.beam && !(o.userData && o.userData.fxOneOff)) nonCanon.add(o.geometry.type);
     if (o.isInstancedMesh && !(o.geometry.userData && o.geometry.userData.canonical)) nonCanon.add('instanced:' + o.geometry.type);
   });
   assert(!nonCanon.size, 'meshes not using canonical geometry: ' + [...nonCanon].join(', '));

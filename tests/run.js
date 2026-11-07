@@ -426,6 +426,8 @@ suite('arrival', () => {
   // skipping
   const env2 = H.load({ quiet: true }), g2 = env2.game;
   g2.ui.mode = 'title'; g2.keyDown('KeyX'); g2.update(1 / 30); g2.keyDown('Space');
+  assert(g2.intro, 'a key in the first moment does not skip it (so mashing E on the title cannot)');
+  for (let i = 0; i < 30; i++) g2.update(1 / 30); g2.keyDown('Space');
   assert(!g2.intro && g2.car.parked && g2.car.beams.every(l => !l.on), 'any key skips the arrival');
   assert(game.frameErrors === 0, 'frame errors');
   return `${road.poles} poles, ${road.trees} pines; drive in, stall, lights die, walk; skippable`;
@@ -495,6 +497,9 @@ suite('hud', () => {
   assert(['attic-1', 'attic-2', 'attic-3'].every(id => g.light(id).powered), 'attic lights toggled from the cellar');
   game.lightPanelToggle('room:sw-attic'); for (let i = 0; i < 10; i++) game.update(1 / 30);
   assert(['attic-1', 'attic-2', 'attic-3'].every(id => !g.light(id).powered), 'and off again');
+  // a blown lamp must not jam its group
+  g.light(game.estateLights.drive[0]).dead = true;
+  assert(game.toggleEstate('drive') === false && game.toggleEstate('drive') === true, 'a group with a blown lamp still switches off and on');
   const r = game.lightPanelRows().find(x => x.k === 'room:sw-attic');
   assert(!r.on && !r.lit && game.byId['sw-attic'].leverOn === false, 'the panel row and the wall toggle agree');
   // number keys work the estate groups while walking about

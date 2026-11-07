@@ -238,6 +238,7 @@ class PowerGrid {
     this.capacity = 3;
     this.coreDoorUnsealed = false;
     this.lights = [];
+    this.byId = new Map();
     this.appliances = [];
     this.time = 0;
     this._lastLive = {};
@@ -247,9 +248,9 @@ class PowerGrid {
 
   }
 
-  addLight(o) { const l = o instanceof LightRecord ? o : new LightRecord(o); this.lights.push(l); return l; }
+  addLight(o) { const l = o instanceof LightRecord ? o : new LightRecord(o); this.lights.push(l); this.byId.set(l.id, l); return l; }
   addAppliance(o) { const a = new Appliance(o); this.appliances.push(a); return a; }
-  light(id) { return this.lights.find(l => l.id === id); }
+  light(id) { return this.byId.get(id); }
 
   /* Is a supply live right now? */
   live(c) {
@@ -3885,6 +3886,7 @@ BM.Intro = class {
     if (!this.placed) { this.placed = true; this.place(); }
     this.done = true; this.radio = 0; this.engine = 0;
     this.game.ui.fade(0);
+    this.game.ui.msgT = 0; if (this.game.ui.el.msg) this.game.ui.el.msg.style.opacity = '0';
     this.game.intro = null;
   }
 };
@@ -4241,16 +4243,16 @@ class FX {
     }
     const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.BufferAttribute(rp, 3));
     this.rain = new THREE.LineSegments(rg, new THREE.ShaderMaterial({
-      uniforms: { time: { value: 0 }, origin: { value: new THREE.Vector3() }, flash: { value: 0 } },
+      uniforms: { time: { value: 0 }, origin: { value: new THREE.Vector3() }, flash: { value: 0 }, carBox: { value: new THREE.Vector4(0, 0, 0, 0) } },
       vertexShader: [
         'uniform float time; uniform vec3 origin; varying vec3 vW; varying float vA;',
         'void main(){ vec3 p = position; p.y = mod(p.y - time * 16.0 - origin.y, 26.0) + origin.y - 6.0; p.x = mod(p.x + time * 1.5 - origin.x + 22.0, 44.0) + origin.x - 22.0; p.z = mod(p.z - origin.z + 22.0, 44.0) + origin.z - 22.0;',
         'vW = p; vA = 0.5 + 0.5 * fract(position.x * 13.7); gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0); }',
       ].join('\n'),
       fragmentShader: [
-        'uniform float flash; varying vec3 vW; varying float vA;',
+        'uniform float flash; uniform vec4 carBox; varying vec3 vW; varying float vA;',
         'bool inside(vec4 b, float top){ return vW.x > b.x && vW.x < b.y && vW.z > b.z && vW.z < b.w && vW.y < top; }',
-        'void main(){ if (inside(vec4(-18.4,18.4,-12.4,12.4), 12.0) || inside(vec4(-14.4,-5.6,79.6,88.4), 5.2) || inside(vec4(25.7,34.3,-2.3,8.3), 3.3) || inside(vec4(-32.2,-26.8,-4.2,2.2), 2.8)) discard;',
+        'void main(){ if (inside(vec4(-18.4,18.4,-12.4,12.4), 12.0) || inside(vec4(-14.4,-5.6,79.6,88.4), 5.2) || inside(vec4(25.7,34.3,-2.3,8.3), 3.3) || inside(vec4(-32.2,-26.8,-4.2,2.2), 2.8) || inside(carBox, 1.6)) discard;',
         'if (vW.y < 0.0) discard;',
         'gl_FragColor = vec4(vec3(0.42,0.48,0.58) * (0.16 + flash) * vA, 1.0); }',
       ].join('\n'),
@@ -4465,6 +4467,7 @@ class FX {
     this.rain.material.uniforms.time.value = t;
     this.rain.material.uniforms.origin.value.set(Math.floor(cam.x), Math.floor(cam.y), Math.floor(cam.z));
     this.rain.material.uniforms.flash.value = this.flash;
+    if (game.car) { const c = game.car.group.position; this.rain.material.uniforms.carBox.value.set(c.x - 2.3, c.x + 2.3, c.z - 1.0, c.z + 1.0); }
     this.rain.geometry.setDrawRange(0, this.quality.rain * 2);
     this.mistMat.uniforms.time.value = t;
     this.mistMat.uniforms.flash.value = this.flash * outdoorFactor;
@@ -4785,7 +4788,7 @@ class Synth {
   }
 
   start() {
-    if (this.ctx) { if (this.ctx.resume) this.ctx.resume(); return; }
+    if (this.ctx) { if (this.ctx.state !== 'running' && this.ctx.resume) this.ctx.resume(); return; }
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
     const ctx = this.ctx = new AC();
@@ -4866,6 +4869,7 @@ class Synth {
     g.gain.exponentialRampToValueAtTime(0.0001, t + attack + decay);
     s.connect(f); f.connect(g);
     if (pan !== undefined && ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = pan; g.connect(p); p.connect(this.master); } else g.connect(this.master);
+    s.loop = true;
     s.start(t, Math.random() * 1.5); s.stop(t + attack + decay + 0.1);
     return { f, g };
   }
@@ -4888,7 +4892,7 @@ class Synth {
     this.burst(this.brown, 'lowpass', close ? 900 : 280 + L * 300, 0.6, 1.3 * L, 0.05, 2.5 + L * 2, delay);
     this.burst(this.brown, 'lowpass', 160, 1.2, 1.0 * L, 0.6, 3.5 + L * 3, delay + 0.3);
   }
-  clunk() { this.tone('sine', 90, 40, 0.5, 0.005, 0.18); this.burst(this.white, 'lowpass', 900, 1, 0.3, 0.002, 0.08); }
+  clunk(v) { v = v === undefined ? 1 : v; this.tone('sine', 90, 40, 0.5 * v, 0.005, 0.18); this.burst(this.white, 'lowpass', 900, 1, 0.3 * v, 0.002, 0.08); }
   click() { this.burst(this.white, 'highpass', 3000, 1, 0.25, 0.001, 0.03); }
   lever() { this.clunk(); this.burst(this.white, 'bandpass', 500, 2, 0.4, 0.01, 0.35, 0.05); this.tone('sine', 60, 50, 0.3, 0.2, 1.6, 0.1); }
   bang(v) { v = v === undefined ? 1 : v; this.burst(this.white, 'highpass', 900, 0.6, 1.2 * v, 0.001, 0.12); this.burst(this.brown, 'lowpass', 600, 1, 0.8 * v, 0.002, 0.5); this.tone('square', 2400, 300, 0.2 * v, 0.001, 0.08); for (let i = 0; i < 4; i++) this.tone('sine', 3200 + i * 700, 3000 + i * 600, 0.05 * v, 0.001, 0.06, 0.08 + i * 0.07); }
@@ -4944,7 +4948,7 @@ class Synth {
   pickHums(p) {
     const out = [];
     for (const l of this.game.grid.lights) {
-      if (l.intensity < 0.02 || l.kind === 'fire') continue;
+      if (l.intensity < 0.02 || l.kind === 'fire' || l.circuit === 'car') continue;
       const dx = l.pos.x - p.x, dy = l.pos.y - p.y, dz = l.pos.z - p.z, d = Math.sqrt(dx * dx + dy * dy + dz * dz);
       const spec = HUM[l.kind] || HUM.incandescent;
       if (d > spec.reach) continue;
@@ -5125,7 +5129,8 @@ class UI {
     this.el.lights = $('lights');
     this.lightsVisible = true;
     this.lightsT = 0;
-    if (this.el.lights && this.el.lights.addEventListener) this.el.lights.addEventListener('click', e => {
+    if (this.el.lights && this.el.lights.addEventListener) this.el.lights.addEventListener('pointerdown', e => {
+      if (e.button) return;
       let t = e.target;
       while (t && t !== this.el.lights && !(t.dataset && t.dataset.k)) t = t.parentNode;
       if (t && t.dataset && t.dataset.k) { this.game.lightPanelToggle(t.dataset.k); this.lightsT = 0; }
@@ -5197,6 +5202,8 @@ class UI {
       `<div class="ph-h">Torch</div><div>${g.player.torch ? 'On' : 'Off'} — press T</div>`;
   }
   fade(v) { this.fadeV = v; if (this.el.fade) this.el.fade.style.opacity = String(v); }
+  setPrompt(t) { if (t !== this.promptText) { this.promptText = t; if (this.el.prompt) this.el.prompt.textContent = t; } }
+  setObjective(t) { if (t !== this.objectiveText) { this.objectiveText = t; if (this.el.objective) this.el.objective.textContent = t; } }
   /* The lighting panel on the side of the screen: every light group, always to hand. */
   renderLights() {
     const el = this.el.lights; if (!el) return;
@@ -5298,6 +5305,7 @@ class Game {
     this.fx.quality.mirrors = s.mirrors;
     this.fx.quality.shadowEvery = s.shadowEvery;
     this.renderer.shadowMap.autoUpdate = false;
+    if (this.fx.torch) { this.fx.torch.castShadow = s.shadowEvery > 0; this.shadowFrame = 0; }
   }
 
   wireEvents() {
@@ -5312,7 +5320,10 @@ class Game {
       this.lastFailSay = this.time;
       this.ui.say(e.mode === 'exploded' ? `Pop — the ${l.name.toLowerCase()} flares and blows. Glass tinkles down.` : `The ${l.name.toLowerCase()} won't settle. It just keeps flickering.`, 4);
     });
-    ev.on('appliance:start', () => this.audio.clunk());
+    ev.on('appliance:start', a => {
+      const p = this.player, d = Math.hypot(a.pos.x - p.x, a.pos.y - p.y - 1.6, a.pos.z - p.z);
+      if (d < 14) this.audio.clunk(Math.max(0.15, 1 - d / 14));
+    });
     // the little sounds of old fittings striking up, if you are near enough to hear
     ev.on('light:start', l => {
       const p = this.player, d = Math.hypot(l.pos.x - p.x, l.pos.y - p.y - 1.6, l.pos.z - p.z);
@@ -5406,7 +5417,7 @@ class Game {
     if (kind === 'estate') return this.toggleEstate(id);
     if (kind === 'room' && this.byId[id]) return this.byId[id].act(this);
   }
-  estateGroupOn(k) { return this.estateLights[k].some(id => this.grid.light(id).on); }
+  estateGroupOn(k) { return this.estateLights[k].some(id => { const l = this.grid.light(id); return l && !l.dead && l.on; }); }
   toggleEstate(k) {
     if (!this.grid.lodge) { this.audio.click(); this.ui.say('The switches click. Nothing. The lodge main switch is off.'); return false; }
     const ids = this.estateLights[k], on = !this.estateGroupOn(k);
@@ -5528,12 +5539,16 @@ class Game {
     this.keys[code] = true;
     const ui = this.ui;
     if (ui.mode === 'title') { this.begin(); return; }
-    if (this.intro) { if (['KeyE', 'Space', 'Enter', 'Escape'].includes(code)) this.intro.skip(); return; }
+    if (this.intro) { if (['KeyE', 'Space', 'Enter', 'Escape'].includes(code) && this.intro.t > 0.6) this.intro.skip(); return; }
     if (ui.mode === 'ending') return;
     if (ui.mode === 'read') { if (code === 'KeyE' || code === 'Escape' || code === 'Space' || code === 'Enter') ui.close(); return; }
     if (ui.mode === 'fuse') {
       if (code === 'KeyE' || code === 'Escape') ui.close();
-      else if (code === 'KeyM') this.grid.setBreaker('main', !this.grid.breakers.main || this.grid.tripped);
+      else if (code === 'KeyM') {
+        const up = !this.grid.breakers.main || this.grid.tripped;
+        this.grid.setBreaker('main', up);
+        if (!up) { this.audio.lever(); this.ui.say('You pull MAIN. The whole house goes dark around you.'); }
+      }
       else { const i = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6'].indexOf(code); if (i >= 0) { this.grid.toggleBreaker(['hall', 'ground', 'east', 'west', 'attic', 'cellar'][i]); this.audio.clunk(); } }
       return;
     }
@@ -5569,7 +5584,7 @@ class Game {
   update(dt) {
     this.time += dt; this.clock += dt;
     const p = this.player;
-    const frozen = this.ui.mode === 'read' || this.ui.mode === 'fuse' || this.ui.mode === 'console' || this.ui.mode === 'title' || this.ui.mode === 'ending';
+    const frozen = this.ui.mode === 'read' || this.ui.mode === 'fuse' || this.ui.mode === 'console' || this.ui.mode === 'estate' || this.ui.mode === 'title' || this.ui.mode === 'ending';
     if (this.intro) this.intro.update(dt);
     else if (this.riding) this.updateRide(dt);
     else if (this.climbing) this.updateClimb(dt);
@@ -5592,9 +5607,9 @@ class Game {
       const it = this.pick();
       const label = it ? this.labelOf(it) : '';
       this.currentPick = it;
-      if (this.ui.el.prompt) this.ui.el.prompt.textContent = label ? 'E — ' + label : '';
-    } else if (this.ui.el.prompt) this.ui.el.prompt.textContent = '';
-    if (this.ui.el.objective && this.ui.mode !== 'title') this.ui.el.objective.textContent = this.objective();
+      this.ui.setPrompt(label ? 'E — ' + label : '');
+    } else this.ui.setPrompt('');
+    if (this.ui.mode !== 'title') this.ui.setObjective(this.objective());
   }
 
   updatePlayer(dt) {
@@ -5728,6 +5743,7 @@ class Game {
 
   /* One guarded frame: one bad frame cannot freeze the game. */
   frame(dt, rawMs) {
+    const t0 = typeof performance !== 'undefined' && performance.now ? performance.now() : 0;
     try {
       this.update(Math.min(0.05, dt));
       this.render();
@@ -5736,7 +5752,12 @@ class Game {
       this.lastError = e;
       if (this.frameErrors < 5 && typeof console !== 'undefined') console.error(e);
     }
-    if (rawMs !== undefined) { this.quality.sample(rawMs); this.quality.update(dt); }
+    if (rawMs !== undefined) {
+      // a vsync'd frame always takes a whole refresh period, so judge the work inside it
+      const work = t0 ? performance.now() - t0 : rawMs;
+      this.quality.sample(this.opts.sampleRaw ? rawMs : Math.min(rawMs, work));
+      this.quality.update(dt);
+    }
   }
 
   resize(W, H) { this.camera.aspect = W / H; this.camera.updateProjectionMatrix(); this.renderer.setSize(W, H); }
@@ -5753,7 +5774,8 @@ BM.boot = function (opts) {
   game.init(document.getElementById('view'));
   BM.game = game;
   game.ui.mode = 'title';
-  window.addEventListener('keydown', e => { if (['Space', 'ArrowUp', 'ArrowDown'].indexOf(e.code) >= 0) e.preventDefault(); if (!e.repeat) game.keyDown(e.code); });
+  window.addEventListener('keydown', e => { if (['Space', 'ArrowUp', 'ArrowDown'].indexOf(e.code) >= 0) e.preventDefault(); if (!e.repeat) game.keyDown(e.code); if (game.ui.mode !== 'title') game.audio.start(); });
+  window.addEventListener('pointerdown', () => { if (game.ui.mode !== 'title') game.audio.start(); });
   window.addEventListener('keyup', e => game.keyUp(e.code));
   window.addEventListener('blur', () => { game.keys = {}; });
   window.addEventListener('resize', () => game.resize(window.innerWidth, window.innerHeight));

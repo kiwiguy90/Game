@@ -1076,6 +1076,8 @@ const MAT_DEFS = {
   statue: [0x9a988f, 'limestone', 0.5, 10],
   marble: [0xa8a6a0, 'limestone', 0.6, 60],
   rubber: [0x1a1a1a, null, 0, 5],
+  leather: [0x3a2418, null, 0, 40],
+  linen: [0xcfc6b2, 'plaster', 0.6, 4],
   carPaint: [0x3c4a3a, null, 0, 120],
   chrome: [0xcfd4d8, null, 0, 150],
   frame: [0x3a2618, null, 0, 30],
@@ -1525,6 +1527,289 @@ class Builder {
   }
 }
 BM.Builder = Builder;
+})();
+</script>
+<script id="bm-31-furniture">
+/* ==========================================================================
+   BLACKTHORN MANOR — 3b. FURNITURE AND PICTURES
+   Every piece of furniture keeps its simple collision box, but is drawn as
+   the thing it is: a table on four turned legs with an apron, a chair with
+   a seat, legs, uprights and rails, a bed with a headboard, mattress and
+   bedding, a wardrobe with doors and a cornice, chests with drawer fronts
+   and knobs, bookcases full of books. Paintings are painted: a procedural
+   landscape, portrait or still life under crazed varnish, in a gilt frame.
+   ========================================================================== */
+(function () {
+'use strict';
+const BM = window.BM;
+const G = BM.G;
+const B = BM.Builder.prototype;
+
+/* ---- the pieces. Each gets (b, mat, cx, cz, y0, sx, sy, sz): the box it must fill. ---- */
+const legs = (b, mat, cx, cz, y0, sx, sz, h, r, inset) => {
+  for (const [ex, ez] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) b.mesh(G.post, mat, cx + ex * (sx / 2 - inset), y0 + h / 2, cz + ez * (sz / 2 - inset), r, h, r);
+};
+const turned = (b, mat, x, y0, z, h, r) => {
+  b.mesh(G.post, mat, x, y0 + h / 2, z, r, h, r);
+  b.mesh(G.sphere, mat, x, y0 + h * 0.3, z, r * 1.7, r * 1.4, r * 1.7);
+  b.mesh(G.sphere, mat, x, y0 + h * 0.62, z, r * 1.5, r * 1.2, r * 1.5);
+};
+const PIECES = {
+  table(b, mat, cx, cz, y0, sx, sy, sz) {
+    const top = 0.04, apron = Math.min(0.12, sy * 0.15);
+    b.box(mat, cx, y0 + sy - top / 2, cz, sx, top, sz);
+    b.box(mat, cx, y0 + sy - top - apron / 2, cz, sx - 0.16, apron, sz - 0.16);
+    const r = Math.min(0.08, sx * 0.08);
+    for (const [ex, ez] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) turned(b, mat, cx + ex * (sx / 2 - 0.1), y0, cz + ez * (sz / 2 - 0.1), sy - top, r);
+    if (sx > 3) for (const ex of [-1, 1]) turned(b, mat, cx + ex * sx / 6, y0, cz, sy - top, r); // a long table has six legs
+  },
+  desk(b, mat, cx, cz, y0, sx, sy, sz) {
+    b.box(mat, cx, y0 + sy - 0.02, cz, sx, 0.04, sz);
+    b.box('leather', cx, y0 + sy + 0.001, cz, sx * 0.7, 0.004, sz * 0.7);
+    // pedestals of drawers either side of the kneehole
+    const pw = Math.min(0.5, sx * 0.3);
+    for (const ex of [-1, 1]) {
+      const px = cx + ex * (sx / 2 - pw / 2);
+      b.box(mat, px, y0 + (sy - 0.04) / 2, cz, pw, sy - 0.04, sz);
+      for (let i = 0; i < 3; i++) { const y = y0 + 0.14 + i * (sy - 0.2) / 3; b.box('darkWood', px, y, cz + sz / 2 + 0.005, pw - 0.08, (sy - 0.2) / 3 - 0.04, 0.01); b.mesh(G.sphere, 'brass', px, y, cz + sz / 2 + 0.02, 0.018); }
+    }
+  },
+  stand(b, mat, cx, cz, y0, sx, sy, sz) {
+    b.box(mat, cx, y0 + sy - 0.02, cz, sx, 0.04, sz);
+    b.mesh(G.post, mat, cx, y0 + sy / 2, cz, 0.06, sy - 0.04, 0.06);
+    b.mesh(G.sphere, mat, cx, y0 + sy * 0.45, cz, 0.11, 0.09, 0.11);
+    b.mesh(G.cyl, mat, cx, y0 + 0.02, cz, sx * 0.8, 0.04, sz * 0.8);
+  },
+  chair(b, mat, cx, cz, y0, sx, sy, sz, back) {
+    const seatY = y0 + Math.min(0.46, sy * 0.48);
+    b.box(mat, cx, seatY, cz, sx, 0.04, sz);
+    b.box('fabricRed', cx, seatY + 0.04, cz, sx - 0.06, 0.05, sz - 0.06);
+    legs(b, mat, cx, cz, y0, sx, sz, seatY - y0, 0.035, 0.04);
+    // the back: two uprights and three rails, on the side away from the table
+    const bx = back ? back[0] : 0, bz = back ? back[1] : -1;
+    const ux = cx + bx * (sx / 2 - 0.03), uz = cz + bz * (sz / 2 - 0.03);
+    const along = bx ? [0, 1] : [1, 0];
+    for (const e of [-1, 1]) b.mesh(G.post, mat, ux + along[0] * e * (sx / 2 - 0.03), y0 + sy / 2, uz + along[1] * e * (sz / 2 - 0.03), 0.035, sy, 0.035);
+    for (let i = 0; i < 3; i++) b.box(mat, ux, seatY + 0.14 + i * (sy - (seatY - y0) - 0.2) / 2, uz, along[0] ? sx - 0.06 : 0.025, 0.05, along[1] ? sz - 0.06 : 0.025);
+  },
+  stool(b, mat, cx, cz, y0, sx, sy, sz) {
+    b.mesh(G.cyl, mat, cx, y0 + sy - 0.025, cz, sx, 0.05, sz);
+    for (let i = 0; i < 3; i++) { const a = i * Math.PI * 2 / 3; b.mesh(G.post, mat, cx + Math.cos(a) * sx * 0.35, y0 + (sy - 0.05) / 2, cz + Math.sin(a) * sz * 0.35, 0.035, sy - 0.05, 0.035); }
+  },
+  seating(b, mat, cx, cz, y0, sx, sy, sz, kind) {
+    const wide = sx >= sz, len = wide ? sx : sz, dep = wide ? sz : sx;
+    const seatH = Math.min(0.42, sy * 0.47);
+    // the frame, the seat cushions, the back, the arms, turned feet
+    b.box(mat, cx, y0 + seatH / 2, cz, sx, seatH, sz);
+    const nCush = Math.max(1, Math.round(len / 0.75));
+    for (let i = 0; i < nCush; i++) {
+      const u = (i + 0.5) / nCush - 0.5;
+      b.box(mat, wide ? cx + u * len : cx, y0 + seatH + 0.06, wide ? cz : cz + u * len, wide ? len / nCush - 0.05 : dep - 0.1, 0.12, wide ? dep - 0.1 : len / nCush - 0.05);
+    }
+    if (kind !== 'chaise') {
+      const bt = 0.16;
+      b.box(mat, wide ? cx : cx - (sx / 2 - bt / 2), y0 + sy / 2 + seatH / 4, wide ? cz - (sz / 2 - bt / 2) : cz, wide ? sx : bt, sy - seatH / 2, wide ? bt : sz);
+      for (const e of [-1, 1]) b.box(mat, wide ? cx + e * (sx / 2 - 0.08) : cx, y0 + seatH + 0.14, wide ? cz : cz + e * (sz / 2 - 0.08), wide ? 0.16 : sx, 0.28, wide ? sz : 0.16);
+    } else {
+      b.box(mat, cx - (sx / 2 - 0.12), y0 + seatH + 0.22, cz, 0.24, 0.44, sz); // one scrolled end
+    }
+    for (const [ex, ez] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) b.mesh(G.sphere, 'darkWood', cx + ex * (sx / 2 - 0.1), y0 + 0.05, cz + ez * (sz / 2 - 0.1), 0.1, 0.1, 0.1);
+  },
+  bed(b, mat, cx, cz, y0, sx, sy, sz) {
+    const frameH = Math.min(0.3, sy * 0.45);
+    b.box('darkWood', cx, y0 + frameH / 2 + 0.1, cz, sx, frameH, sz);
+    legs(b, 'darkWood', cx, cz, y0, sx, sz, 0.12, 0.05, 0.06);
+    b.box('linen', cx, y0 + frameH + 0.1 + 0.09, cz, sx - 0.08, 0.18, sz - 0.08);               // mattress
+    b.box('drape', cx, y0 + frameH + 0.1 + 0.19, cz + sz * 0.12, sx - 0.06, 0.05, sz * 0.72);     // the cover, turned back
+    b.mesh(G.sphere, 'linen', cx, y0 + frameH + 0.1 + 0.24, cz - sz / 2 + 0.3, sx * 0.4, 0.12, 0.3); // pillow
+    b.box('darkWood', cx, y0 + sy * 0.75, cz - sz / 2 + 0.04, sx, sy * 1.5, 0.08);               // headboard
+  },
+  cot(b, mat, cx, cz, y0, sx, sy, sz) {
+    b.box(mat, cx, y0 + 0.4, cz, sx, 0.04, sz);
+    b.box('linen', cx, y0 + 0.47, cz, sx - 0.1, 0.1, sz - 0.1);
+    legs(b, mat, cx, cz, y0, sx, sz, sy, 0.035, 0.03);
+    for (const side of [-1, 1]) for (let i = 0; i < Math.floor(sx / 0.12); i++) b.mesh(G.post, mat, cx - sx / 2 + 0.08 + i * 0.12, y0 + sy * 0.6, cz + side * (sz / 2 - 0.03), 0.015, sy * 0.8, 0.015);
+    for (const side of [-1, 1]) b.box(mat, cx, y0 + sy - 0.02, cz + side * (sz / 2 - 0.03), sx, 0.04, 0.04);
+  },
+  cupboard(b, mat, cx, cz, y0, sx, sy, sz, front) {
+    b.box(mat, cx, y0 + sy / 2, cz, sx, sy, sz);
+    const fx = front[0], fz = front[1];
+    const faceX = cx + fx * (sz / 2 + 0.006), faceZ = cz + fz * (sz / 2 + 0.006);
+    // two doors with raised panels, a cornice and a plinth
+    const w = fx ? sz : sx;
+    for (const e of [-1, 1]) {
+      const px = fx ? faceX : cx + e * w / 4, pz = fz ? faceZ : cz + e * w / 4;
+      b.box('panel', fx ? cx + fx * (sx / 2 + 0.006) : px, y0 + sy * 0.55, fz ? pz : cz + e * w / 4 * 0 + (fx ? cz + e * w / 4 : 0) * 0 + (fx ? e * w / 4 : 0), fx ? 0.012 : w / 2 - 0.08, sy * 0.72, fz ? 0.012 : w / 2 - 0.08);
+      b.mesh(G.sphere, 'brass', fx ? cx + fx * (sx / 2 + 0.02) : cx + e * 0.06, y0 + sy * 0.5, fz ? cz + fz * (sz / 2 + 0.02) : cz + e * 0.06 * 0 + (fx ? e * 0.06 : 0), 0.018);
+    }
+    b.box(mat, cx, y0 + sy + 0.03, cz, sx + 0.1, 0.06, sz + 0.1);
+    b.box('darkWood', cx, y0 + 0.05, cz, sx + 0.04, 0.1, sz + 0.04);
+  },
+  drawers(b, mat, cx, cz, y0, sx, sy, sz, front) {
+    b.box(mat, cx, y0 + sy / 2, cz, sx, sy, sz);
+    const fx = front[0], fz = front[1], w = fx ? sz : sx;
+    const n = Math.max(2, Math.round(sy / 0.26)), dh = (sy - 0.12) / n;
+    for (let i = 0; i < n; i++) {
+      const y = y0 + 0.08 + dh * (i + 0.5);
+      b.box('darkWood', cx + fx * (sx / 2 + 0.006), y, cz + fz * (sz / 2 + 0.006), fx ? 0.012 : w - 0.1, dh - 0.03, fz ? 0.012 : w - 0.1);
+      for (const e of [-1, 1]) b.mesh(G.sphere, 'brass', cx + fx * (sx / 2 + 0.02) + (fz ? e * w * 0.25 : 0), y, cz + fz * (sz / 2 + 0.02) + (fx ? e * w * 0.25 : 0), 0.016);
+    }
+    b.box(mat, cx, y0 + sy + 0.015, cz, sx + 0.04, 0.03, sz + 0.04);
+  },
+  bookcase(b, mat, cx, cz, y0, sx, sy, sz, front) {
+    const fx = front[0], fz = front[1];
+    b.box(mat, cx, y0 + sy / 2, cz, sx, sy, sz);
+    const n = Math.max(3, Math.round(sy / 0.36)), sh = (sy - 0.08) / n, w = fx ? sz : sx, rnd = BM.mulberry32(Math.round(cx * 31 + cz * 17));
+    const cols = ['fabricRed', 'fabricGreen', 'darkWood', 'leather', 'fabricCream', 'frame'];
+    for (let i = 0; i < n; i++) {
+      const y = y0 + 0.04 + sh * i;
+      b.box('darkWood', cx + fx * 0.01, y + sh - 0.015, cz + fz * 0.01, fx ? sz * 0.9 : sx - 0.06, 0.03, fz ? sz * 0.9 : sz - 0.06);
+      let u = -w / 2 + 0.06;
+      while (u < w / 2 - 0.08) {
+        const bw = 0.03 + rnd() * 0.04, bh = sh * (0.5 + rnd() * 0.4);
+        if (rnd() < 0.08) { u += bw * 3; continue; } // a gap where a book was taken
+        b.box(cols[Math.floor(rnd() * cols.length)], cx + fx * (sx * 0.15) + (fz ? u + bw / 2 : 0), y + bh / 2, cz + fz * (sz * 0.15) + (fx ? u + bw / 2 : 0), fx ? sx * 0.55 : bw, bh, fz ? sz * 0.55 : bw);
+        u += bw + 0.004;
+      }
+    }
+    b.box(mat, cx, y0 + sy + 0.03, cz, sx + 0.08, 0.06, sz + 0.08);
+  },
+  trunk(b, mat, cx, cz, y0, sx, sy, sz) {
+    b.box(mat, cx, y0 + sy * 0.4, cz, sx, sy * 0.8, sz);
+    b.mesh(G.cyl, mat, cx, y0 + sy * 0.8, cz, sz, sx, sz).rotation.z = Math.PI / 2;
+    const lid = b.mesh(G.cyl, mat, cx, y0 + sy * 0.8, cz, sz * 0.98, sx, sz * 0.98); lid.rotation.z = Math.PI / 2; lid.updateMatrix();
+    for (const e of [-1, 1]) b.box('iron', cx + e * sx * 0.3, y0 + sy * 0.4, cz, 0.04, sy * 0.82, sz + 0.02);
+    b.box('brass', cx, y0 + sy * 0.55, cz + sz / 2 + 0.01, 0.1, 0.1, 0.02);
+  },
+  bath(b, mat, cx, cz, y0, sx, sy, sz) {
+    b.mesh(G.sphere, 'porcelain', cx, y0 + sy * 0.55, cz, sx, sy * 0.9, sz);
+    b.box('porcelain', cx, y0 + sy - 0.03, cz, sx, 0.06, sz);
+    b.box('black', cx, y0 + sy + 0.001, cz, sx - 0.24, 0.002, sz - 0.24);
+    for (const [ex, ez] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) b.mesh(G.sphere, 'brass', cx + ex * (sx / 2 - 0.15), y0 + 0.08, cz + ez * (sz / 2 - 0.12), 0.1, 0.16, 0.1);
+    b.mesh(G.post, 'brass', cx - sx / 2 + 0.15, y0 + sy + 0.12, cz, 0.02, 0.24, 0.02); b.box('brass', cx - sx / 2 + 0.15, y0 + sy + 0.24, cz, 0.04, 0.03, 0.16);
+  },
+  basin(b, mat, cx, cz, y0, sx, sy, sz) {
+    b.mesh(G.post, 'porcelain', cx, y0 + sy * 0.42, cz, sx * 0.4, sy * 0.84, sz * 0.4);
+    b.mesh(G.sphere, 'porcelain', cx, y0 + sy * 0.86, cz, sx, sy * 0.26, sz);
+    b.box('porcelain', cx, y0 + sy - 0.01, cz, sx, 0.02, sz);
+    for (const e of [-1, 1]) b.mesh(G.cyl, 'brass', cx + e * sx * 0.25, y0 + sy + 0.05, cz - sz * 0.3, 0.04, 0.1, 0.04);
+  },
+  panel(b, mat, cx, cz, y0, sx, sy, sz) {
+    b.box(mat, cx, y0 + sy / 2, cz, sx, sy, sz);
+    b.box('panel', cx, y0 + sy * 0.55, cz + sz / 2 + 0.006, sx - 0.2, sy * 0.6, 0.012);
+    b.box(mat, cx, y0 + sy + 0.03, cz, sx + 0.06, 0.06, sz + 0.04);
+  },
+};
+
+/* Which piece a name is. */
+function pieceOf(name) {
+  const n = (name || '').toLowerCase();
+  if (/dining chair|^chair|kitchen chair|windsor/.test(n)) return 'chair';
+  if (/stool/.test(n)) return 'stool';
+  if (/sofa|settee|settle|armchair|reading chair|chaise/.test(n)) return 'seating';
+  if (/narrow bed|^bed$|^bed /.test(n) || n === 'bed') return 'bed';
+  if (/cot/.test(n)) return 'cot';
+  if (/headboard/.test(n)) return 'panel';
+  if (/wardrobe|press|cabinet|dresser|pantry shelves|linen shelves/.test(n)) return 'cupboard';
+  if (/sideboard|chest of drawers|dressing table/.test(n)) return 'drawers';
+  if (/bookcase|wine rack/.test(n)) return 'bookcase';
+  if (/trunk|tea chest|hall chest/.test(n)) return 'trunk';
+  if (/bath$/.test(n)) return 'bath';
+  if (/basin/.test(n)) return 'basin';
+  if (/desk/.test(n)) return 'desk';
+  if (/stand$|side table|bedside|landing table|nursery table|shelf$/.test(n)) return 'stand';
+  if (/table|bench|lectern/.test(n)) return 'table';
+  return null;
+}
+
+/* The furniture call: the same collision box, a real piece on top of it. */
+B.furniture = function (mat, cx, cz, y0, sx, sy, sz, name) {
+  const w = this.phys.addWall(cx - sx / 2, cx + sx / 2, cz - sz / 2, cz + sz / 2, y0, y0 + sy, { kind: 'furniture', tag: name || 'furniture' });
+  w.room = this.room;
+  if (!mat) return w;
+  const piece = pieceOf(name);
+  // which way a case piece faces: away from the nearest wall
+  let front = [0, 1];
+  if (piece === 'cupboard' || piece === 'drawers' || piece === 'bookcase' || piece === 'chair') {
+    let best = Infinity;
+    for (const [nx, nz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const hit = this.phys.occluded(cx + nx * (sx / 2 + 0.05), y0 + 1.0, cz + nz * (sz / 2 + 0.05), cx + nx * (sx / 2 + 1.2), y0 + 1.0, cz + nz * (sz / 2 + 1.2));
+      if (hit && hit.kind === 'wall') { const d = nx ? Math.abs((nx > 0 ? hit.x0 : hit.x1) - cx) : Math.abs((nz > 0 ? hit.z0 : hit.z1) - cz); if (d < best) { best = d; front = [-nx, -nz]; } }
+    }
+  }
+  if (piece && PIECES[piece]) {
+    if (piece === 'chair') {
+      // a chair's back is away from the table it sits at
+      const hit = ['x', 'z'].map(() => null);
+      let back = front;
+      const t = this.phys.furniture.find(f => f !== w && /table|desk/.test(f.tag) && Math.abs((f.x0 + f.x1) / 2 - cx) < 3 && Math.abs((f.z0 + f.z1) / 2 - cz) < 3);
+      if (t) { const dx = (t.x0 + t.x1) / 2 - cx, dz = (t.z0 + t.z1) / 2 - cz; back = Math.abs(dx) > Math.abs(dz) ? [-Math.sign(dx), 0] : [0, -Math.sign(dz)]; }
+      PIECES.chair(this, mat, cx, cz, y0, sx, sy, sz, back);
+    } else if (piece === 'seating') PIECES.seating(this, mat, cx, cz, y0, sx, sy, sz, /chaise/.test(name) ? 'chaise' : 'sofa');
+    else PIECES[piece](this, mat, cx, cz, y0, sx, sy, sz, front);
+    return w;
+  }
+  const m = this.boxE(mat, cx - sx / 2, cx + sx / 2, y0, y0 + sy, cz - sz / 2, cz + sz / 2);
+  m.userData.wall = w.id;
+  return w;
+};
+
+/* ---- paintings: painted on a canvas, varnished, crazed, framed ---- */
+const PAINT = {};
+function painting(style, seed) {
+  const key = style + ':' + seed;
+  if (PAINT[key]) return PAINT[key];
+  const c = document.createElement('canvas'); c.width = 256; c.height = 192;
+  const g = c.getContext('2d'), rnd = BM.mulberry32(seed * 977 + 13), W = 256, H = 192;
+  const hsl = (h, s, l) => `hsl(${h},${s}%,${l}%)`;
+  if (style === 'landscape' || style === 'house') {
+    const sky = g.createLinearGradient(0, 0, 0, H * 0.6); sky.addColorStop(0, hsl(215 + rnd() * 20, 30, 40 + rnd() * 20)); sky.addColorStop(1, hsl(35 + rnd() * 20, 45, 70));
+    g.fillStyle = sky; g.fillRect(0, 0, W, H);
+    for (let i = 0; i < 4; i++) { g.fillStyle = `rgba(255,250,240,${0.15 + rnd() * 0.2})`; g.beginPath(); g.ellipse(rnd() * W, H * (0.1 + rnd() * 0.3), 40 + rnd() * 50, 10 + rnd() * 12, 0, 0, 7); g.fill(); }
+    for (let k = 0; k < 3; k++) { g.fillStyle = hsl(200 - k * 30, 20 + k * 10, 55 - k * 14); g.beginPath(); g.moveTo(0, H); for (let x = 0; x <= W; x += 16) g.lineTo(x, H * (0.5 + k * 0.08) - Math.sin(x * 0.02 + k + rnd() * 0.3) * 18 - rnd() * 8); g.lineTo(W, H); g.fill(); }
+    g.fillStyle = hsl(85, 30, 30); g.fillRect(0, H * 0.72, W, H * 0.28);
+    if (style === 'house') { g.fillStyle = hsl(30, 15, 22); g.fillRect(W * 0.35, H * 0.42, W * 0.3, H * 0.3); g.beginPath(); g.moveTo(W * 0.33, H * 0.42); g.lineTo(W * 0.5, H * 0.28); g.lineTo(W * 0.67, H * 0.42); g.fill(); g.fillRect(W * 0.47, H * 0.2, W * 0.06, H * 0.25); }
+    for (let i = 0; i < 6; i++) { const x = rnd() * W, y = H * (0.68 + rnd() * 0.1), s = 10 + rnd() * 22; g.fillStyle = hsl(100 + rnd() * 30, 25, 14 + rnd() * 10); g.beginPath(); g.ellipse(x, y - s, s * 0.6, s, 0, 0, 7); g.fill(); g.fillRect(x - 2, y - s * 0.4, 4, s * 0.5); }
+    if (rnd() < 0.6) { g.fillStyle = hsl(205, 25, 50); g.beginPath(); g.ellipse(W * 0.5, H * 0.86, W * 0.3, H * 0.06, 0, 0, 7); g.fill(); }
+  } else if (style === 'portrait') {
+    g.fillStyle = hsl(25, 20, 12 + rnd() * 6); g.fillRect(0, 0, W, H);
+    const cx = W / 2, cy = H * 0.42, skin = hsl(28, 35, 60 + rnd() * 15);
+    g.fillStyle = hsl(rnd() < 0.5 ? 0 : 230, 25, 18); g.beginPath(); g.ellipse(cx, H * 0.95, W * 0.34, H * 0.45, 0, 0, 7); g.fill(); // the coat
+    g.fillStyle = hsl(40, 20, 85); g.beginPath(); g.ellipse(cx, H * 0.68, W * 0.13, H * 0.09, 0, 0, 7); g.fill(); // lace
+    g.fillStyle = skin; g.beginPath(); g.ellipse(cx, cy, W * 0.14, H * 0.2, 0, 0, 7); g.fill();
+    g.fillStyle = hsl(20 + rnd() * 20, 30, 12 + rnd() * 25); g.beginPath(); g.ellipse(cx, cy - H * 0.14, W * 0.15, H * 0.1, 0, 0, 7); g.fill(); // hair
+    g.fillStyle = hsl(30, 20, 20); for (const e of [-1, 1]) { g.beginPath(); g.ellipse(cx + e * W * 0.05, cy - H * 0.02, 5, 3, 0, 0, 7); g.fill(); }
+    g.strokeStyle = 'rgba(80,40,30,0.6)'; g.lineWidth = 2; g.beginPath(); g.moveTo(cx - 8, cy + H * 0.09); g.quadraticCurveTo(cx, cy + H * 0.11, cx + 8, cy + H * 0.09); g.stroke();
+  } else {
+    g.fillStyle = hsl(30, 25, 14); g.fillRect(0, 0, W, H);
+    g.fillStyle = hsl(28, 30, 30); g.fillRect(0, H * 0.6, W, H * 0.4);
+    g.fillStyle = hsl(40, 25, 70); g.beginPath(); g.ellipse(W * 0.5, H * 0.62, W * 0.38, H * 0.06, 0, 0, 7); g.fill();
+    for (let i = 0; i < 6; i++) { g.fillStyle = hsl([0, 40, 100, 280][Math.floor(rnd() * 4)], 50, 40 + rnd() * 15); g.beginPath(); g.arc(W * (0.25 + rnd() * 0.5), H * (0.52 + rnd() * 0.06), 10 + rnd() * 12, 0, 7); g.fill(); }
+    g.fillStyle = hsl(200, 20, 55); g.fillRect(W * 0.62, H * 0.3, W * 0.14, H * 0.32); g.beginPath(); g.ellipse(W * 0.69, H * 0.3, W * 0.07, H * 0.03, 0, 0, 7); g.fill();
+  }
+  // varnish: a warm, dark, crazed skin over everything
+  const v = g.createRadialGradient(W / 2, H / 2, W * 0.2, W / 2, H / 2, W * 0.75); v.addColorStop(0, 'rgba(60,40,10,0.15)'); v.addColorStop(1, 'rgba(20,10,0,0.7)');
+  g.fillStyle = v; g.fillRect(0, 0, W, H);
+  g.strokeStyle = 'rgba(0,0,0,0.25)'; g.lineWidth = 0.7;
+  for (let i = 0; i < 70; i++) { let x = rnd() * W, y = rnd() * H; g.beginPath(); g.moveTo(x, y); for (let k = 0; k < 5; k++) { x += (rnd() - 0.5) * 16; y += (rnd() - 0.5) * 16; g.lineTo(x, y); } g.stroke(); }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+  const m = new THREE.MeshPhongMaterial({ map: t, shininess: 60, specular: 0x333322 }); m.userData.unique = true;
+  return PAINT[key] = m;
+}
+BM.painting = painting;
+
+/* A framed picture on a wall: x,y,z its centre on the wall face, ry facing into the room. */
+B.picture = function (x, y, z, ry, w, h, style, seed) {
+  const s = Math.sin(ry), c = Math.cos(ry), fw = 0.09;
+  // a moulded gilt frame: four bars, stepped
+  for (const [u, v, bw, bh] of [[0, h / 2 + fw / 2, w + fw * 2, fw], [0, -h / 2 - fw / 2, w + fw * 2, fw], [-w / 2 - fw / 2, 0, fw, h], [w / 2 + fw / 2, 0, fw, h]]) {
+    this.box('gilt', x + c * u + s * 0.04, y + v, z - s * u + c * 0.04, bw, bh, 0.08, ry);
+    this.box('frame', x + c * u + s * 0.075, y + v, z - s * u + c * 0.075, bw * 0.96, bh * 0.5, 0.012, ry);
+  }
+  const canvas = this.mesh(G.plane, painting(style || 'landscape', seed || Math.round(x * 7 + y * 3 + z * 11)), x + s * 0.035, y, z + c * 0.035, w, h, 1, ry);
+  canvas.userData.picture = true;
+  return canvas;
+};
 })();
 </script>
 <script id="bm-40-grounds">
@@ -2006,7 +2291,7 @@ BM.buildMansion = function (B, game) {
   B.furniture('darkWood', 5.45, 6.0, 0, 0.6, 1.0, 1.6, 'hall chest');
   B.furniture('fabricRed', -5.4, 5.6, 0, 0.7, 0.9, 1.6, 'hall settle');
   B.mesh(G.cyl, 'porcelain', -3.0, 1.05, 10.9, 0.3, 0.4, 0.3);
-  B.box('frame', 0, 6.4, 0.12, 2.6, 2.0, 0.06); B.box('canvas', 0, 6.4, 0.16, 2.3, 1.7, 0.02);
+  B.picture(0, 6.4, 0.14, 0, 2.3, 1.7, 'house', 3); // the house itself, over the stairs
   // hall lights: chandelier and sconces, off at the panel
   const hallIds = [];
   const hall = (o) => { const l = B.fixture(Object.assign({ circuit: 'hall', on: false, colour: 0xffc786 }, o)); hallIds.push(l.id); return l; };
@@ -2034,8 +2319,7 @@ BM.buildMansion = function (B, game) {
   B.room = 'dining';
   B.furniture('darkWood', -12, 8, 0, 5.0, 0.78, 1.4, 'dining table');
   for (let i = 0; i < 4; i++) for (const s of [-1, 1]) B.furniture('wood', -13.8 + i * 1.2, 8 + s * 1.05, 0, 0.5, 0.95, 0.5, 'dining chair');
-  B.furniture('darkWood', -15.6, 4.42, 0, 2.4, 0.9, 0.5, 'sideboard');
-  B.mesh(G.cyl, 'brass', -12.6, 0.95, 8, 0.12, 0.34, 0.12); B.mesh(G.cyl, 'brass', -11.4, 0.95, 8, 0.12, 0.34, 0.12);
+  B.furniture('darkWood', -17.5, 8.0, 0, 0.5, 0.9, 2.4, 'sideboard');
   B.fixture({ id: 'dining-pendant', name: 'Dining chandelier', circuit: 'west', style: 'chandelier', pos: [-12, 3.0, 8.3], colour: 0xffc786, target: 1.8, range: 11 });
   B.fixture({ id: 'dining-sconce', name: 'Dining sconce', circuit: 'west', style: 'sconce', pos: [-17.7, 2.4, 5.0], nx: 1, colour: 0xffc786, target: 0.7, range: 6, dead: true });
   roomSwitch('sw-dining', 'Dining room lights', [-6.25, 1.4, 10.8], [-1, 0], ['dining-pendant', 'dining-sconce']);
@@ -2058,19 +2342,7 @@ BM.buildMansion = function (B, game) {
   B.furniture('fabricGreen', 8.0, 7.4, 0, 1.0, 0.9, 1.0, 'armchair');
   B.furniture('darkWood', 12.4, 8.0, 0, 1.6, 0.45, 0.8, 'tea table');
   B.furniture('darkWood', 16.9, 10.8, 0, 1.2, 0.8, 0.6, 'writing desk');
-  // fireplace on the north wall (z=4)
-  B.solid('marble', 14.3, 16.7, 0, 1.3, 4.1, 4.65, { kind: 'furniture', tag: 'fireplace' });
-  B.boxE('black', 14.8, 16.2, 0.05, 1.0, 4.62, 4.68);
-  B.boxE('marble', 14.1, 16.9, 1.3, 1.42, 4.1, 4.8);
-  B.box('frame', 15.5, 2.4, 4.13, 1.6, 1.1, 0.05); B.box('canvas', 15.5, 2.4, 4.16, 1.4, 0.9, 0.02);
-  const fire = B.fixture({ id: 'drawing-fire', name: 'Fire', circuit: 'fire', kind: 'fire', style: 'fire', pos: [15.5, 0.4, 4.9], colour: 0xff7a2a, target: 1.6, range: 9, on: false, lightType: 'flicker' });
-  game.fire = { light: fire, lit: false, flames: [] };
-  for (let i = 0; i < 5; i++) {
-    const f = B.mesh(G.cone, BM.Basic(0xff8a2a, { transparent: true, opacity: 0.0, depthWrite: false, blending: THREE.AdditiveBlending }), 15.1 + i * 0.2, 0.35, 4.75, 0.25, 0.6, 0.25);
-    f.userData.dynamic = true; f.matrixAutoUpdate = true; game.fire.flames.push(f);
-  }
-  for (let i = 0; i < 3; i++) B.box('bark', 15.5, 0.12 + i * 0.05, 4.8, 0.9, 0.1, 0.12, 0.3 * i);
-  B.interactable({ id: 'fire', label: () => game.fire.lit ? 'The fire is lit' : 'Light the fire', pos: [15.5, 0.6, 4.95], n: [0, 1], act: g => g.lightFire() });
+  // (the fireplace is built with the other hearths)
   B.fixture({ id: 'drawing-pendant', name: 'Drawing room light', circuit: 'east', style: 'chandelier', pos: [12, 3.0, 8], colour: 0xffc786, target: 1.6, range: 11 });
   B.fixture({ id: 'drawing-lamp', name: 'Standard lamp', circuit: 'east', kind: 'lamp', style: 'lamp', pos: [6.9, 1.5, 6.4], colour: 0xffb870, target: 0.8, range: 6 });
   B.furniture('wood', 6.9, 6.4, 0, 0.36, 1.05, 0.36, 'lamp stand');
@@ -2143,7 +2415,7 @@ BM.buildMansion = function (B, game) {
   B.fixture({ id: 'corridor-w', name: 'Corridor light', circuit: 'ground', style: 'pendant', pos: [-12, 3.3, -5], ceiling: 4, colour: 0xffc786, target: 0.9, range: 7, blink: 0.25 });
   B.fixture({ id: 'corridor-e', name: 'Corridor light', circuit: 'ground', style: 'pendant', pos: [12, 3.3, -5], ceiling: 4, colour: 0xffc786, target: 0.9, range: 7 });
   roomSwitch('sw-corridor', 'Corridor lights', [-3.5, 1.4, -0.15], [0, -1], ['lobby-pendant', 'corridor-w', 'corridor-e']);
-  B.box('frame', 0, 2.0, -5.88, 1.0, 1.2, 0.04);
+  B.picture(0, 2.0, -5.88, 0, 0.8, 1.0, 'landscape', 5);
 
   /* ---- KITCHEN (ground circuit, fluorescent) ---- */
   B.room = 'kitchen';
@@ -2289,7 +2561,7 @@ BM.buildMansion = function (B, game) {
   B.room = 'gallery';
   B.boxE('floor', 6.2, 17.8, 4.2, 4.22, -3.8, 3.8);
   const portraits = [['Charles Blackthorn, 1960', 8.5], ['Margaret Blackthorn, 1960', 11.5], ['Edmund Blackthorn, 1962', 14.5]];
-  for (const [name, x] of portraits) { B.box('gilt', x, 6.2, 3.88, 1.3, 1.7, 0.06); B.box('canvas', x, 6.2, 3.84, 1.1, 1.5, 0.02); }
+  portraits.forEach(([name, x], i) => B.picture(x, 6.2, 3.88, Math.PI, 1.1, 1.5, 'portrait', 11 + i));
   B.box('darkWood', 15.5, 6.0, -3.86, 1.3, 1.8, 0.08); // the turned portrait: you see its back
   B.fixture({ id: 'gallery-1', name: 'Picture light', circuit: 'east', style: 'sconce', pos: [8.5, 7.3, 3.8], nz: -1, colour: 0xffd29a, target: 0.7, range: 5 });
   B.fixture({ id: 'gallery-2', name: 'Picture light', circuit: 'east', style: 'sconce', pos: [11.5, 7.3, 3.8], nz: -1, colour: 0xffd29a, target: 0.7, range: 5, dead: true });
@@ -3103,11 +3375,11 @@ BM.buildGothic = function (B, game) {
   B.boxE('boards', IX0, IX1, T.top - 0.25, T.top, IZ0, IZ1); // the ceiling under the spire
   // the bells: four quarter bells on a beam, and the great hour bell with its hammer
   B.box('boards', 0, T.belfry + 3.0, 8.0, 6.4, 0.3, 0.3);
-  for (const x of [-2.4, -0.8, 0.8, 2.4]) { const b = B.mesh(G.cone, 'brass', x, T.belfry + 2.55, 8.0, 0.5, 0.55, 0.5); b.rotation.x = Math.PI; b.updateMatrix(); B.mesh(G.sphere, 'brass', x, T.belfry + 2.85, 8.0, 0.14); }
+  for (const x of [-2.4, -0.8, 0.8, 2.4]) { B.mesh(G.cone, 'brass', x, T.belfry + 2.55, 8.0, 0.5, 0.55, 0.5); B.mesh(G.sphere, 'brass', x, T.belfry + 2.85, 8.0, 0.14); }
   for (const x of [-3.0, 3.0]) B.box('boards', x, T.belfry + 1.5, 8.0, 0.3, 3.0, 0.3);
   B.box('boards', 0, T.belfry + 3.3, 10.3, 1.6, 0.4, 0.4);
   for (const x of [-0.6, 0.6]) B.box('boards', x, T.belfry + 1.65, 10.3, 0.3, 3.3, 0.3);
-  { const bell = B.mesh(G.cone, 'brass', 0, T.belfry + 2.45, 10.3, 1.1, 1.3, 1.1); bell.rotation.x = Math.PI; bell.updateMatrix();
+  { B.mesh(G.cone, 'brass', 0, T.belfry + 2.45, 10.3, 1.1, 1.3, 1.1);
     B.mesh(G.sphere, 'brass', 0, T.belfry + 3.05, 10.3, 0.3);
     const hammer = new THREE.Group(); hammer.position.set(0.9, T.belfry + 2.9, 10.3); B.root.add(hammer);
     B.mesh(G.post, 'iron', 0, -0.5, 0, 0.04, 1.0, 0.04, 0, hammer); B.box('iron', 0, -1.0, 0, 0.18, 0.16, 0.16, 0, hammer);
@@ -3324,7 +3596,7 @@ BM.buildDressing = function (B, game) {
   }
 
   /* ---- dust sheets over the furniture (fitted to each piece's collision box) ---- */
-  const sheet = new Set(['sofa', 'armchair', 'settee', 'chaise', 'hall settle', 'hall chest', 'reading chair', 'sideboard', 'piano', 'trunk', 'tea chest', 'bed']);
+  const sheet = new Set(['piano', 'tea chest', 'hall chest']);
   const sheetOver = (f) => {
     const w = f.x1 - f.x0, d = f.z1 - f.z0, h = f.y1 - f.y0;
     B.box('dustSheet', (f.x0 + f.x1) / 2, f.y0 + h / 2, (f.z0 + f.z1) / 2, w + 0.08, h + 0.03, d + 0.08);
@@ -3399,23 +3671,16 @@ BM.buildDressing = function (B, game) {
   };
   armour(-1.95, 0, 11.35, Math.PI, 'hall');
   B.levelName = 'upper'; armour(3.6, 4.2, 0.45, 0, 'hall'); B.levelName = 'ground';
-  const portrait = (x, y, z, ry, w, h) => {
-    const s = Math.sin(ry), c = Math.cos(ry);
-    B.box('gilt', x, y, z, w + 0.2, h + 0.2, 0.07, ry);
-    B.box('canvas', x + s * 0.04, y, z + c * 0.04, w, h, 0.02, ry);
-    B.mesh(G.sphere, 'canvas', x + s * 0.05, y + h * 0.18, z + c * 0.05, w * 0.36, h * 0.3, 0.03, ry);
-    // the eyes catch the light
-    for (const e of [-1, 1]) B.box(BM.Basic(0x8a8070), x + s * 0.065 + c * e * w * 0.06, y + h * 0.2, z + c * 0.065 - s * e * w * 0.06, 0.03, 0.015, 0.005, ry);
-  };
+  const portrait = (x, y, z, ry, w, h, style) => B.picture(x, y, z, ry, w, h, style || 'portrait');
   portrait(-5.88, 2.6, 5.9, Math.PI / 2, 1.0, 1.4);
   portrait(5.88, 2.6, 5.9, -Math.PI / 2, 1.0, 1.4);
   B.levelName = 'upper';
   portrait(-3.6, 6.3, 0.12, 0, 0.9, 1.2); portrait(3.6, 6.6, 0.12, 0, 0.9, 1.2);
-  portrait(-15.5, 6.3, 4.12, 0, 1.0, 1.3);        // bedroom 1
+  portrait(-15.5, 6.3, 4.12, 0, 1.0, 1.3, 'landscape');        // bedroom 1
   portrait(-17.88, 6.3, -11.0, Math.PI / 2, 0.7, 0.9); // eleanor's bedroom: a child's portrait
   B.levelName = 'ground';
-  portrait(-15.6, 2.5, 4.12, 0, 1.2, 0.9);         // dining
-  portrait(-8.5, 2.4, -3.88, 0, 1.1, 0.8);         // back sitting
+  portrait(-15.6, 2.5, 4.12, 0, 1.2, 0.9, 'house');         // dining
+  portrait(-8.5, 2.4, -3.88, 0, 1.1, 0.8, 'stilllife');         // back sitting
 
   /* ---- heavy drapes at the windows of the formal rooms ---- */
   const formal = new Set(['dining', 'drawing', 'library', 'back sitting', 'hall', 'bedroom1', 'bedroom2', "eleanor's sitting room", 'gallery', "eleanor's bedroom", 'nursery']);
@@ -3476,6 +3741,156 @@ BM.buildDressing = function (B, game) {
   for (let i = 0; i < 4; i++) { const f = B.box('gilt', 9.5 + i * 0.12, 8.2 + 0.55, -3.2, 0.06, 1.1 - i * 0.12, 0.9 - i * 0.1); f.rotation.z = -0.25; f.updateMatrix(); }
 
   game.dressing = { webs };
+};
+})();
+</script>
+<script id="bm-47-hearths">
+/* ==========================================================================
+   BLACKTHORN MANOR — 6f. HEARTHS AND CANDLES
+   None of this needs electricity. Every main room has a fireplace you can
+   light (the kitchen its range, the lodge its stove), and every room has a
+   candle you can light with a match and snuff again. When the storm takes
+   the power, this is what you have.
+   ========================================================================== */
+(function () {
+'use strict';
+const BM = window.BM;
+const G = BM.G;
+
+BM.buildHearths = function (B, game) {
+  const P = B.phys;
+  game.fires = [];
+  const flameMat = () => BM.Basic(0xff8a2a, { transparent: true, opacity: 0.0, depthWrite: false, blending: THREE.AdditiveBlending });
+
+  /* A fireplace set into a wall. pos = a point on the wall's face at floor level, n = out into the room.
+     style: 'marble' (reception rooms), 'iron' (bedrooms), 'stone' (the hall). */
+  const hearth = (o) => {
+    const [x, y0, z] = o.pos, n = { x: o.n[0], z: o.n[1] }, ry = Math.atan2(n.x, n.z);
+    const w = o.w || 2.0, h = o.h || 1.3, d = 0.5, mat = o.style === 'iron' ? 'metalDark' : o.style === 'stone' ? 'gothicTrim' : 'marble';
+    const cx = x + n.x * d / 2, cz = z + n.z * d / 2;
+    // the surround, the dark opening, the shelf, and (reception rooms) the overmantel mirror
+    const along = (len) => (n.x ? [d, len] : [len, d]);
+    const [sx, sz] = along(w);
+    B.solid(mat, cx - sx / 2, cx + sx / 2, y0, y0 + h, cz - sz / 2, cz + sz / 2, { kind: 'furniture', tag: 'fireplace' });
+    const [ox, oz] = along(w * 0.55);
+    B.box('black', x + n.x * (d - 0.02), y0 + h * 0.38, z + n.z * (d - 0.02), ox + (n.x ? 0 : 0), h * 0.7, oz, 0);
+    const [mx, mz] = along(w + 0.3);
+    B.box(mat, x + n.x * (d + 0.08) / 2, y0 + h + 0.06, z + n.z * (d + 0.08) / 2, mx, 0.12, mz);
+    if (o.style === 'marble') {
+      B.box('gilt', x + n.x * 0.04, y0 + h + 0.95, z + n.z * 0.04, n.x ? 0.06 : 1.5, 1.4, n.x ? 1.5 : 0.06);
+      B.box('darkGlass', x + n.x * 0.075, y0 + h + 0.95, z + n.z * 0.075, n.x ? 0.01 : 1.3, 1.2, n.x ? 1.3 : 0.01);
+    }
+    // the grate: bars, and the logs behind them
+    for (let i = -2; i <= 2; i++) B.box('iron', x + n.x * 0.42 + (n.x ? 0 : i * 0.18), y0 + 0.2, z + n.z * 0.42 + (n.z ? 0 : i * 0.18), 0.03, 0.4, 0.03);
+    for (let i = 0; i < 3; i++) B.box('bark', x + n.x * 0.25, y0 + 0.1 + i * 0.05, z + n.z * 0.25, n.x ? 0.12 : 0.8, 0.1, n.x ? 0.8 : 0.12, 0.3 * i + ry);
+    const f = { id: o.id, name: o.name, kind: 'hearth', lit: false, flames: [], pos: { x: x + n.x * 0.25, y: y0 + 0.4, z: z + n.z * 0.25 } };
+    f.light = B.fixture({ id: o.id + '-fire', name: o.name, circuit: 'fire', kind: 'fire', style: 'fire', pos: [f.pos.x, f.pos.y, f.pos.z], colour: 0xff7a2a, target: o.target || 1.5, range: o.range || 9, on: false, lightType: 'flicker', noFail: true });
+    for (let i = 0; i < 5; i++) {
+      const fl = B.mesh(G.cone, flameMat(), x + n.x * 0.25 + (n.x ? 0 : (i - 2) * 0.17), y0 + 0.32, z + n.z * 0.25 + (n.z ? 0 : (i - 2) * 0.17), 0.25, 0.6, 0.25);
+      fl.userData.dynamic = true; fl.matrixAutoUpdate = true; f.flames.push(fl);
+    }
+    B.interactable({ id: o.id === 'drawing' ? 'fire' : 'fire-' + o.id, label: () => f.lit ? o.name + ': burning' : 'Light the ' + o.name.toLowerCase(), pos: [x + n.x * (d + 0.12), y0 + 0.6, z + n.z * (d + 0.12)], n: o.n, act: g => g.lightHearth(f) });
+    game.fires.push(f);
+    return f;
+  };
+
+  /* A fire that lives inside something already built (the range, the stove): just the glow and the door. */
+  const firebox = (o) => {
+    const [x, y, z] = o.pos, n = { x: o.n[0], z: o.n[1] };
+    const f = { id: o.id, name: o.name, kind: o.kind || 'range', lit: false, flames: [], pos: { x, y, z } };
+    B.box('black', x - n.x * 0.02, y, z - n.z * 0.02, n.x ? 0.02 : 0.5, 0.36, n.x ? 0.5 : 0.02);
+    f.light = B.fixture({ id: o.id + '-fire', name: o.name, circuit: 'fire', kind: 'fire', style: 'fire', pos: [x + n.x * 0.15, y, z + n.z * 0.15], colour: 0xff6a20, target: o.target || 0.9, range: 6, on: false, lightType: 'flicker', noFail: true });
+    for (let i = 0; i < 3; i++) {
+      const fl = B.mesh(G.cone, flameMat(), x + n.x * 0.03 + (n.x ? 0 : (i - 1) * 0.12), y - 0.08, z + n.z * 0.03 + (n.z ? 0 : (i - 1) * 0.12), 0.14, 0.3, 0.14);
+      fl.userData.dynamic = true; fl.matrixAutoUpdate = true; f.flames.push(fl);
+    }
+    B.interactable({ id: 'fire-' + o.id, label: () => f.lit ? o.name + ': burning' : 'Light the ' + o.name.toLowerCase(), pos: [x + n.x * 0.1, y, z + n.z * 0.1], n: o.n, act: g => g.lightHearth(f) });
+    game.fires.push(f);
+    return f;
+  };
+
+  /* A candle in a brass stick, standing on something. pos = where the stick's foot goes. */
+  const candle = (o) => {
+    const [x, y, z] = o.pos;
+    B.mesh(G.disc, 'brass', x, y + 0.005, z, 0.1); B.mesh(G.cyl, 'brass', x, y + 0.06, z, 0.03, 0.12, 0.03);
+    B.mesh(G.cyl, 'brass', x, y + 0.13, z, 0.07, 0.03, 0.07);
+    B.mesh(G.cyl, 'wax', x, y + 0.26, z, 0.028, 0.24, 0.028);
+    const f = { id: o.id, name: 'Candle', kind: 'candle', lit: false, flames: [], pos: { x, y: y + 0.45, z } };
+    f.light = B.fixture({ id: o.id + '-flame', name: 'Candle', circuit: 'fire', kind: 'fire', style: 'none', pos: [x, y + 0.45, z], colour: 0xffb060, target: o.target || 0.55, range: 5, on: false, lightType: 'flicker', noFail: true, corona: 0.6 });
+    const fl = B.mesh(G.cone, flameMat(), x, y + 0.44, z, 0.05, 0.12, 0.05);
+    fl.userData.dynamic = true; fl.matrixAutoUpdate = true; f.flames.push(fl);
+    B.interactable({ id: o.id, label: () => f.lit ? 'Snuff the candle' : 'Light the candle', pos: [x, y + 0.3, z], n: o.n || [0, 1], reach: 1.8, approachDist: o.approach || 0.7, act: g => g.lightCandle(f) });
+    game.fires.push(f);
+    return f;
+  };
+
+  /* ---- the house's fireplaces ---- */
+  B.zone = 'mansion'; B.levelName = 'ground';
+  B.room = 'drawing';
+  game.fire = hearth({ id: 'drawing', name: 'Drawing room fire', pos: [15.5, 0, 4.1], n: [0, 1], style: 'marble' });
+  B.room = 'dining';
+  hearth({ id: 'dining', name: 'Dining room fire', pos: [-15.5, 0, 4.1], n: [0, 1], style: 'marble' });
+  B.room = 'library';
+  hearth({ id: 'library', name: 'Library fire', pos: [15.5, 0, 3.9], n: [0, -1], style: 'marble', w: 1.8 });
+  B.room = 'back sitting';
+  hearth({ id: 'sitting', name: 'Sitting room fire', pos: [-14.0, 0, 3.9], n: [0, -1], style: 'iron', w: 1.4, h: 1.1 });
+  B.room = 'kitchen';
+  firebox({ id: 'range', name: 'Kitchen range', pos: [-16.95, 0.42, -9.0], n: [1, 0], kind: 'range', target: 1.0 });
+  B.levelName = 'upper';
+  B.room = 'bedroom1';
+  hearth({ id: 'bedroom1', name: 'Bedroom fire', pos: [-14.0, 4.2, 4.1], n: [0, 1], style: 'iron', w: 1.3, h: 1.1 });
+  B.room = 'bedroom2';
+  hearth({ id: 'bedroom2', name: 'Guest room fire', pos: [14.0, 4.2, 4.1], n: [0, 1], style: 'iron', w: 1.3, h: 1.1 });
+  B.room = "eleanor's sitting room";
+  hearth({ id: 'eleanor', name: "Eleanor's fire", pos: [-15.5, 4.2, 3.9], n: [0, -1], style: 'iron', w: 1.3, h: 1.1 });
+  B.room = 'nursery';
+  hearth({ id: 'nursery', name: 'Nursery fire', pos: [9.0, 4.2, -6.1], n: [0, -1], style: 'iron', w: 1.2, h: 1.0 });
+
+  /* ---- the lodge's stove ---- */
+  B.zone = 'exterior'; B.levelName = 'ground'; B.room = 'lodge';
+  B.furniture('metalDark', -13.3, 81.2, 0, 0.7, 0.9, 0.6, 'stove');
+  B.mesh(G.cyl, 'metalDark', -13.3, 2.0, 81.2, 0.14, 2.2, 0.14);
+  B.box('brass', -12.93, 0.55, 81.2, 0.02, 0.06, 0.06);
+  firebox({ id: 'stove', name: 'Lodge stove', pos: [-12.95, 0.45, 81.2], n: [1, 0], kind: 'stove', target: 0.8 });
+
+  /* ---- a candle in every room ---- */
+  const C = (id, room, pos, n, level, zone) => { B.zone = zone || 'mansion'; B.levelName = level || 'ground'; B.room = room; candle({ id, pos, n }); };
+  C('candle-hall', 'hall', [5.45, 1.0, 6.0], [-1, 0]);
+  B.zone = 'mansion'; B.levelName = 'ground'; B.room = 'dining';
+  candle({ id: 'candle-dining', pos: [-12.0, 0.78, 7.45], n: [0, -1], approach: 0.95 });
+  B.zone = 'mansion'; B.levelName = 'ground'; B.room = 'drawing';
+  candle({ id: 'candle-drawing', pos: [16.9, 0.8, 10.8], n: [-1, 0], approach: 1.05 });
+  B.room = 'library';
+  B.furniture('darkWood', 13.5, 2.6, 0, 0.5, 0.8, 0.5, 'library stand'); candle({ id: 'candle-library', pos: [13.5, 0.8, 2.6], n: [0, -1] });
+  C('candle-sitting', 'back sitting', [-7.0, 0.8, -3.4], [0, 1]);
+  C('candle-kitchen', 'kitchen', [-12.6, 0.9, -8.5], [0, 1]);
+  C('candle-pantry', 'pantry', [-5.3, 1.2, -7.6], [1, 0]);
+  C('candle-bathroom', 'bathroom', [5.55, 0.85, -7.5], [-1, 0]);
+  B.zone = 'mansion'; B.levelName = 'ground'; B.room = 'service';
+  B.furniture('wood', 14.5, -7.0, 0, 0.5, 0.8, 0.5, 'stand'); candle({ id: 'candle-service', pos: [14.5, 0.8, -7.0], n: [-1, 0] });
+  B.room = 'corridor';
+  B.furniture('wood', -5.4, -3.2, 0, 0.5, 0.8, 0.5, 'hall stand'); candle({ id: 'candle-corridor', pos: [-5.4, 0.8, -3.2], n: [1, 0] });
+  B.levelName = 'upper'; B.room = 'upper corridor';
+  B.furniture('darkWood', 2.0, -3.4, 4.2, 0.5, 0.8, 0.5, 'landing table'); candle({ id: 'candle-landing', pos: [2.0, 5.0, -3.4], n: [0, 1] });
+  C('candle-bedroom1', 'bedroom1', [-14.3, 4.95, 11.3], [0, -1], 'upper');
+  B.levelName = 'upper'; B.room = 'bedroom2';
+  B.furniture('wood', 14.3, 11.3, 4.2, 0.5, 0.75, 0.5, 'bedside table'); candle({ id: 'candle-bedroom2', pos: [14.3, 4.95, 11.3], n: [0, -1] });
+  B.levelName = 'upper'; B.room = "eleanor's sitting room";
+  B.furniture('darkWood', -15.5, -0.5, 4.2, 0.4, 0.75, 0.4, 'side table'); candle({ id: 'candle-eleanor', pos: [-15.5, 4.95, -0.5], n: [1, 0] });
+  B.levelName = 'upper'; B.room = 'gallery';
+  B.furniture('darkWood', 12.0, -0.2, 4.2, 0.5, 0.8, 0.5, 'gallery stand'); candle({ id: 'candle-gallery', pos: [12.0, 5.0, -0.2], n: [0, 1] });
+  B.levelName = 'upper'; B.room = "eleanor's bedroom";
+  B.furniture('wood', -13.9, -9.6, 4.2, 0.4, 0.7, 0.4, 'bedside stand'); candle({ id: 'candle-eleanor-bed', pos: [-13.9, 4.9, -9.6], n: [1, 0] });
+  B.levelName = 'upper'; B.room = 'nursery';
+  B.furniture('wood', 12.5, -8.5, 4.2, 0.5, 0.8, 0.5, 'nursery table'); candle({ id: 'candle-nursery', pos: [12.5, 5.0, -8.5], n: [0, 1] });
+  C('candle-linen', 'linen', [0.6, 5.4, -11.2], [0, 1], 'upper');
+  C('candle-attic', 'attic', [-13.0, 8.8, 3.2], [0, -1], 'attic');
+  B.levelName = 'cellar'; B.room = 'cellar';
+  B.furniture('wood', -10.0, -11.5, -3.2, 0.5, 0.8, 0.5, 'cellar stand'); candle({ id: 'candle-cellar', pos: [-10.0, -2.4, -11.5], n: [0, 1] });
+  C('candle-clock', 'clock room', [2.6, 15.7, 11.2], [0, -1], 'clock');
+  B.zone = 'exterior'; B.levelName = 'ground'; B.room = 'lodge';
+  B.furniture('wood', -13.5, 85.0, 0, 0.5, 0.9, 0.5, 'shelf'); candle({ id: 'candle-lodge', pos: [-13.5, 0.9, 85.0], n: [1, 0] });
+  B.zone = 'mansion'; B.levelName = 'ground'; B.room = 'house';
 };
 })();
 </script>
@@ -4430,13 +4845,15 @@ class FX {
       }
     }
     // fire
-    const fire = game.fire;
-    if (fire) for (let i = 0; i < fire.flames.length; i++) {
-      const fl = fire.flames[i];
-      const v = fire.lit ? 0.5 + 0.5 * BM.noise1(t * 6 + i * 3) : 0;
-      fl.material.opacity = fire.lit ? 0.7 : 0;
-      fl.scale.set(0.25, 0.3 + v * 0.6, 0.25);
-      fl.visible = fire.lit;
+    for (const fire of game.fires || []) {
+      const small = fire.kind === 'candle';
+      for (let i = 0; i < fire.flames.length; i++) {
+        const fl = fire.flames[i];
+        const v = fire.lit ? 0.5 + 0.5 * BM.noise1(t * (small ? 9 : 6) + i * 3 + fire.pos.x) : 0;
+        fl.material.opacity = fire.lit ? (small ? 0.85 : 0.7) : 0;
+        if (small) fl.scale.set(0.05, 0.08 + v * 0.07, 0.05); else if (fire.kind === 'hearth') fl.scale.set(0.25, 0.3 + v * 0.6, 0.25); else fl.scale.set(0.14, 0.18 + v * 0.25, 0.14);
+        fl.visible = fire.lit;
+      }
     }
   }
 
@@ -5253,8 +5670,11 @@ class Synth {
     // the gate motor grinds while the gates are being driven open: loud at the gates, a thrum through the cellar
     const gp = { x: 0, y: 0, z: 88 }, motor = game.gates.escaping && game.gates.t < 1;
     this.set('motor', motor ? Math.max(near(gp, 40) * 0.3, zone === 'house' && p.y < -1 ? 0.08 : 0) : 0, pan(gp));
-    this.set('fire', game.fire && game.fire.lit ? near(game.fire.light.pos, 9) * 0.3 : 0, game.fire ? pan(game.fire.light.pos) : 0);
-    if (game.fire && game.fire.lit && Math.random() < dt * 6) { const v = near(game.fire.light.pos, 9); if (v > 0) this.burst(this.white, 'highpass', 2500, 1, 0.12 * v, 0.001, 0.03); }
+    // the nearest burning hearth crackles (candles are silent)
+    let fireV = 0, firePos = null;
+    for (const f of game.fires || []) { if (!f.lit || f.kind === 'candle') continue; const v = near(f.light.pos, 9) * (f.kind === 'hearth' ? 1 : 0.6); if (v > fireV) { fireV = v; firePos = f.light.pos; } }
+    this.set('fire', fireV * 0.3, firePos ? pan(firePos) : 0);
+    if (fireV > 0 && Math.random() < dt * 6) this.burst(this.white, 'highpass', 2500, 1, 0.12 * fireV, 0.001, 0.03);
     this.set('hum', grid.live('main') && zone === 'house' ? 0.03 : 0);
     // the arrival: your engine and your car radio, on low
     const intro = game.intro;
@@ -5462,6 +5882,7 @@ class Game {
     BM.buildRoad(this.B, this);
     BM.buildDressing(this.B, this);
     BM.buildSwitchboards(this.B, this);
+    BM.buildHearths(this.B, this);
     this.interactables = this.B.interactables;
     this.byId = {};
     for (const it of this.interactables) this.byId[it.id] = it;
@@ -5618,11 +6039,18 @@ class Game {
     if (a.switchedOn && !this.grid.live(a.circuit)) { this.ui.say(a.name + ': switched on, but there is no power to it.'); return; }
     if (a.switchedOn) this.ui.say(APPLIANCE_SAY[a.kind] || a.name + ': on.', 3.5);
   }
-  lightFire() {
-    if (this.fire.lit) { this.ui.say('The fire is burning. It needs no electricity at all.'); return; }
-    this.fire.lit = true; this.fire.light.on = true;
+  lightFire() { this.lightHearth(this.fire); }
+  /* Fires need no electricity: a match, kindling, and they burn for the night. */
+  lightHearth(f) {
+    if (f.lit) { this.ui.say(f.name + ' is burning. It needs no electricity at all.'); return; }
+    f.lit = true; f.light.on = true;
     this.audio.burst(this.audio.white, 'lowpass', 1200, 1, 0.5, 0.01, 0.8);
-    this.ui.say('Old newspaper, kindling, a match from the mantel. The fire catches.');
+    this.ui.say(f.kind === 'hearth' ? 'Old newspaper, kindling, a match. ' + f.name + ' catches, and the room comes up orange.' : f.kind === 'range' ? 'A match to the paper and sticks in the firebox. The old range takes, ticking as the iron warms.' : 'A match to the kindling in the stove. It draws, and begins to roar quietly.');
+  }
+  lightCandle(c) {
+    c.lit = !c.lit; c.light.on = c.lit;
+    if (c.lit) { this.audio.burst(this.audio.white, 'highpass', 3000, 2, 0.15, 0.002, 0.15); this.ui.say('You strike a match and the wick takes. A small warm light, and the shadows move.', 3); }
+    else { this.audio.burst(this.audio.white, 'lowpass', 500, 1, 0.1, 0.002, 0.08); this.ui.say('You pinch out the candle.', 2); }
   }
   openGates() {
     if (this.gates.open) return;

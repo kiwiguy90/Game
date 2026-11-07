@@ -1448,10 +1448,20 @@ class Builder {
       if (n.z) fz = n.z > 0 ? w.z1 : w.z0;
     }
     const ry = Math.atan2(n.x, n.z);
-    this.box('brass', fx + n.x * 0.008, p.y, fz + n.z * 0.008, 0.1, 0.15, 0.016, ry);
-    const lever = this.box('ivory' in BM.MATS ? 'ivory' : 'porcelain', fx + n.x * 0.03, p.y, fz + n.z * 0.03, 0.022, 0.055, 0.03, ry);
-    lever.rotation.order = 'YXZ';
-    lever.matrixAutoUpdate = true; lever.userData.dynamic = true;
+    // a brass dolly switch on a varnished wooden pattress, 1960s wiring on 1860s walls
+    this.box('frame', fx + n.x * 0.007, p.y, fz + n.z * 0.007, 0.088, 0.088, 0.014, ry);
+    const base = this.mesh(G.cyl, 'brass', fx + n.x * 0.019, p.y, fz + n.z * 0.019, 0.064, 0.01, 0.064);
+    base.rotation.set(Math.PI / 2, ry, 0, 'YXZ'); base.updateMatrix();
+    this.mesh(G.cyl, 'black', fx + n.x * 0.025, p.y, fz + n.z * 0.025, 0.026, 0.004, 0.026).rotation.set(Math.PI / 2, ry, 0, 'YXZ');
+    // the dolly pivots at the base: up for on, down for off
+    const lever = new THREE.Group();
+    lever.position.set(fx + n.x * 0.026, p.y, fz + n.z * 0.026);
+    lever.rotation.order = 'YXZ'; lever.rotation.y = ry;
+    const dolly = this.mesh(G.cyl, 'brass', 0, 0, 0.02, 0.016, 0.04, 0.016, 0, lever);
+    dolly.rotation.x = Math.PI / 2; dolly.updateMatrix();
+    this.mesh(G.sphere, 'brass', 0, 0, 0.04, 0.011, 0, lever);
+    this.root.add(lever);
+    lever.traverse(m => { m.userData.dynamic = true; });
     it.switchVisual = { lever, ids, ry };
     it.controls = ids;
     it.leverOn = ids.some(id => { const l = this.grid.light(id); return l && l.on && !l.dead; });
@@ -1978,15 +1988,11 @@ BM.buildMansion = function (B, game) {
   hall({ id: 'hall-sconce-b1', name: 'Balcony sconce', kind: 'incandescent', style: 'sconce', pos: [-2.6, 6.6, 0.15], nz: 1, target: 0.8, range: 7 });
   hall({ id: 'hall-sconce-b2', name: 'Balcony sconce', kind: 'incandescent', style: 'sconce', pos: [2.6, 6.6, 0.15], nz: 1, target: 0.8, range: 7, dead: true });
   game.hallLights = hallIds;
-  B.box('brass', 2.0, 1.4, 11.77, 0.3, 0.42, 0.04);
-  const hallPanel = B.interactable({
-    id: 'hall-panel', label: 'Hall light panel', pos: [2.0, 1.4, 11.72], n: [0, -1],
-    act: g => {
-      if (!grid.live('hall')) { g.audio.click(); g.ui.say('The switches click. Nothing. No power to the house.'); hallPanel.leverOn = !hallPanel.leverOn; return; }
-      hallPanel.leverOn = g.toggleFittings(hallIds.concat(['porch-1', 'porch1']));
-    },
-  });
-  B.switchPlate(hallPanel, hallIds.concat(['porch-1', 'porch1']));
+  // three switches on one board by the front door: the porch lanterns, the wall lights, the chandelier
+  const sconces = hallIds.filter(id => id !== 'hall-chandelier');
+  roomSwitch('sw-porch', 'Porch lanterns', [1.9, 1.4, 11.77], [0, -1], ['porch-1', 'porch1']);
+  roomSwitch('sw-hall-sconces', 'Hall wall lights', [2.0, 1.4, 11.77], [0, -1], sconces);
+  roomSwitch('sw-hall-chandelier', 'Hall chandelier', [2.1, 1.4, 11.77], [0, -1], ['hall-chandelier']);
   B.readable('note-solicitor', "Solicitor's letter", [
     'Harrow & Lisle, Solicitors. 3 March.',
     'Dear Sir or Madam, we write regarding the estate of the late Miss A. Blackthorn, who has named you as sole beneficiary of Blackthorn Manor.',
@@ -3433,6 +3439,10 @@ BM.buildSwitchboards = function (B, game) {
       meter(-0.05, 1.3, 'AMPS', () => grid.lodge ? Math.min(1, grid.lights.filter(l => l.powered).length / 140) : 0);
     },
   });
+  // the hall's three switches are named on a little engraved strip above them
+  B.zone = 'mansion'; B.room = 'hall';
+  B.mesh(G.plane, labelMat('PORCH · WALL · LAMP', { w: 384, h: 56, size: 24, bg: '#8a6a2c', fg: '#241808', border: '#5a4418' }), 2.0, 1.5, 11.785, 0.3, 0.04, 1, Math.PI);
+  B.zone = 'exterior'; B.room = 'lodge';
   // the gate release gets a proper label too
   B.mesh(G.plane, labelMat('GATE\nRELEASE', { w: 192, h: 128, size: 30 }), -6.36, 1.75, 83.2, 0.22, 0.15, 1, -Math.PI / 2);
 
@@ -5107,7 +5117,7 @@ class Game {
     if (!gates.open && !gates.lockedIn) return 'There is power at the lodge. Work the gate release — and the estate lighting panel under the window lights the grounds.';
     if (!gates.lockedIn) return 'Go up the drive to the house.';
     if (!this.frontDoors.opened) return 'The gates have shut and bolted behind you. There is nothing for it but the house.';
-    if (!g.breakers.main && !g.stormHasTripped) return this.hallLit() ? 'The hall is lit. Find the fuse board for the rest of the house — try the pantry, at the back.' : 'It is dark. There is a light panel by the door.';
+    if (!g.breakers.main && !g.stormHasTripped) return this.hallLit() ? 'The hall is lit. Find the fuse board for the rest of the house — try the pantry, at the back.' : 'It is dark. There are switches by the door.';
     if (g.tripped) return 'The storm has tripped MAIN. Go back down to the pantry fuse board and reset it.';
     if (!s.journalRead) return 'Look round the house. Eleanor\'s rooms are upstairs, and the attic above them.';
     if (!g.live('cellar')) return 'Eleanor\'s father wired the gates to a switch in the cellar, on the house supply. The cellar circuit must be on.';
@@ -5285,7 +5295,8 @@ class Game {
       if (dot < 0.6) continue;
       if (this.phys.occluded(p.x, eyeY, p.z, it.pos.x, it.pos.y, it.pos.z, 0.3)) continue;
       // what you are looking straight at wins over something nearer but off to the side
-      const score = dot * 3.0 - d * 0.5 - Math.abs(dy) * 0.15;
+      const lateral = d * Math.sqrt(Math.max(0, 1 - dot * dot)); // how far off the crosshair it sits
+      const score = dot * 3.0 - d * 0.5 - Math.abs(dy) * 0.15 - lateral * 2.5;
       if (score > bestScore) { bestScore = score; best = it; }
     }
     return best;

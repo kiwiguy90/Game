@@ -623,7 +623,7 @@ suite('playthrough', () => {
   assert(tipIn.z < 11.5, 'the front doors open inwards (leaf tip z ' + tipIn.z.toFixed(2) + ')');
   go(env, 'front-doors-in'); settle(env, 4); assert(!game.frontDoors.open && game.frontDoors.wall.enabled, 'and can be shut from inside');
   go(env, 'front-doors-in'); settle(env, 4);
-  go(env, 'hall-panel'); settle(env, 3);
+  go(env, 'sw-hall-chandelier'); settle(env, 3);
   assert(game.hallLit(), 'hall lit from the panel before the fuse board');
   assert(!g.live('ground'), 'the rest of the house still dark');
   go(env, 'fuse-board'); assert(game.ui.mode === 'fuse', 'fuse board opens');
@@ -675,7 +675,7 @@ suite('controls', () => {
   keys(['KeyT']);
   use('lodge-door'); AP.wait(2); use('lodge-main'); use('lodge-lighting'); keys(['KeyA', 'KeyE']);
   use('gate-release'); AP.wait(12);
-  use('front-doors'); AP.wait(5); use('hall-panel'); AP.wait(3);
+  use('front-doors'); AP.wait(5); use('sw-hall-chandelier'); AP.wait(3);
   use('fuse-board'); keys(['KeyM', 'KeyE']); AP.wait(4);
   use('note-order'); keys(['KeyE']);
   use('ladder-up'); AP.wait(4);

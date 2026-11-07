@@ -152,7 +152,8 @@
     }
     if (!arrived) return { id, ok: false, why: 'stuck', at: [g.player.x, g.player.y, g.player.z].map(v => +v.toFixed(2)) };
     // face it
-    const want = Math.atan2(it.n.x, it.n.z);
+    // look straight at it, not merely at the wall it is on (three switches on one board are 10 cm apart)
+    const want = Math.atan2(-(it.pos.x - g.player.x), -(it.pos.z - g.player.z));
     for (let i = 0; i < 400; i++) {
       let err = want - g.player.yaw; while (err > Math.PI) err -= Math.PI * 2; while (err < -Math.PI) err += Math.PI * 2;
       if (Math.abs(err) < 0.05) break;

@@ -93,7 +93,7 @@ suite('builds', () => {
   env.step(240);
   assert(game.frameErrors === 0, 'frame errors: ' + (game.lastError && game.lastError.stack));
   assert(env.networkCalls.length === 0, 'network calls made: ' + JSON.stringify(env.networkCalls));
-  assert(game.phys.windows.filter(w => w.zone === 'mansion').length === 26, '26 mansion windows, got ' + game.phys.windows.filter(w => w.zone === 'mansion').length);
+  assert(game.phys.windows.filter(w => w.zone === 'mansion').length === 31, '31 mansion windows, got ' + game.phys.windows.filter(w => w.zone === 'mansion').length);
   assert(BM.POOL.points === 8 && BM.POOL.spots === 2, 'pool must be 8 points + 2 spots');
   assert(game.fx.points.length === 8 && game.fx.spots.length === 2, 'pool built wrong');
   assert(!game.player.torch, 'the torch starts OFF');

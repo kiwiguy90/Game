@@ -110,7 +110,7 @@ BM.buildSwitchboards = function (B, game) {
   /* ---- the pantry fuse board: MAIN and the six house circuits ---- */
   B.zone = 'mansion'; B.room = 'pantry';
   board({
-    n: [-1, 0], px: -0.1, pz: -8.6, y: 1.75, w: 1.5, h: 1.2, ceiling: 4.0, title: 'HOUSE SUPPLY — MAIN BOARD', danger: [0.55, 1.3], conduits: 5,
+    n: [-1, 0], px: -14.1, pz: -8.0, y: 1.75, w: 1.5, h: 1.2, ceiling: 4.0, title: 'HOUSE SUPPLY — MAIN BOARD', danger: [0.55, 1.3], conduits: 5,
     build: ({ lever, lamp, label, fuse, meter }) => {
       lever(0.55, 1.83, () => grid.breakers.main && !grid.tripped, true);
       label(0.55, 2.02, 'MAIN', 0.2, 0.06);

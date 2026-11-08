@@ -22,7 +22,7 @@ BM.buildOvergrown = function (B, game) {
   /* where nothing grows: buildings, water, the lane */
   const NOGO = [
     [-18.4, 18.4, -12.4, 12.4], [-17.6, -5.6, 79.6, 88.4], [26, 34, -2, 8], [-34, -26, -6, 4],
-    [-40.2, -23.8, 55.8, 68.2], [-64, 64, 88, 101], [33, 43, 21, 29.5], [-18, 4, -24, -12],
+    [-40.2, -23.8, 55.8, 68.2], [-64, 64, 88, 101], [33, 43, 21, 29.5], [-18, -6, -24, -12], [-6, 18, -15, -12], [-5.3, -3.7, -30, -15], [-6, 16, -22.7, -21.3], [5.3, 6.7, -30, -15], [12, 18, -30, -23.4],
   ];
   const WATER = [[0, 24, 3.4], [34, 62, 6.4]];
   const grows = (x, z) => Math.abs(x) < 63.5 && z > -53.5 && z < 87.5 && !NOGO.some(q => x > q[0] && x < q[1] && z > q[2] && z < q[3]) && !WATER.some(c => Math.hypot(x - c[0], z - c[1]) < c[2]);
@@ -65,7 +65,7 @@ BM.buildOvergrown = function (B, game) {
   for (let z = 34; z < 86; ) { const len = 0.8 + rnd() * 2.6, w = 0.25 + rnd() * 0.3; B.boxE('moss', -w + (rnd() - 0.5) * 0.15, w, 0.004, 0.012, z, Math.min(86.5, z + len)); z += len + 0.3 + rnd() * 1.4; }
   for (let z = 34; z < 87; z += 1.6) if (rnd() < 0.4) tuft(rnd() < 0.5 ? -2.75 : 2.75, z, 0.3, 3); // weeds along the edges
   // grass through the setts in the courtyard and up against the house
-  for (let i = 0; i < 60; i++) tuft(-18 + rnd() * 22, -24 + rnd() * 11.8, 0.25, 3);
+  for (let i = 0; i < 40; i++) tuft(-18 + rnd() * 12, -24 + rnd() * 11.8, 0.25, 3);
   for (let x = -17.5; x < 17.6; x += 0.9) { if (Math.abs(x) > 3.2) tuft(x, 12.55 + rnd() * 0.25, 0.45, 4); tuft(x, -12.55 - rnd() * 0.25, 0.45, 4); }
 
   /* ---- brambles: arching canes, over beds, round the pool, up the walls ---- */

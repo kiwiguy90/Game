@@ -158,11 +158,11 @@ BM.buildAppliances = function (B, game) {
   B.zone = 'mansion'; B.levelName = 'ground';
   B.room = 'kitchen';
   B.furniture('white', -17.4, -6.55, 0, 0.7, 1.6, 0.68, 'fridge');
-  const kFridge = fridge('kitchen-fridge', 'Fridge', 'ground', -17.4, 0, -6.55, 1, 0);
+  const kFridge = fridge('kitchen-fridge', 'Fridge', 'ground', -12.6, 0, -4.55, 0, -1);
   control(kFridge, [-17.03, 1.0, -6.55], [1, 0]);
-  const kKettle = kettle('kitchen-kettle', 'Kettle', 'ground', -10.6, 0.9, -11.4, 0);
+  const kKettle = kettle('kitchen-kettle', 'Kettle', 'ground', -10.2, 0.9, -11.4, 0);
   control(kKettle, [-10.6, 1.0, -11.3], [0, 1]);
-  clock('kitchen-clock', 'Kitchen clock', 'ground', -15, 2.6, -6.13, 0, -1);
+  clock('kitchen-clock', 'Kitchen clock', 'ground', -11, 2.7, -4.13, 0, -1);
   B.room = 'drawing';
   B.furniture('darkWood', 6.5, 5.0, 0, 0.8, 0.82, 1.2, 'radiogram');
   const record = radiogram('drawing-radiogram', 'Radiogram', 'east', 6.5, 0, 5.0, 1, 0);

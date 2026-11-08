@@ -128,7 +128,7 @@ BM.buildGothic = function (B, game) {
     P.addWall(Math.min(x0, x1), Math.max(x0, x1), Math.min(z0, z1), Math.max(z0, z1), 0, 3.2, { kind: 'wall', structural: false });
   };
   { const F = face(B, 0, 1, 0, 12.2); for (const l of [-12, -6.25, 6.25, 12]) buttress(F, l); }
-  { const F = face(B, 0, -1, 0, -12.2); for (const l of [-16.5, -7.5, 0, 7.5, 13]) buttress(F, l); }
+  { const F = face(B, 0, -1, 0, -12.2); for (const l of [14.4, 9.2, 2.3, -4.5, -10.6, -16.5]) buttress(F, l); } // (x = -l), clear of the back doors and windows
   { const F = face(B, -1, 0, -18.2, 0); for (const l of [-4.2, 2.5]) buttress(F, l); }   // west: z = 4.2, -2.5
   { const F = face(B, 1, 0, 18.2, 0); for (const l of [-4.2, 2.6]) buttress(F, l); }     // east: z = 4.2, -2.6
 

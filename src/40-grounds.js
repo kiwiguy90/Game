@@ -216,7 +216,7 @@ BM.buildGrounds = function (B, game) {
   // haunted planting: gnarled dead trees (see 44-haunted); a few black yews
   const tree = (x, z, s) => BM.deadTree(B, x, z, s || 1, game);
   for (let z = 40; z <= 84; z += 8) { tree(-6.5, z); tree(6.5, z); }
-  for (const [x, z, s] of [[-24, 12, 1.2], [-40, 0, 1.3], [44, 6, 1.2], [-50, 70, 1.1], [52, 52, 1.3], [-52, -20, 1.4], [40, -30, 1.2], [-12, -30, 1.3], [16, 78, 0.9], [-18, 80, 1.0]]) tree(x, z, s);
+  for (const [x, z, s] of [[-24, 12, 1.2], [-40, 0, 1.3], [44, 6, 1.2], [-50, 70, 1.1], [52, 52, 1.3], [-52, -20, 1.4], [40, -30, 1.2], [-12, -37, 1.3], [16, 78, 0.9], [-18, 80, 1.0]]) tree(x, z, s);
   // clipped box along the drive (gaps where the walks cross at z=62)
   for (let z = 34; z <= 86; z += 2) {
     if (z >= 60 && z <= 64) continue;

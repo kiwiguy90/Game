@@ -34,7 +34,6 @@ BM.buildWindows = function (B, game) {
     const inx = -w.nx, inz = -w.nz, tx = w.nz, tz = -w.nx, ry = Math.atan2(w.nx, w.nz);
     if (w.zone === 'mansion') { const r = BM.roomOfPoint(w.x + inx * 0.7, w.y, w.z + inz * 0.7); if (!r) continue; w.room = r; }
     if (w.room === 'attic' || w.room === 'clock room' || w.room === 'belfry') continue;
-    if (w.id === 'w-kitchen-w') continue; // the range stands in front of it
     const floorY = w.y > 7.5 ? 8.2 : w.y > 3.5 ? 4.2 : 0;
     B.zone = w.zone; B.levelName = floorY > 7 ? 'attic' : floorY > 3 ? 'upper' : 'ground'; B.room = w.room;
     // the sash

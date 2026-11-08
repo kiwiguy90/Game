@@ -101,12 +101,11 @@ const SCHEMES = {
 };
 const ROOMS = [
   ['hall', 'hall', -6, 6, 0, 12, 0, 7.98], ['dining', 'dining', -18, -6, 4, 12, 0, 3.98], ['drawing', 'drawing', 6, 18, 4, 12, 0, 3.98],
-  ['library', 'library', 6, 18, -4, 4, 0, 3.98], ['back sitting', 'sitting', -18, -6, -4, 4, 0, 3.98], ['corridor', 'service', -6, 6, -4, 0, 0, 3.98],
-  ['corridor', 'service', -18, -6, -6, -4, 0, 3.98], ['corridor', 'service', 6, 18, -6, -4, 0, 3.98],
-  ['kitchen', 'kitchen', -18, -6, -12, -6, 0, 3.98], ['pantry', 'service', -6, 0, -12, -6, 0, 3.98], ['bathroom', 'bathroom', 0, 6, -12, -6, 0, 3.98], ['service', 'service', 6, 18, -12, -6, 0, 3.98],
+  ['library', 'library', 6, 18, -4, 4, 0, 3.98], ['back sitting', 'sitting', -18, -6, -4, 4, 0, 3.98], ['corridor', 'landing', -6, 6, -12, 0, 0, 3.98],
+  ['kitchen', 'kitchen', -14, -6, -12, -4, 0, 3.98], ['pantry', 'service', -18, -14, -12, -4, 0, 3.98], ['bathroom', 'bathroom', 6, 10, -12, -4, 0, 3.98], ['service', 'service', 10, 18, -12, -4, 0, 3.98],
   ['bedroom1', 'bed1', -18, -6, 4, 12, 4.2, 7.98], ['bedroom2', 'bed2', 6, 18, 4, 12, 4.2, 7.98], ["eleanor's sitting room", 'eleanor', -18, -6, -4, 4, 4.2, 7.98],
-  ['gallery', 'gallery', 6, 18, -4, 4, 4.2, 7.98], ['upper corridor', 'landing', -6, 6, -4, 0, 4.2, 7.98], ['upper corridor', 'corridorUp', -18, -6, -6, -4, 4.2, 7.98], ['upper corridor', 'corridorUp', 6, 18, -6, -4, 4.2, 7.98],
-  ["eleanor's bedroom", 'eleanorBed', -18, -6, -12, -6, 4.2, 7.98], ['linen', 'service', -6, 6, -12, -6, 4.2, 7.98], ['nursery', 'nursery', 6, 18, -12, -6, 4.2, 7.98],
+  ['gallery', 'gallery', 6, 18, -4, 4, 4.2, 7.98], ['upper corridor', 'landing', -6, 6, -12, 0, 4.2, 7.98],
+  ["eleanor's bedroom", 'eleanorBed', -18, -6, -12, -4, 4.2, 7.98], ['nursery', 'nursery', 6, 18, -12, -4, 4.2, 7.98],
 ];
 
 /* Subtract a rectangle from a list of rectangles (in a 2-D [u0,u1]x[v0,v1] space). */

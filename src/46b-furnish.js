@@ -66,17 +66,20 @@ BM.buildFurnishings = function (B, game) {
   rug(0, 0, 9.6, 2.6, 1.7, 0, 'carpet');
   // the barometer by the door; the keys board's empty hooks
   B.box('darkWood', 5.88, 1.55, 11.0, 0.05, 0.9, 0.22); { const d = B.mesh(G.disc, 'paper', 5.85, 1.75, 11.0, 0.18); d.rotation.y = -Math.PI / 2; d.updateMatrix(); }
-  /* ================= THE LOBBY BEHIND THE HALL ================= */
+  /* ================= THE STAIR HALL BEHIND THE ENTRANCE HALL ================= */
   at('corridor');
-  runner(-0.45, 0.45, -5.6, -0.4, 0);
-  B.box('darkWood', 1.6, 1.5, -5.87, 0.5, 0.4, 0.03); label('KEYS', 1.6, 1.78, -5.85, 0, 0.18, 0.05, { w: 128, h: 40, size: 24 });
-  for (let i = 0; i < 12; i++) { const kx = 1.4 + (i % 6) * 0.08, ky = 1.6 - Math.floor(i / 6) * 0.16; B.box('brass', kx, ky, -5.84, 0.01, 0.01, 0.03); if (rnd() < 0.4) B.box('brass', kx, ky - 0.05, -5.84, 0.015, 0.06, 0.004); }
-  for (const x of [-1.3, -1.6, -1.9]) { B.box('brass', x, 1.75, -5.86, 0.02, 0.02, 0.05); }
-  coat(-1.6, 1.72, -5.8, 0, 'fabricCream');
-  label('OCTOBER 1974', -4.4, 1.7, -5.88, 0, 0.3, 0.38, { w: 128, h: 160, size: 18, bg: '#e8e0c8' });
-  for (const x of [-15, -9]) { B.picture(x, 1.8, -4.11, Math.PI, 0.6, 0.45, 'landscape', Math.round(x * 3)); }
-  for (const x of [9, 15]) { B.picture(x, 1.8, -4.11, Math.PI, 0.6, 0.45, x > 10 ? 'stilllife' : 'landscape', Math.round(x * 5)); }
-  runner(-17.4, -6.6, -5.4, -4.6, 0); runner(6.6, 17.4, -5.4, -4.6, 0);
+  runner(-0.45, 0.45, -9.4, -0.6, 0); runner(-5.4, -0.45, -6.95, -6.05, 0);
+  // the key board and the coats by the garden door
+  B.box('darkWood', -5.87, 1.5, -10.6, 0.03, 0.4, 0.5); label('KEYS', -5.85, 1.78, -10.6, Math.PI / 2, 0.18, 0.05, { w: 128, h: 40, size: 24 });
+  for (let i = 0; i < 12; i++) { const kz = -10.8 + (i % 6) * 0.08, ky = 1.6 - Math.floor(i / 6) * 0.16; B.box('brass', -5.84, ky, kz, 0.03, 0.01, 0.01); if (rnd() < 0.4) B.box('brass', -5.84, ky - 0.05, kz, 0.004, 0.06, 0.015); }
+  for (const x of [-3.2, -2.9]) B.box('brass', x, 1.75, -11.86, 0.02, 0.02, 0.05);
+  coat(-3.05, 1.72, -11.8, 0, 'fabricCream');
+  label('OCTOBER 1974', -5.88, 1.7, -3.3, Math.PI / 2, 0.3, 0.38, { w: 128, h: 160, size: 18, bg: '#e8e0c8' });
+  // a long-case barometer and an umbrella stand by the arch, a settle against the west wall
+  B.furniture('darkWood', -5.55, -3.65, 0, 0.5, 0.95, 1.3, 'settle');
+  B.mesh(G.cyl, 'brass', -1.9, 0.3, -0.5, 0.32, 0.6, 0.32); for (const dx of [-0.06, 0.07]) B.mesh(G.post, 'black', -1.9 + dx, 0.75, -0.5, 0.025, 0.9, 0.025);
+  B.picture(-5.88, 2.1, -8.2, Math.PI / 2, 0.8, 0.6, 'landscape', 5);
+  B.picture(2.0, 2.2, -0.12, Math.PI, 0.7, 0.55, 'house', 9);
 
   /* ================= THE DINING ROOM ================= */
   at('dining');
@@ -142,52 +145,53 @@ BM.buildFurnishings = function (B, game) {
 
   /* ================= THE KITCHEN ================= */
   at('kitchen');
-  B.furniture('wood', -14.05, -9.0, 0, 0.45, 0.95, 0.45, 'kitchen chair');
-  B.furniture('wood', -11.7, -8.05, 0, 0.45, 0.95, 0.45, 'kitchen chair');
+  B.furniture('wood', -11.8, -8.0, 0, 0.45, 0.95, 0.45, 'kitchen chair');
+  B.furniture('wood', -10.0, -9.05, 0, 0.45, 0.95, 0.45, 'kitchen chair');
   // the dresser's plates and mugs
-  for (let r = 0; r < 2; r++) for (let i = 0; i < 6; i++) { const z = -10.45 + i * 0.38; const p = B.mesh(G.disc, 'porcelain', -6.73, 1.3 + r * 0.42, z, 0.17); p.rotation.y = -Math.PI / 2; p.updateMatrix(); B.mesh(G.ring, 'flowersPurple', -6.735, 1.3 + r * 0.42, z, 0.13, 0.13, 0.02, -Math.PI / 2); }
+  for (let r = 0; r < 2; r++) for (let i = 0; i < 6; i++) { const z = -10.45 + i * 0.38; const p = B.mesh(G.disc, 'porcelain', -6.73, 1.3 + r * 0.42, z - 0.1, 0.17); p.rotation.y = -Math.PI / 2; p.updateMatrix(); B.mesh(G.ring, 'flowersPurple', -6.735, 1.3 + r * 0.42, z, 0.13, 0.13, 0.02, -Math.PI / 2); }
   for (let i = 0; i < 5; i++) B.mesh(G.cyl, 'porcelain', -6.75, 1.0, -10.2 + i * 0.4, 0.08, 0.1, 0.08);
   // copper pans on the wall above the range, largest to smallest
-  for (let i = 0; i < 6; i++) { const r = 0.32 - i * 0.035, z = -10.6 + i * 0.6; const p = B.mesh(G.cyl, 'brass', -17.74, 1.75, z, r, 0.07, r); p.rotation.z = Math.PI / 2; p.updateMatrix(); B.box('brass', -17.74, 1.75 + r / 2 + 0.08, z, 0.02, 0.18, 0.025); }
-  B.box('iron', -17.76, 2.0, -9.0, 0.02, 0.02, 4.0);
+  for (let i = 0; i < 6; i++) { const r = 0.32 - i * 0.035, z = -11.0 + i * 0.55; const p = B.mesh(G.cyl, 'brass', -13.84, 1.75, z, r, 0.07, r); p.rotation.z = Math.PI / 2; p.updateMatrix(); B.box('brass', -13.84, 1.75 + r / 2 + 0.08, z, 0.02, 0.18, 0.025); }
+  B.box('iron', -13.86, 2.0, -9.6, 0.02, 0.02, 3.4);
   // the bells board high over the corridor door, every room on it
-  B.box('darkWood', -8.6, 2.75, -6.12, 1.6, 0.42, 0.04);
+  B.box('darkWood', -8.6, 2.75, -4.12, 1.6, 0.42, 0.04);
   ['DINING', 'DRAWING', 'LIBRARY', 'SITTING', 'BED 1', 'BED 2', 'MISS E.', 'NURSERY'].forEach((t, i) => {
     const x = -9.25 + (i % 4) * 0.42, y = 2.86 - Math.floor(i / 4) * 0.2;
-    B.mesh(G.cone, 'brass', x, y, -6.16, 0.07, 0.07, 0.07);
-    label(t, x, y - 0.07, -6.15, Math.PI, 0.18, 0.04, { w: 160, h: 40, size: 18, bg: '#e8dcc0' });
+    B.mesh(G.cone, 'brass', x, y, -4.16, 0.07, 0.07, 0.07);
+    label(t, x, y - 0.07, -4.15, Math.PI, 0.18, 0.04, { w: 160, h: 40, size: 18, bg: '#e8dcc0' });
   });
-  wallClock(-12, 2.75, -6.12, Math.PI, 0.18);
-  B.box('wood', -9.6, 1.7, -11.85, 1.1, 0.6, 0.12); for (let i = 0; i < 7; i++) { const p = B.mesh(G.disc, 'porcelain', -10.05 + i * 0.15, 1.72, -11.85, 0.2); p.rotation.x = 0; p.updateMatrix(); } // the plate rack
-  label('EGGS\nFLOUR\nCANDLES\nMATCHES', -15.3, 1.5, -6.12, Math.PI, 0.32, 0.4, { w: 160, h: 200, size: 20, bg: '#2a2a2a', fg: '#ddd' }); // the cook's slate
-  B.box('black', -10.2, 0.9, -11.45, 0.4, 0.04, 0.3); B.mesh(G.cyl, 'brass', -10.4, 0.98, -11.45, 0.12, 0.14, 0.12); // the scales
+  B.box('wood', -13.0, 1.7, -11.85, 1.1, 0.6, 0.12); for (let i = 0; i < 7; i++) { const p = B.mesh(G.disc, 'porcelain', -13.45 + i * 0.15, 1.72, -11.85, 0.2); p.rotation.x = 0; p.updateMatrix(); } // the plate rack
+  label('EGGS\nFLOUR\nCANDLES\nMATCHES', -13.3, 1.5, -4.12, Math.PI, 0.32, 0.4, { w: 160, h: 200, size: 20, bg: '#2a2a2a', fg: '#ddd' }); // the cook's slate
+  B.box('black', -11.9, 0.9, -11.45, 0.4, 0.04, 0.3); B.mesh(G.cyl, 'brass', -12.0, 0.98, -11.45, 0.12, 0.14, 0.12); // the scales
 
   /* ================= THE PANTRY ================= */
   at('pantry');
-  jars(-5.85, -5.45, 0.6, -10.6); jars(-5.85, -5.45, 1.2, -8.2);
-  for (let i = 0; i < 5; i++) B.mesh(G.cyl, i % 2 ? 'metalDark' : 'flowersRed', -5.6, 1.82, -10.4 + i * 0.25, 0.09, 0.13, 0.09);
-  B.mesh(G.cyl, 'metalDark', -1.4, 0.18, -11.5, 0.3, 0.36, 0.3); B.box('black', -0.8, 0.12, -11.55, 0.12, 0.24, 0.28); B.box('black', -0.6, 0.12, -11.55, 0.12, 0.24, 0.28); // a pail and boots
-  B.box('wood', -1.7, 1.5, -11.85, 0.6, 0.3, 0.12); label('MATCHES', -1.7, 1.5, -11.78, 0, 0.18, 0.05, { w: 128, h: 36, size: 20 });
+  jars(-17.6, -14.4, 0.6, -4.45); jars(-17.6, -14.4, 1.2, -4.45);
+  for (let i = 0; i < 5; i++) B.mesh(G.cyl, i % 2 ? 'metalDark' : 'flowersRed', -17.4 + i * 0.3, 1.82, -4.45, 0.09, 0.13, 0.09);
+  B.furniture('wood', -17.45, -10.6, 0, 0.6, 0.85, 1.6, 'meat safe');
+  B.mesh(G.cyl, 'metalDark', -15.0, 0.18, -11.4, 0.3, 0.36, 0.3); B.box('black', -15.6, 0.12, -11.5, 0.12, 0.24, 0.28); B.box('black', -15.8, 0.12, -11.5, 0.12, 0.24, 0.28); // a pail and boots
+  B.box('wood', -16.4, 1.5, -11.85, 0.6, 0.3, 0.12); label('MATCHES', -16.4, 1.5, -11.78, 0, 0.18, 0.05, { w: 128, h: 36, size: 20 });
 
   /* ================= THE BATHROOM ================= */
   at('bathroom');
-  B.furniture('porcelain', 0.45, -7.4, 0, 0.45, 0.42, 0.55, 'wc');
-  B.mesh(G.sphere, 'porcelain', 0.45, 0.32, -7.4, 0.42, 0.22, 0.5); B.box('darkWood', 0.45, 0.43, -7.4, 0.44, 0.03, 0.5);
-  B.box('porcelain', 0.18, 2.05, -7.4, 0.2, 0.3, 0.5); B.mesh(G.post, 'brass', 0.25, 1.1, -7.2, 0.025, 1.8, 0.025);
-  B.mesh(G.post, 'brass', 0.4, 1.5, -7.68, 0.01, 0.8, 0.01); B.mesh(G.sphere, 'porcelain', 0.4, 1.08, -7.68, 0.05); // the chain
-  mirror(5.86, 1.6, -7.2, -Math.PI / 2, 0.5, 0.65);
-  B.box('brass', 5.85, 1.0, -9.6, 0.05, 0.05, 0.8); B.box('brass', 5.85, 0.6, -9.6, 0.05, 0.05, 0.8); B.box('linen', 5.82, 0.8, -9.6, 0.03, 0.55, 0.5);
-  B.box('glass', 5.85, 1.22, -7.2, 0.12, 0.02, 0.5); bottle(5.83, 1.23, -7.05, 'glass'); B.mesh(G.cyl, 'porcelain', 5.83, 1.28, -7.35, 0.07, 0.1, 0.07);
-  B.furniture('wood', 1.0, -11.5, 0, 0.5, 0.85, 0.5, 'chair');
-  rug(3.0, 0, -9.6, 1.2, 0.7, 0, 'linen');
+  B.furniture('porcelain', 6.5, -9.0, 0, 0.45, 0.42, 0.55, 'wc');
+  B.mesh(G.sphere, 'porcelain', 6.5, 0.32, -9.0, 0.42, 0.22, 0.5); B.box('darkWood', 6.5, 0.43, -9.0, 0.44, 0.03, 0.5);
+  B.box('porcelain', 6.23, 2.05, -9.0, 0.2, 0.3, 0.5); B.mesh(G.post, 'brass', 6.3, 1.1, -8.8, 0.025, 1.8, 0.025);
+  B.mesh(G.post, 'brass', 6.45, 1.5, -9.28, 0.01, 0.8, 0.01); B.mesh(G.sphere, 'porcelain', 6.45, 1.08, -9.28, 0.05); // the chain
+  mirror(9.86, 1.6, -7.6, -Math.PI / 2, 0.5, 0.65);
+  B.box('brass', 9.85, 1.0, -5.6, 0.05, 0.05, 0.8); B.box('brass', 9.85, 0.6, -5.6, 0.05, 0.05, 0.8); B.box('linen', 9.82, 0.8, -5.6, 0.03, 0.55, 0.5);
+  B.box('glass', 9.85, 1.22, -7.6, 0.12, 0.02, 0.5); bottle(9.83, 1.23, -7.45, 'glass'); B.mesh(G.cyl, 'porcelain', 9.83, 1.28, -7.75, 0.07, 0.1, 0.07);
+  B.furniture('wood', 6.55, -11.4, 0, 0.5, 0.85, 0.5, 'chair');
+  rug(8.4, 0, -9.0, 1.0, 0.7, 0, 'linen');
 
-  /* ================= THE SERVICE ROOM ================= */
+  /* ================= THE BOOT ROOM ================= */
   at('service');
-  B.furniture('wood', 12.5, -6.45, 0, 1.4, 0.45, 0.4, 'bench');
-  for (const x of [11.9, 12.4, 12.9]) B.box('black', x, 0.1, -6.9, 0.12, 0.22, 0.3); // boots under it
-  for (const x of [11.6, 12.1, 13.4, 13.9]) { B.box('brass', x, 1.75, -6.13, 0.02, 0.02, 0.06); }
-  coat(11.6, 1.72, -6.2, Math.PI, 'fabricGreen'); coat(13.4, 1.7, -6.2, Math.PI, 'leather');
+  B.furniture('wood', 11.6, -4.45, 0, 1.4, 0.45, 0.4, 'bench');
+  for (const x of [11.1, 11.6, 12.1]) B.box('black', x, 0.1, -4.9, 0.12, 0.22, 0.3); // boots under it
+  for (const x of [10.9, 11.4, 12.0, 12.5]) { B.box('brass', x, 1.75, -4.13, 0.02, 0.02, 0.06); }
+  coat(10.9, 1.72, -4.2, Math.PI, 'fabricGreen'); coat(12.0, 1.7, -4.2, Math.PI, 'leather');
   shelf(17.78 - 0.15, 1.3, -11.0, 0.3, 0.9); for (let i = 0; i < 3; i++) oilLamp(17.65, 1.31, -11.3 + i * 0.3);
+  B.furniture('wood', 13.0, -11.45, 0, 2.0, 0.9, 0.6, 'boot room sink');
 
   /* ================= BEDROOM 1 ================= */
   at('bedroom1', 'upper');
@@ -236,9 +240,8 @@ BM.buildFurnishings = function (B, game) {
   B.furniture('darkWood', -3.6, -0.4, 4.2, 1.1, 0.55, 0.5, 'linen chest');
   vase(2.2, 5.0, -3.5, true);
   for (const x of [-3.5, 3.5]) B.picture(x, 6.0, -0.12, Math.PI, 0.55, 0.7, 'portrait', 70 + x);
-  runner(-0.45, 0.45, -5.6, -0.6, 4.2);
-  runner(-17.4, -6.6, -5.4, -4.6, 4.2); runner(6.6, 17.4, -5.4, -4.6, 4.2);
-  for (const x of [-15, -9, 9, 15]) B.picture(x, 6.0, -4.11, Math.PI, 0.5, 0.4, 'landscape', 80 + x);
+  runner(-0.45, 0.45, -10.4, -0.6, 4.2);
+  for (const z of [-6.2, -10.0]) B.picture(-5.88, 6.0, z, Math.PI / 2, 0.5, 0.4, 'landscape', 80 + z);
   B.box('paintedWood', -17.85, 5.25, -5.0, 0.06, 2.0, 0.8); B.mesh(G.sphere, 'brass', -17.8, 5.2, -4.75, 0.04);   // the housemaid's cupboard
 
   /* ================= ELEANOR'S BEDROOM ================= */
@@ -255,17 +258,17 @@ BM.buildFurnishings = function (B, game) {
   for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2, x = -10.5 + Math.cos(a) * 0.42, z = -8.0 + Math.sin(a) * 0.42; B.box('wood', x, 4.4, z, 0.2, 0.04, 0.2); if (i < 3) doll(x, 4.42, z, -a + Math.PI / 2, ['dollDress', 'fabricRed', 'flowersWhite'][i]); }
   for (let i = 0; i < 4; i++) B.mesh(G.cyl, 'porcelain', -10.5 + Math.cos(i * 1.57) * 0.18, 4.68, -8.0 + Math.sin(i * 1.57) * 0.18, 0.06, 0.04, 0.06);
   // her drawings pinned at child height along the wall, the dates rising to 1974
-  for (let i = 0; i < 9; i++) B.box('paper', -6.12, 5.0 + (i % 2) * 0.32, -11.3 + i * 0.5, 0.004, 0.26, 0.32, 0);
-  for (let i = 0; i < 9; i++) B.box(['flowersRed', 'fabricGreen', 'flowersPurple'][i % 3], -6.115, 5.0 + (i % 2) * 0.32 + 0.03, -11.3 + i * 0.5 - 0.04, 0.003, 0.08, 0.1);
+  for (let i = 0; i < 9; i++) B.box('paper', -6.12, 5.0 + (i % 2) * 0.32, -11.4 + i * 0.32, 0.004, 0.26, 0.28, 0);
+  for (let i = 0; i < 9; i++) B.box(['flowersRed', 'fabricGreen', 'flowersPurple'][i % 3], -6.115, 5.0 + (i % 2) * 0.32 + 0.03, -11.4 + i * 0.32 - 0.04, 0.003, 0.08, 0.1);
   // bars on the window, added later; the bolt on the outside of her door
   for (let i = 0; i < 5; i++) B.mesh(G.post, 'iron', -12.6 + i * 0.3, 5.75, -11.74, 0.03, 1.6, 0.03);
-  B.box('iron', -11.2, 5.5, -5.86, 0.3, 0.05, 0.05); B.box('iron', -11.3, 5.5, -5.84, 0.04, 0.12, 0.08);
+  B.box('iron', -5.86, 5.5, -7.25, 0.05, 0.05, 0.3); B.box('iron', -5.84, 5.5, -7.35, 0.08, 0.12, 0.04);
   label('Thou God\nseest me\nE.B. aged 9', -17.79, 5.8, -8.0, Math.PI / 2, 0.32, 0.28, { w: 192, h: 160, size: 22, bg: '#e2d6b4', fg: '#2a3a6a' });
-  for (let i = 0; i < 6; i++) B.box('black', -6.1 + 0.002, 4.5 + i * 0.18, -6.6, 0.002, 0.004, 0.12); // a height chart on the frame
+  for (let i = 0; i < 6; i++) B.box('black', -6.1 + 0.002, 4.5 + i * 0.18, -8.75, 0.002, 0.004, 0.12); // a height chart on the frame
   rug(-13.0, 4.2, -9.0, 1.4, 1.0, 0, 'carpet');
 
   /* ================= THE LINEN ROOM ================= */
-  at('linen', 'upper');
+  at('upper corridor', 'upper'); // the linen presses along the back of the landing
   for (let r = 0; r < 4; r++) for (let i = 0; i < 6; i++) B.box(i % 3 ? 'linen' : 'dustSheet', -1.6 + i * 0.62, 4.75 + r * 0.45, -11.45, 0.5, 0.12 + rnd() * 0.12, 0.45);
   B.mesh(G.cyl, 'leafLitter2', 3.8, 4.45, -7.2, 0.6, 0.5, 0.45); B.box('linen', 3.8, 4.72, -7.2, 0.5, 0.08, 0.35);
   { const ib = B.box('wood', -3.6, 4.95, -7.0, 1.3, 0.04, 0.35, 0.0); ib.rotation.z = 0.0; ib.updateMatrix(); }
@@ -305,8 +308,8 @@ BM.buildFurnishings = function (B, game) {
   { const w = B.mesh(G.ring, 'iron', 2.85, -2.1, -0.2, 0.5, 0.5, 0.5); w.rotation.y = Math.PI / 2; w.updateMatrix(); }
   B.furniture('brick', 4.4, -9.4, -3.2, 0.9, 0.95, 0.9, 'copper');
   B.mesh(G.cyl, 'brass', 4.4, -2.2, -9.4, 0.7, 0.06, 0.7);
-  B.furniture('darkWood', 2.3, -11.55, -3.2, 3.2, 1.8, 0.4, 'jar shelves');
-  for (let r = 0; r < 3; r++) { B.box('darkWood', 2.3, -3.2 + 0.45 + r * 0.5, -11.55, 3.2, 0.03, 0.4); jars(0.9, 3.7, -3.2 + 0.47 + r * 0.5, -11.55); }
+  B.furniture('darkWood', 4.95, -11.55, -3.2, 1.6, 1.8, 0.4, 'jar shelves');
+  for (let r = 0; r < 3; r++) { B.box('darkWood', 4.95, -3.2 + 0.45 + r * 0.5, -11.55, 1.6, 0.03, 0.4); jars(4.3, 5.6, -3.2 + 0.47 + r * 0.5, -11.55); }
   for (const x of [-1.6, -1.2]) { B.mesh(G.cyl, 'flowersRed', x, -2.98, -0.9, 0.3, 0.44, 0.22); B.mesh(G.cyl, 'black', x, -2.72, -0.9, 0.06, 0.08, 0.06); } // paraffin cans by the boiler
   for (let i = 0; i < 6; i++) B.mesh(G.cyl, 'wax', -10.3 + i * 0.07, -2.38, -11.6, 0.03, 0.03 + rnd() * 0.06, 0.03); // candle stubs on the ledge
   B.box('leather', -10.0, -2.38, -11.35, 0.22, 0.04, 0.3); // the wine ledger

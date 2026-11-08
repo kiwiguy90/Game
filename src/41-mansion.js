@@ -20,31 +20,34 @@ BM.buildMansion = function (B, game) {
   /* ======================= GROUND FLOOR ======================= */
   B.levelName = 'ground'; B.room = 'house';
   // floor (with the cellar stairwell cut out); ceiling skin is the upper slab
-  B.floor('floor', -18, 18, -12, 12, 0, 0.2, [[8.0, 15.6, -11.8, -10.0]]);
+  B.floor('floor', -18, 18, -12, 12, 0, 0.2, [[-2.4, 3.6, -11.8, -10.0]]);
   // exterior walls, ground storey
   B.wall('x', 12, -18, 18, Object.assign({ outSign: 1 }, EXT), [
     win(-15, 'w-dining-1'), win(-9, 'w-dining-2'), win(-3.5, 'w-hall-l', { w: 1.2 }), win(3.5, 'w-hall-r', { w: 1.2 }),
     win(9, 'w-drawing-1'), win(15, 'w-drawing-2'), { at: 0, w: 2.4, type: 'door', head: 3.2, id: 'front-doors', casing: 'stone' }]);
-  B.wall('x', -12, -18, 18, Object.assign({ outSign: -1 }, EXT), [door(-15, 'kitchen-door', { head: 2.2 }), win(-12, 'w-kitchen-r'), door(-3, 'yard-door', { head: 2.2 }), win(3, 'w-bath', { w: 0.9 })]);
-  B.wall('z', -18, -12, 12, Object.assign({ outSign: -1 }, EXT), [win(8, 'w-dining-w'), win(0, 'w-backsitting'), win(-9, 'w-kitchen-w')]);
+  B.wall('x', -12, -18, 18, Object.assign({ outSign: -1 }, EXT), [win(-16, 'w-pantry-b', { w: 0.9 }), win(-11, 'w-kitchen-r'), door(-7.5, 'kitchen-door', { head: 2.2 }), door(-4.5, 'yard-door', { head: 2.2 }), win(0.6, 'w-stairhall', { w: 1.8 }), win(8, 'w-bath', { w: 0.9 }), win(14, 'w-service-b')]);
+  B.wall('z', -18, -12, 12, Object.assign({ outSign: -1 }, EXT), [win(8, 'w-dining-w'), win(0, 'w-backsitting'), win(-9, 'w-pantry')]);
   B.wall('z', 18, -12, 12, Object.assign({ outSign: 1 }, EXT), [win(8, 'w-drawing-e'), win(0, 'w-library'), win(-9, 'w-service'), door(-5, 'back-door')]);
   // interior walls, ground
-  B.wall('z', -6, -4, 12, { mat: 'panel' }, [door(9.6, 'd-hall-dining'), door(2.6, 'd-hall-backsitting')]);
+  // interior walls, ground. The front of the house: hall, dining, drawing, library, sitting room.
+  // The back: a stair hall behind the entrance hall (the lift in its east wall, the cellar stairs along its
+  // back wall, the garden door), the kitchen and pantry to the west, the bathroom and boot room to the east.
+  B.wall('z', -6, -4, 12, { mat: 'panel' }, [door(9.6, 'd-hall-dining'), door(2.6, 'd-hall-backsitting'), door(-2, 'd-stairhall-sitting')]);
   B.wall('z', 6, -4, 12, { mat: 'panel' }, [door(9.6, 'd-hall-drawing'), door(2.6, 'd-hall-library')]);
   B.wall('x', 4, -18, -6, { mat: 'wallpaperGreen' }, [door(-12, 'd-dining-backsitting')]);
   B.wall('x', 4, 6, 18, { mat: 'wallpaper' }, [door(12, 'd-drawing-library')]);
-  B.wall('x', 0, -6, 6, { mat: 'panel' }, [door(-5, 'arch-hall-back-l'), door(3, 'arch-hall-back-r')]); // open arches: no door leaves to swing into the corridor
-  B.wall('x', -4, -18, -6, { mat: 'plaster' }, [door(-12, 'd-backsitting-corridor')]);
-  B.wall('x', -4, 6, 18, { mat: 'plaster' }, [door(12, 'd-library-corridor')]);
-  B.wall('x', -6, -18, 18, { mat: 'plaster' }, [door(-12, 'd-kitchen'), door(-3, 'd-pantry'), door(3, 'd-bath'), door(9, 'd-service')]);
-  B.wall('z', -6, -12, -6, { mat: 'plaster' });
-  B.wall('z', 0, -12, -6, { mat: 'tile' });
-  B.wall('z', 6, -12, -6, { mat: 'plaster' });
+  B.wall('x', 0, -6, 6, { mat: 'panel' }, [{ at: 0, w: 2.4, type: 'door', head: 2.8, id: 'arch-hall-back' }]); // a wide arch through to the stair hall
+  B.wall('x', -4, -18, -6, { mat: 'plaster' });
+  B.wall('x', -4, 6, 18, { mat: 'plaster' }, [door(13.3, 'd-library-service')]);
+  B.wall('z', -6, -12, -4, { mat: 'plaster' }, [door(-6.5, 'd-kitchen')]);
+  B.wall('z', -14, -12, -4, { mat: 'plaster' }, [door(-5.6, 'd-pantry')]);
+  B.wall('z', 6, -12, -4, { mat: 'plaster' }, [door(-6.5, 'd-bath')]);
+  B.wall('z', 10, -12, -4, { mat: 'tile' });
 
   /* ---- the front doors: two leaves that open inwards together on a long groan, and can be shut again ---- */
   // the kitchen door and the back door open onto the courtyard; the side door onto the east lawn
-  game.kitchenDoor = B.hingedDoor({ id: 'kitchen-door', axis: 'x', at: -15, c: -12, w: 1.2, h: 2.1, hinge: 'low', swing: 1, outside: -1, mat: 'shutter', panelMat: 'boards', dur: 1.4, sound: 'creak', label: 'the kitchen door', wallT: 0.4 });
-  game.yardDoor = B.hingedDoor({ id: 'yard-door', axis: 'x', at: -3, c: -12, w: 1.2, h: 2.1, hinge: 'high', swing: 1, outside: -1, mat: 'shutter', panelMat: 'boards', dur: 1.4, sound: 'creak', label: 'the back door', wallT: 0.4 });
+  game.kitchenDoor = B.hingedDoor({ id: 'kitchen-door', axis: 'x', at: -7.5, c: -12, w: 1.2, h: 2.1, hinge: 'low', swing: 1, outside: -1, mat: 'shutter', panelMat: 'boards', dur: 1.4, sound: 'creak', label: 'the kitchen door', wallT: 0.4 });
+  game.yardDoor = B.hingedDoor({ id: 'yard-door', axis: 'x', at: -4.5, c: -12, w: 1.2, h: 2.1, hinge: 'high', swing: 1, outside: -1, mat: 'shutter', panelMat: 'boards', dur: 1.4, sound: 'creak', label: 'the back door', wallT: 0.4 });
   game.sideDoor = B.hingedDoor({ id: 'back-door', axis: 'z', at: -5, c: 18, w: 1.2, h: 2.1, hinge: 'low', swing: -1, outside: 1, mat: 'darkWood', dur: 1.4, sound: 'creak', label: 'the side door', wallT: 0.4 });
   game.frontDoors = B.hingedDoor({ id: 'front-doors', axis: 'x', at: 0, c: 12.0, w: 2.4, h: 3.1, hinge: 'both', swing: -1, mat: 'darkWood', dur: 3.2, sound: 'groan', label: 'the front doors', wallT: 0.4, maxAngle: 1.7 });
   B.mesh(G.ring, 'brass', -0.3, 1.5, 12.26, 0.18, 0.18, 0.18); B.mesh(G.ring, 'brass', 0.3, 1.5, 12.26, 0.18, 0.18, 0.18); // the knockers
@@ -218,72 +221,73 @@ BM.buildMansion = function (B, game) {
   roomSwitch('sw-backsitting', 'Sitting room lights', [-6.25, 1.4, 3.6], [-1, 0], ['backsitting-pendant', 'backsitting-lamp']);
   B.readable('note-newspaper', 'Newspaper, 22 October 1974', 'THE COUNTY GAZETTE\n\nBLACKTHORN GIRL "TO REST ABROAD"\n\nThe family of Blackthorn Manor confirmed last night that Miss Eleanor Blackthorn, 25, will travel to a private clinic in Switzerland "for her nerves". A spokesman for the family declined to comment on local rumours, describing their daughter as "troubled since childhood" and asking for privacy.', [-15.5, 0.87, -3.3], [0, 1]);
 
-  /* ---- CORRIDOR / LOBBY (ground circuit) ---- */
+  /* ---- THE STAIR HALL (ground circuit): behind the entrance hall, through the arch ---- */
   B.room = 'corridor';
-  B.fixture({ id: 'lobby-pendant', name: 'Back lobby light', circuit: 'ground', style: 'pendant', pos: [0, 3.2, -2], ceiling: 4, colour: 0xffc786, target: 1.1, range: 8 });
-  B.fixture({ id: 'corridor-w', name: 'Corridor light', circuit: 'ground', style: 'pendant', pos: [-12, 3.3, -5], ceiling: 4, colour: 0xffc786, target: 0.9, range: 7, blink: 0.25 });
-  B.fixture({ id: 'corridor-e', name: 'Corridor light', circuit: 'ground', style: 'pendant', pos: [12, 3.3, -5], ceiling: 4, colour: 0xffc786, target: 0.9, range: 7 });
-  roomSwitch('sw-corridor', 'Corridor lights', [-3.5, 1.4, -0.15], [0, -1], ['lobby-pendant', 'corridor-w', 'corridor-e']);
-  B.picture(0, 2.0, -5.88, 0, 0.8, 1.0, 'landscape', 5);
+  B.fixture({ id: 'lobby-pendant', name: 'Stair hall light', circuit: 'ground', style: 'pendant', pos: [0, 3.2, -3.5], ceiling: 4, colour: 0xffc786, target: 1.2, range: 9 });
+  B.fixture({ id: 'corridor-w', name: 'Stair hall light', circuit: 'ground', style: 'pendant', pos: [-3, 3.3, -8.5], ceiling: 4, colour: 0xffc786, target: 0.9, range: 7, blink: 0.25 });
+  B.fixture({ id: 'corridor-e', name: 'Cellar stair light', circuit: 'ground', style: 'pendant', pos: [2.5, 3.3, -9.2], ceiling: 4, colour: 0xffc786, target: 0.9, range: 7 });
+  roomSwitch('sw-corridor', 'Stair hall lights', [-2.2, 1.4, -0.25], [0, -1], ['lobby-pendant', 'corridor-w', 'corridor-e']);
+  // the cellar stairs: a straight flight down along the back wall, from a landing in the south-east corner
+  P.ramp(-2.4, 3.6, -11.8, -10.0, 'x', -3.2, 0, -3.2, 'cellar stairs');
+  for (let i = 0; i < 16; i++) { const x = 3.6 - (i + 0.5) * 6.0 / 16, top = -3.2 * (i + 1) / 16; B.boxE('wood', x - 0.19, x + 0.19, -3.2, top + 0.02, -11.8, -10.0); B.boxE('stone', x - 0.19, x + 0.19, top, top + 0.025, -11.78, -10.02); }
+  P.addWall(-2.4, 3.6, -10.0, -9.9, 0, 1.0, { kind: 'rail' });
+  P.addWall(-2.5, -2.4, -11.8, -9.9, 0, 1.0, { kind: 'rail' });
+  B.boxE('darkWood', -2.45, 3.6, 0.95, 1.02, -10.02, -9.9); B.boxE('darkWood', -2.5, -2.4, 0.95, 1.02, -11.8, -9.9);
+  for (let x = -2.3; x < 3.6; x += 0.3) B.mesh(G.post, 'darkWood', x, 0.48, -9.96, 0.035, 0.95, 0.035);
+  for (const z of [-11.5, -11.0, -10.5]) B.mesh(G.post, 'darkWood', -2.45, 0.48, z, 0.035, 0.95, 0.035);
+  B.mesh(G.post, 'darkWood', -2.45, 0.6, -9.95, 0.12, 1.2, 0.12); B.mesh(G.post, 'darkWood', 3.6, 0.6, -9.95, 0.12, 1.2, 0.12); // newels
+  // below, the stair's open side is walled down to the cellar floor
+  B.solid('brick', -2.4, 3.6, -3.2, -0.2, -10.0, -9.8);
+  B.readable('sign-cellar', 'A painted board', 'CELLAR\n\nMind the step. Lamp on the left.', [4.8, 1.6, -11.78], [0, 1], { plaque: true });
 
   /* ---- KITCHEN (ground circuit, fluorescent) ---- */
   B.room = 'kitchen';
-  B.boxE('tile', -17.8, -6.1, 0, 0.02, -11.8, -6.1);
-  B.furniture('wood', -12, -9, 0, 3.0, 0.9, 1.2, 'kitchen table');
-  B.furniture('metalDark', -17.35, -9, 0, 0.8, 0.95, 4.0, 'range');
-  B.furniture('white', -12, -11.45, 0, 4.0, 0.9, 0.6, 'sink unit');
-  B.furniture('wood', -6.45, -9.5, 0, 0.5, 2.0, 2.4, 'dresser');
-  B.fixture({ id: 'kitchen-tube', name: 'Kitchen tube', circuit: 'ground', kind: 'fluorescent', style: 'tube', pos: [-12, 3.9, -9], colour: 0xeaf4ff, target: 1.8, range: 10, flicker: 0.25 });
-  roomSwitch('sw-kitchen', 'Kitchen light', [-10.6, 1.4, -6.2], [0, -1], ['kitchen-tube']);
-  const radio1Box = B.box('wood', -13.0, 1.05, -9.2, 0.42, 0.28, 0.22);
-  const radio1Dial = B.box(BM.Own(0x221608), -13.0, 1.07, -9.08, 0.3, 0.08, 0.02); radio1Dial.userData.dynamic = true;
-  const radio1 = grid.addAppliance({ id: 'radio-kitchen', name: 'Kitchen radio', kind: 'radio', circuit: 'ground', room: 'kitchen', pos: [-13.0, 1.05, -9.2], station: 0 });
+  B.boxE('tile', -13.9, -6.1, 0, 0.02, -11.8, -4.1);
+  B.furniture('wood', -10, -8.0, 0, 2.6, 0.9, 1.2, 'kitchen table');
+  B.furniture('metalDark', -13.5, -9.6, 0, 0.8, 0.95, 3.4, 'range');
+  B.furniture('white', -11, -11.45, 0, 2.4, 0.9, 0.6, 'sink unit');
+  B.furniture('wood', -6.45, -9.6, 0, 0.5, 2.0, 2.4, 'dresser');
+  B.fixture({ id: 'kitchen-tube', name: 'Kitchen tube', circuit: 'ground', kind: 'fluorescent', style: 'tube', pos: [-10, 3.9, -8], colour: 0xeaf4ff, target: 1.8, range: 10, flicker: 0.25 });
+  roomSwitch('sw-kitchen', 'Kitchen light', [-6.25, 1.4, -5.4], [-1, 0], ['kitchen-tube']);
+  const radio1Box = B.box('wood', -11.1, 1.05, -8.2, 0.42, 0.28, 0.22);
+  const radio1Dial = B.box(BM.Own(0x221608), -11.1, 1.07, -8.08, 0.3, 0.08, 0.02); radio1Dial.userData.dynamic = true;
+  const radio1 = grid.addAppliance({ id: 'radio-kitchen', name: 'Kitchen radio', kind: 'radio', circuit: 'ground', room: 'kitchen', pos: [-11.1, 1.05, -8.2], station: 0 });
   radio1.object = radio1Dial;
-  B.interactable({ id: 'radio-kitchen-switch', label: () => radio1.switchedOn ? 'Radio: switch off' : 'Radio: switch on', pos: [-13.0, 1.0, -8.45], n: [0, 1], act: g => g.toggleAppliance(radio1) });
-  B.readable('note-cook', "Cook's note", "Mrs Blackthorn,\n\nI have done the trays as asked but I will not carry them up to Miss Eleanor's door again. It is locked on the outside and she talks to me through it. Last night she asked me to tell the gatekeeper she is still here. I did not, and I have not slept.\n\nI give my notice from Friday.\n\nAgnes Pell", [-11.1, 0.91, -9.0], [1, 0]);
+  B.interactable({ id: 'radio-kitchen-switch', label: () => radio1.switchedOn ? 'Radio: switch off' : 'Radio: switch on', pos: [-11.1, 1.0, -7.45], n: [0, 1], act: g => g.toggleAppliance(radio1) });
+  B.readable('note-cook', "Cook's note", "Mrs Blackthorn,\n\nI have done the trays as asked but I will not carry them up to Miss Eleanor's door again. It is locked on the outside and she talks to me through it. Last night she asked me to tell the gatekeeper she is still here. I did not, and I have not slept.\n\nI give my notice from Friday.\n\nAgnes Pell", [-10.0, 0.91, -7.9], [0, 1]);
 
-  /* ---- PANTRY: the fuse board ---- */
+  /* ---- PANTRY: the fuse board, through the kitchen ---- */
   B.room = 'pantry';
-  B.furniture('wood', -5.65, -9.0, 0, 0.5, 2.2, 4.0, 'pantry shelves');
-  for (let i = 0; i < 12; i++) B.mesh(G.cyl, i % 3 ? 'porcelain' : 'brick', -5.6, 1.2 + Math.floor(i / 6) * 0.6, -10.6 + (i % 6) * 0.6, 0.18, 0.25, 0.18);
-  B.fixture({ id: 'pantry-tube', name: 'Pantry tube', circuit: 'ground', kind: 'fluorescent', style: 'tube', pos: [-3, 3.9, -9], colour: 0xeaf4ff, target: 1.3, range: 7, len: 1.2 });
+  B.furniture('wood', -16.0, -4.45, 0, 3.6, 2.2, 0.5, 'pantry shelves');
+  for (let i = 0; i < 12; i++) B.mesh(G.cyl, i % 3 ? 'porcelain' : 'brick', -17.4 + (i % 6) * 0.55, 1.2 + Math.floor(i / 6) * 0.6, -4.5, 0.18, 0.25, 0.18);
+  B.fixture({ id: 'pantry-tube', name: 'Pantry tube', circuit: 'ground', kind: 'fluorescent', style: 'tube', pos: [-16, 3.9, -8], colour: 0xeaf4ff, target: 1.3, range: 7, len: 1.2 });
   B.interactable({
-    id: 'fuse-board', label: 'Fuse board', pos: [-0.3, 1.75, -8.6], n: [-1, 0], kind: 'control', approachDist: 0.95,
+    id: 'fuse-board', label: 'Fuse board', pos: [-14.3, 1.75, -8.0], n: [-1, 0], kind: 'control', approachDist: 0.95,
     act: g => g.ui.openFuseBoard(),
   });
-  roomSwitch('sw-pantry', 'Pantry light', [-1.8, 1.4, -6.2], [0, -1], ['pantry-tube']);
-  B.readable('note-electrician', "Electrician's tag", "ESTATE SUPPLY — BLACKTHORN\n\nLodge main must be ON before anything in the house will take.\nHall circuit runs direct from the lodge.\nEverything else is fed through MAIN here. Throwing MAIN brings every circuit and every fitting back as it was left.\n\nLeft as instructed 21/10/74: ALL ON. Do not touch. — W.G.", [-4.6, 1.4, -6.12], [0, -1], { plaque: true });
+  roomSwitch('sw-pantry', 'Pantry light', [-14.25, 1.4, -6.3], [-1, 0], ['pantry-tube']);
+  B.readable('note-electrician', "Electrician's tag", "ESTATE SUPPLY — BLACKTHORN\n\nLodge main must be ON before anything in the house will take.\nHall circuit runs direct from the lodge.\nEverything else is fed through MAIN here. Throwing MAIN brings every circuit and every fitting back as it was left.\n\nLeft as instructed 21/10/74: ALL ON. Do not touch. — W.G.", [-14.3, 1.35, -9.4], [-1, 0], { plaque: true });
 
   /* ---- BATHROOM ---- */
   B.room = 'bathroom';
-  B.boxE('tile', 0.1, 5.9, 0, 0.02, -11.8, -6.1);
-  B.furniture('porcelain', 3, -10.9, 0, 1.7, 0.6, 0.8, 'bath');
-  B.furniture('porcelain', 5.55, -7.2, 0, 0.5, 0.85, 0.6, 'basin');
-  B.box(BM.Basic(0x1c2228), 5.86, 1.6, -7.2, 0.02, 0.6, 0.45);
-  B.fixture({ id: 'bath-light', name: 'Bathroom light', circuit: 'ground', style: 'bulkhead', pos: [3, 3.6, -6.25], nz: 1, colour: 0xf2e6d0, target: 0.9, range: 6 });
-  roomSwitch('sw-bath', 'Bathroom light', [1.6, 1.4, -6.2], [0, -1], ['bath-light']);
+  B.boxE('tile', 6.1, 9.9, 0, 0.02, -11.8, -4.1);
+  B.furniture('porcelain', 8.6, -10.9, 0, 1.7, 0.6, 0.8, 'bath');
+  B.furniture('porcelain', 9.55, -7.6, 0, 0.5, 0.85, 0.6, 'basin');
+  B.fixture({ id: 'bath-light', name: 'Bathroom light', circuit: 'ground', style: 'bulkhead', pos: [8, 3.6, -4.25], nz: -1, colour: 0xf2e6d0, target: 0.9, range: 6 });
+  roomSwitch('sw-bath', 'Bathroom light', [6.25, 1.4, -5.4], [1, 0], ['bath-light']);
 
-  /* ---- SERVICE ROOM: stairs down to the cellar ---- */
+  /* ---- THE BOOT ROOM, off the library, with the side door ---- */
   B.room = 'service';
-  P.ramp(8.0, 15.6, -11.8, -10.0, 'x', 0, -3.2, -3.2, 'cellar stairs');
-  for (let i = 0; i < 16; i++) { const x = 8 + (i + 0.5) * 7.6 / 16, top = -3.2 * (i + 1) / 16; B.boxE('wood', x - 0.24, x + 0.24, -3.2, top + 0.2, -11.8, -10.0); }
-  P.addWall(8.4, 15.6, -10.0, -9.9, 0, 1.0, { kind: 'rail' });
-  // the stair is walled on its open side all the way down to the cellar floor
-  B.solid('brick', 8.0, 15.6, -3.2, -0.2, -10.0, -9.8);
-  P.addWall(15.6, 15.7, -11.8, -9.9, 0, 1.0, { kind: 'rail' });
-  B.boxE('darkWood', 8.4, 15.6, 0.95, 1.0, -10.0, -9.9);
-  B.boxE('darkWood', 15.6, 15.7, 0.95, 1.0, -11.8, -9.9);
-  for (let x = 8.6; x < 15.6; x += 0.5) B.mesh(G.post, 'darkWood', x, 0.5, -9.95, 0.04, 1.0, 0.04);
   B.furniture('wood', 17.4, -6.95, 0, 0.8, 1.8, 1.6, 'linen press');
-  B.fixture({ id: 'service-light', name: 'Service room light', circuit: 'ground', style: 'pendant', pos: [12, 3.3, -8], ceiling: 4, colour: 0xffc786, target: 1.0, range: 8 });
-  roomSwitch('sw-service', 'Service room light', [10.4, 1.4, -6.2], [0, -1], ['service-light']);
+  B.fixture({ id: 'service-light', name: 'Service room light', circuit: 'ground', style: 'pendant', pos: [14, 3.3, -8], ceiling: 4, colour: 0xffc786, target: 1.0, range: 8 });
+  roomSwitch('sw-service', 'Boot room light', [15.1, 1.4, -4.25], [0, -1], ['service-light']);
 
   /* ======================= UPPER FLOOR ======================= */
   B.levelName = 'upper';
   const U = { y0: 4.2, y1: 8.2 };
   B.room = 'house';
   B.wall('x', 12, -18, 18, Object.assign({ outSign: 1 }, EXT, U), [win(-15, 'w-bed1-1'), win(-9, 'w-bed1-2'), win(0, 'w-hall-upper', { w: 1.8, sill: 1.0, head: 3.0 }), win(9, 'w-bed2-1'), win(15, 'w-bed2-2')]);
-  B.wall('x', -12, -18, 18, Object.assign({ outSign: -1 }, EXT, U), [win(-12, 'w-eleanor-bed-r')]);
+  B.wall('x', -12, -18, 18, Object.assign({ outSign: -1 }, EXT, U), [win(-12, 'w-eleanor-bed-r'), win(-2.5, 'w-landing'), win(12, 'w-nursery-b')]);
   B.wall('z', -18, -12, 12, Object.assign({ outSign: -1 }, EXT, U), [win(8, 'w-bed1-w'), win(0, 'w-eleanor-sitting'), win(-9, 'w-eleanor-bed-w')]);
   B.wall('z', 18, -12, 12, Object.assign({ outSign: 1 }, EXT, U), [win(8, 'w-bed2-e'), win(0, 'w-gallery'), win(-9, 'w-nursery')]);
   B.wall('z', -6, -4, 12, Object.assign({ mat: 'panel' }, U), [door(9.6, 'd-bal-bed1'), door(2.6, 'd-bal-eleanor')]);
@@ -291,11 +295,11 @@ BM.buildMansion = function (B, game) {
   B.wall('x', 4, -18, -6, Object.assign({ mat: 'wallpaperBlue' }, U), [door(-12, 'd-bed1-eleanor')]);
   B.wall('x', 4, 6, 18, Object.assign({ mat: 'wallpaper' }, U), [door(17.0, 'd-bed2-gallery')]);
   B.wall('x', 0, -6, 6, Object.assign({ mat: 'panel' }, U), [{ at: 0, w: 2.0, type: 'door', head: 2.6, id: 'd-balcony-landing' }]);
+  // the back of the first floor: one landing over the stair hall; Eleanor's bedroom west of it, the nursery east
   B.wall('x', -4, -18, -6, Object.assign({ mat: 'plaster' }, U), [door(-12, 'd-eleanor-corridor')]);
   B.wall('x', -4, 6, 18, Object.assign({ mat: 'plaster' }, U), [door(12, 'd-gallery-corridor')]);
-  B.wall('x', -6, -18, 18, Object.assign({ mat: 'plaster' }, U), [door(-12, 'd-eleanor-bed'), door(0, 'd-linen'), door(12, 'd-nursery')]);
-  B.wall('z', -6, -12, -6, Object.assign({ mat: 'plaster' }, U));
-  B.wall('z', 6, -12, -6, Object.assign({ mat: 'plaster' }, U));
+  B.wall('z', -6, -12, -4, Object.assign({ mat: 'plaster' }, U), [door(-8, 'd-eleanor-bed')]);
+  B.wall('z', 6, -12, -4, Object.assign({ mat: 'plaster' }, U), [door(-8, 'd-nursery')]);
   // attic floor slab (ceiling of the upper storey and the hall)
   B.levelName = 'attic';
   const atticSlab = B.floor('floor', -18, 18, -12, 12, 8.2, 0.2);
@@ -305,8 +309,8 @@ BM.buildMansion = function (B, game) {
   /* ---- landing and upper corridor (east circuit); the loft ladder ---- */
   B.room = 'upper corridor';
   B.fixture({ id: 'landing-pendant', name: 'Landing light', circuit: 'east', style: 'pendant', pos: [0, 7.3, -2], ceiling: 8, colour: 0xffc786, target: 1.1, range: 8 });
-  B.fixture({ id: 'upcorr-w', name: 'Upper corridor light', circuit: 'west', style: 'pendant', pos: [-12, 7.3, -5], ceiling: 8, colour: 0xffc786, target: 0.9, range: 7 });
-  B.fixture({ id: 'upcorr-e', name: 'Upper corridor light', circuit: 'east', style: 'pendant', pos: [12, 7.3, -5], ceiling: 8, colour: 0xffc786, target: 0.9, range: 7, dead: true });
+  B.fixture({ id: 'upcorr-w', name: 'Upper corridor light', circuit: 'west', style: 'pendant', pos: [-2.5, 7.3, -8.5], ceiling: 8, colour: 0xffc786, target: 0.9, range: 7 });
+  B.fixture({ id: 'upcorr-e', name: 'Upper corridor light', circuit: 'east', style: 'pendant', pos: [2.5, 7.3, -8.5], ceiling: 8, colour: 0xffc786, target: 0.9, range: 7, dead: true });
   roomSwitch('sw-landing', 'Landing lights', [1.4, 5.6, -0.15], [0, -1], ['landing-pendant', 'upcorr-w', 'upcorr-e']);
   // loft ladder from the landing up through a hatch
   for (let i = 0; i < 10; i++) B.box('wood', -3.5, 4.4 + i * 0.4, -4.75, 0.6, 0.05, 0.08);
@@ -397,8 +401,8 @@ BM.buildMansion = function (B, game) {
   /* ---- Linen room ---- */
   B.room = 'linen';
   B.furniture('wood', 0, -11.45, 4.2, 4.0, 2.2, 0.6, 'linen shelves');
-  B.fixture({ id: 'linen-light', name: 'Linen room light', circuit: 'east', style: 'bulkhead', pos: [0, 7.6, -6.25], nz: 1, colour: 0xf2e6d0, target: 0.8, range: 6 });
-  roomSwitch('sw-linen', 'Linen room light', [1.4, 5.6, -6.2], [0, -1], ['linen-light']);
+  B.fixture({ id: 'linen-light', name: 'Back landing light', circuit: 'east', style: 'bulkhead', pos: [0, 7.2, -11.75], nz: 1, colour: 0xf2e6d0, target: 0.8, range: 6 });
+  roomSwitch('sw-linen', 'Back landing light', [1.65, 5.6, -0.15], [0, -1], ['linen-light']);
 
   /* ======================= ATTIC ======================= */
   B.levelName = 'attic'; B.room = 'attic';
@@ -463,7 +467,7 @@ BM.buildMansion = function (B, game) {
   B.wall('z', -18, -12, 2, CEL); B.wall('z', 18, -12, 2, CEL);
   B.wall('x', -12, -18, 18, CEL, [{ at: -12, w: 1.3, type: 'door', head: 2.2, id: 'd-cellar-hatch', casing: 'brick' }]);
   B.wall('z', -6, -12, 2, { mat: 'brick', y0: CY, y1: 0 }, [door(-4, 'd-cellar-w')]);
-  B.wall('z', 6, -12, 2, { mat: 'brick', y0: CY, y1: 0 }, [door(-5, 'd-cellar-e')]);
+  B.wall('z', 6, -12, 2, { mat: 'brick', y0: CY, y1: 0 }, [door(0.6, 'd-cellar-e')]);
   // wine racks, boiler, coal
   B.furniture('wood', -17.5, -5, CY, 0.6, 2.2, 6.0, 'wine rack');
   for (let i = 0; i < 24; i++) B.mesh(G.cyl, 'fabricGreen', -17.45, CY + 0.3 + (i % 6) * 0.33, -7.4 + Math.floor(i / 6) * 1.6, 0.09, 0.3, 0.09).userData.bottle = true;

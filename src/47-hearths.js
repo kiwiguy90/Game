@@ -88,7 +88,7 @@ BM.buildHearths = function (B, game) {
   B.room = 'back sitting';
   hearth({ id: 'sitting', name: 'Sitting room fire', pos: [-14.0, 0, 3.9], n: [0, -1], style: 'iron', w: 1.4, h: 1.1 });
   B.room = 'kitchen';
-  firebox({ id: 'range', name: 'Kitchen range', pos: [-16.95, 0.42, -9.0], n: [1, 0], kind: 'range', target: 1.0 });
+  firebox({ id: 'range', name: 'Kitchen range', pos: [-13.1, 0.42, -9.6], n: [1, 0], kind: 'range', target: 1.0 });
   B.levelName = 'upper';
   B.room = 'bedroom1';
   hearth({ id: 'bedroom1', name: 'Bedroom fire', pos: [-14.0, 4.2, 4.1], n: [0, 1], style: 'iron', w: 1.3, h: 1.1 });
@@ -97,7 +97,7 @@ BM.buildHearths = function (B, game) {
   B.room = "eleanor's sitting room";
   hearth({ id: 'eleanor', name: "Eleanor's fire", pos: [-15.5, 4.2, 3.9], n: [0, -1], style: 'iron', w: 1.3, h: 1.1 });
   B.room = 'nursery';
-  hearth({ id: 'nursery', name: 'Nursery fire', pos: [9.0, 4.2, -6.1], n: [0, -1], style: 'iron', w: 1.2, h: 1.0 });
+  hearth({ id: 'nursery', name: 'Nursery fire', pos: [9.0, 4.2, -4.1], n: [0, -1], style: 'iron', w: 1.2, h: 1.0 });
 
   /* ---- the lodge's stove ---- */
   B.zone = 'exterior'; B.levelName = 'ground'; B.room = 'lodge';
@@ -116,13 +116,13 @@ BM.buildHearths = function (B, game) {
   B.room = 'library';
   B.furniture('darkWood', 13.5, 2.6, 0, 0.5, 0.8, 0.5, 'library stand'); candle({ id: 'candle-library', pos: [13.5, 0.8, 2.6], n: [0, -1] });
   C('candle-sitting', 'back sitting', [-7.0, 0.8, -3.4], [0, 1]);
-  C('candle-kitchen', 'kitchen', [-12.6, 0.9, -8.5], [0, 1]);
-  C('candle-pantry', 'pantry', [-5.3, 1.2, -7.6], [1, 0]);
-  C('candle-bathroom', 'bathroom', [5.55, 0.85, -7.5], [-1, 0]);
+  C('candle-kitchen', 'kitchen', [-8.95, 0.9, -8.3], [1, 0]);
+  C('candle-pantry', 'pantry', [-16.6, 1.2, -4.75], [0, -1]);
+  C('candle-bathroom', 'bathroom', [9.55, 0.85, -7.95], [-1, 0]);
   B.zone = 'mansion'; B.levelName = 'ground'; B.room = 'service';
   B.furniture('wood', 14.5, -7.0, 0, 0.5, 0.8, 0.5, 'stand'); candle({ id: 'candle-service', pos: [14.5, 0.8, -7.0], n: [-1, 0] });
   B.room = 'corridor';
-  B.furniture('wood', -5.4, -3.2, 0, 0.5, 0.8, 0.5, 'hall stand'); candle({ id: 'candle-corridor', pos: [-5.4, 0.8, -3.2], n: [1, 0] });
+  B.furniture('wood', -5.45, -9.5, 0, 0.5, 0.8, 0.5, 'hall stand'); candle({ id: 'candle-corridor', pos: [-5.45, 0.8, -9.5], n: [1, 0] });
   B.levelName = 'upper'; B.room = 'upper corridor';
   B.furniture('darkWood', 2.0, -3.4, 4.2, 0.5, 0.8, 0.5, 'landing table'); candle({ id: 'candle-landing', pos: [2.0, 5.0, -3.4], n: [0, 1] });
   C('candle-bedroom1', 'bedroom1', [-14.3, 4.95, 11.3], [0, -1], 'upper');

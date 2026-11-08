@@ -64,8 +64,8 @@ BM.buildLift = function (B, game) {
     wall(LIFT.wall, LIFT.x0, LIFT.gate1, LIFT.z1, y0, y1);
     wall(LIFT.wall, LIFT.x0, LIFT.gate0, LIFT.gate1, y0 + GATE_H + 0.1, y1);
     if (f.level === 'attic') wall(LIFT.x1, LIFT.x1 + 0.1, LIFT.z0, LIFT.z1, y0, y1);
-    else {
-      // set into the end of the corridor: the wall carries on either side of the shaft, closing off the
+    else if (f.level !== 'cellar') {
+      // set into the east wall of the stair hall: the wall carries on either side of the shaft, closing off the
       // space behind it, and the way through to the east wing stays open beyond (z below -4)
       const zEnd = f.level === 'cellar' ? 1.8 : -0.1;
       wall(LIFT.wall, LIFT.x0, LIFT.z1, zEnd, y0, y1);

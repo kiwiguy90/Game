@@ -30,10 +30,13 @@ requests. There is no build step.
 It begins in your own car, coming up Blackthorn Lane after midnight with the
 radio playing: an old abandoned country road through miles of pine forest,
 the bridge behind you under the river, the nearest town a hundred and fifty
-kilometres away, and no signal. A warning lamp comes on, smoke leaks from the
-bonnet, you pull over at the gates, the engine dies and the battery drains:
-the dash, the headlights and the radio fade out together. When you get out the
-tyre is flat too. Press E, Space, Enter or Escape to skip the arrival.
+kilometres away, and no signal. You are at the wheel of a modern SUV, the
+cluster and the radio touchscreen glowing, the wipers going. A tyre blows with a
+bang and starts slapping round; then something under the bonnet pops and fizzes,
+the dash flickers, and smoke pours out. You pull over at the gates, the engine
+dies, and the screens, the headlights and the radio fade out together. When you
+get out the tyre is in shreds and the battery is dead. Press E, Space, Enter or
+Escape to skip the arrival.
 
 The lodge's telephone is dead. The gate box in the lodge has a lever that
 releases the gates; past the contact in the drive they swing shut and bolt
@@ -103,7 +106,7 @@ draw-call counts are what the renderer actually issues.
 | Suite | Checks |
 | --- | --- |
 | builds | Boots and runs with no frame errors or network use; 27 house windows; light count constant |
-| arrival | The old road, poles and forest; the car drives in, stalls, its lights die; you get out and walk; skippable |
+| arrival | The old road, poles and forest; a blowout, a pop and smoke under the bonnet; the SUV pulls over, stalls, its lights and radio die; you get out and walk; skippable |
 | hud | The side lighting panel switches estate groups and rooms from anywhere; number keys; L; walking and running speeds |
 | appliances | Lodge and house appliances: switching, boiling, cycling, clocks stopping, coming back by themselves |
 | circuits | Lodge → estate lights and hall → MAIN, start-up behaviours, storm trip, appliances, fire, blown and faulty bulbs |

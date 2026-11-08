@@ -712,7 +712,7 @@ class Game {
     if (this.carry !== 'spare wheel' || this.busy) return;
     this.carry = null; this.spare.fitted = true;
     this.busy = { t: 0, dur: this.headless ? 0.05 : 9, done: () => {
-      this.car.flat = false; const w = this.car.wheels[0]; w.scale.set(0.66, 0.24, 0.66); w.position.y = 0.33;
+      this.car.flat = false; this.car.setFlat(0);
       this.ui.say('Last nut tight, jack down. The car sits level again.' + (this.battery.fitted ? ' Now the key.' : ' It still needs a battery.'), 5);
       if (this.battery.fitted) this.startOutro();
     } };
@@ -745,8 +745,8 @@ class Game {
   startOutro() {
     const p = this.player, car = this.car, c = car.group.position;
     this.outro = { t: 0, step: 0, car: true, radio: 0, engine: 0, rev: 1, x: c.x, z: c.z, yaw: -Math.PI / 2 };
-    this.carWall.enabled = false;
-    p.x = c.x - 0.45; p.z = c.z + 0.4; p.y = 1.22 - BM.PLAYER.eye; p.pitch = -0.04; p.yaw = -Math.PI / 2;
+    this.carWall.enabled = false; car.setCabin(true);
+    const e = car.eye(); p.x = e.x; p.z = e.z; p.y = e.y - BM.PLAYER.eye; p.pitch = -0.06; p.yaw = -Math.PI / 2;
   }
   updateOutro(dt) {
     const o = this.outro, p = this.player, g = this.grid, car = this.car;
@@ -754,8 +754,8 @@ class Game {
     const t = o.t;
     // the dash wakes, the engine turns over and catches, the headlights come up, the radio comes back
     const dash = Math.min(1, t / 1.5);
-    car.cluster.material.color.setRGB(0.05 + 0.12 * dash, 0.08 + 0.16 * dash, 0.14 + 0.25 * dash);
-    car.warn.material.color.setHex(t < 2.5 ? 0xff7a10 : 0x200800);
+    Object.assign(car.dashState, { engine: t < 2.5, battery: t < 2.5, tpms: false, flicker: false, speed: 0, rpm: o.engine > 0.05 ? 0.8 + (o.rev - 0.8) * 2 : 0 });
+    car.radioState.t = t; car.radioState.crackle = false; car.radioState.level = dash;
     if (t > 1.0 && !o.cranked) { o.cranked = true; this.audio.crank && this.audio.crank(); }
     o.engine = t < 1.0 ? 0 : t < 2.6 ? 0.08 : Math.min(0.2, 0.1 + (t - 2.6) * 0.03);
     o.rev = t < 2.6 ? 0.5 + 0.3 * Math.sin(t * 20) : 0.8 + Math.min(1, Math.max(0, t - 6) / 8) * 0.7;
@@ -769,22 +769,18 @@ class Game {
     o.x -= speed * dt * Math.max(0, Math.cos(o.yaw + Math.PI / 2) * -1); // along -x once turned
     if (turn > 0 && turn < 1) { o.z += dt * 0.6; }
     car.group.position.set(o.x, Math.sin(t * 9) * 0.006 * Math.min(1, speed / 3), o.z); car.group.rotation.y = o.yaw;
-    const fx = Math.sin(o.yaw + Math.PI / 2) * 0, cosY = -Math.sin(o.yaw), sinY = -Math.cos(o.yaw); // the car's nose direction in world
+    car.spin(speed * dt); car.wipe(dt, t > 2.6, t);
+    car.dashState.speed = speed * 3.6; car.setDash(dash);
     car.beams.forEach((l, i) => {
-      l.on = head > 0.02; l.target = 2.6 * head; l.colour = 0xfff0c8; l.flicker = 0; l.lightType = 'steady';
-      l.pos.x = o.x + cosY * 2.3 + sinY * (i ? -0.62 : 0.62) * -1; l.pos.z = o.z + sinY * 2.3 + cosY * (i ? 0.62 : -0.62);
-      l.dir = [cosY, -0.12, sinY];
+      l.corona = 0; l.on = head > 0.02; l.target = 2.6 * head; l.colour = 0xfff0c8; l.flicker = 0; l.lightType = 'steady';
+      const w = car.toWorld(i ? 0.62 : -0.62, 0.92, -2.3); l.pos.x = w.x; l.pos.y = w.y; l.pos.z = w.z;
+      l.dir = [-Math.sin(o.yaw), -0.12, -Math.cos(o.yaw)];
       this.fx.moveLight(l);
     });
-    car.heads.forEach(m => m.material.color.setRGB(head, 0.92 * head, 0.7 * head * head));
-    car.tails.forEach(m => m.material.color.setRGB(0.12 + 0.6 * head, 0.02, 0.02));
-    car.dial.material.color.setRGB(0.6 * Math.min(1, o.radio * 20), 0.35 * Math.min(1, o.radio * 20), 0.05);
-    p.x = o.x + cosY * 0.0 - sinY * 0.45 * 0 + (cosY * -0.0) + (-sinY) * 0.45 * 0; // seat: stays with the car below
-    { const sx = -0.45, sz = 0.4; p.x = o.x + sx * -sinY * -1 * 0 + (cosY * 0) + (sx * (-sinY) * 0) + ( -sinY * sx * 0 ); }
-    // the seat in car space (x right, z back along the nose): world = pos + nose * (-sz) + right * sx
-    { const rx = -sinY, rz = cosY; p.x = o.x + cosY * -0.4 + rx * -0.45; p.z = o.z + sinY * -0.4 + rz * -0.45; p.y = 1.22 - BM.PLAYER.eye; }
-    p.yaw = Math.atan2(-cosY, -sinY) + 0; // look along the nose
-    p.yaw = -Math.atan2(cosY, -sinY) + Math.PI; p.pitch = -0.04;
+    car.setLamps(head);
+    // the driver's seat goes with the car; you look along the nose
+    const e = car.eye(); p.x = e.x; p.z = e.z; p.y = e.y - BM.PLAYER.eye;
+    p.yaw = o.yaw; p.pitch = -0.06;
     if (t > 9.5 && !o.said2) { o.said2 = true, this.ui.say('The gates go by on the right, open, and the house above them with every window lit. You do not look back at the windows.', 6); }
     // the house goes dark from the top down, then the grounds from the house outwards
     const STEPS = [

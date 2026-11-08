@@ -241,6 +241,26 @@ class Synth {
       this.burst(this.white, 'bandpass', 1500, 4, 0.12 * v, 0.01, 0.18, w, pan);
     }
   }
+  /* A tyre blowing out at speed: a crack like a shot, a thump through the floor. */
+  tyreBang() {
+    this.burst(this.white, 'lowpass', 4000, 0.7, 1.0, 0.001, 0.22);
+    this.tone('sine', 95, 28, 0.9, 0.002, 0.6);
+    this.burst(this.brown, 'lowpass', 300, 1, 0.7, 0.005, 1.0);
+    this.burst(this.white, 'bandpass', 900, 2, 0.25, 0.01, 0.5, 0.05);
+  }
+  /* The flat slapping round: rubber on the arch, once a turn. */
+  flap(v) {
+    v = v === undefined ? 1 : v;
+    this.burst(this.brown, 'lowpass', 380, 1.2, 0.42 * v, 0.003, 0.09);
+    this.burst(this.white, 'bandpass', 700, 2.5, 0.14 * v, 0.002, 0.06);
+  }
+  /* Under the bonnet something shorts: a sharp pop, then a long electrical fizzle. */
+  pop() {
+    this.burst(this.white, 'highpass', 1500, 0.8, 0.9, 0.001, 0.06);
+    this.tone('square', 320, 70, 0.35, 0.002, 0.14);
+    this.burst(this.white, 'highpass', 4200, 0.7, 0.16, 0.06, 1.9, 0.05);
+    for (let i = 0; i < 46; i++) { const w = 0.05 + Math.pow(Math.random(), 1.6) * 1.9; this.burst(this.white, 'bandpass', 2500 + Math.random() * 4500, 9, 0.06 + Math.random() * 0.16, 0.001, 0.015 + Math.random() * 0.03, w); }
+  }
   /* The car's engine coughing and dying. */
   cough() {
     for (const [w, v] of [[0, 0.9], [0.45, 0.7], [0.8, 0.5], [1.05, 0.3]]) { this.burst(this.brown, 'lowpass', 260, 2, 0.8 * v, 0.01, 0.16, w); this.tone('sawtooth', 44, 26, 0.25 * v, 0.01, 0.2, w); }

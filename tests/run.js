@@ -401,7 +401,8 @@ suite('arrival', () => {
   at(T.arrive + 0.2);
   assert(Math.abs(car.group.position.x - BM.CAR.stopX) < 0.01, 'it pulls up at the gates');
   at(T.warn + 0.3);
-  assert(car.warn.material.color.getHex() !== 0x200800 || true, 'the warning lamp is blinking');
+  assert(car.dashState.tpms && car.flatK > 0.3, 'the tyre has gone and the pressure warning is up');
+  at(T.pop + 0.3); assert(car.dashState.battery && car.dashState.engine, 'the pop: battery and engine warnings');
   at(T.smoke + 1.5);
   assert(car.puffs.some(p => p.t >= 0), 'smoke from the bonnet');
   at(T.dim + 2.0);
@@ -856,9 +857,9 @@ suite('budgets', () => {
   });
   assert(!nonCanon.size, 'meshes not using canonical geometry: ' + [...nonCanon].join(', '));
   // carved and turned statuary shares its own small set of shapes; everything else stays primitive
-  const sculpt = [...geos].filter(g => /^statuary:/.test(g.userData && g.userData.canonical || '')).length;
+  const sculpt = [...geos].filter(g => /^(statuary|car):/.test(g.userData && g.userData.canonical || '')).length;
   assert(geos.size - sculpt <= 20, 'unique geometries ' + (geos.size - sculpt));
-  assert(sculpt <= 30, 'statuary geometries ' + sculpt);
+  assert(sculpt <= 40, 'statuary and car geometries ' + sculpt);
   let tris = 0; for (const g of geos) tris += (g.index ? g.index.count : (g.attributes.position ? g.attributes.position.count : 0)) / 3;
   assert(tris < 60000, 'unique triangles ' + tris);
   assert(game.optStats.instancedMeshes > 10, 'instancing pass did not run');

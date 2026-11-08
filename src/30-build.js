@@ -34,6 +34,8 @@ G.wedge = (function () {
 })();
 G.pyramid = new THREE.ConeGeometry(0.5, 1, 4).rotateY(Math.PI / 4);   // square spires, pinnacles
 G.spire = new THREE.ConeGeometry(0.5, 1, 8).rotateY(Math.PI / 8);     // octagonal tower spires
+/* A grass blade: one tapering triangle, base on the ground, tip at y = 1 (drawn from both sides). */
+G.blade = (function () { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute([-0.5, 0, 0, 0.5, 0, 0, 0.08, 1, 0, 0.5, 0, 0, -0.5, 0, 0, 0.08, 1, 0], 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute([0, 1, 0.25, 0, 1, 0.25, 0, 1, 0.25, 0, 1, -0.25, 0, 1, -0.25, 0, 1, -0.25], 3)); return g; })(); // both faces, lit like the ground
 for (const k in G) G[k].userData.canonical = k;
 
 /* ---------------- procedural textures ---------------- */
@@ -90,9 +92,12 @@ function tex(name) {
     }); break;
     case 'limestone': t = canvasTex(128, (g, s, r) => speckle(g, s, r, '#b9b29d', 0.16, 2200, 2)); break;
     case 'gravel': t = canvasTex(128, (g, s, r) => speckle(g, s, r, '#8a8273', 0.35, 3500, 2)); break;
-    case 'grass': t = canvasTex(128, (g, s, r) => {
-      speckle(g, s, r, '#3a4a2a', 0.2, 2500, 2);
-      for (let i = 0; i < 900; i++) { g.fillStyle = 'rgba(' + (60 + r() * 40 | 0) + ',' + (80 + r() * 50 | 0) + ',40,0.5)'; g.fillRect(r() * s, r() * s, 1, 3 + r() * 4); }
+    case 'grass': t = canvasTex(256, (g, s, r) => {
+      speckle(g, s, r, '#34422a', 0.2, 6000, 2);
+      // patches: dead brown, dark moss, a little clover
+      for (let i = 0; i < 26; i++) { const x = r() * s, y = r() * s, rad = 10 + r() * 34, col = ['rgba(110,96,60,0.32)', 'rgba(26,40,22,0.4)', 'rgba(70,96,44,0.3)'][i % 3]; const gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, col); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(x - rad, y - rad, rad * 2, rad * 2); }
+      // blades, light and dark, leaning with the wind
+      for (let i = 0; i < 2600; i++) { const v = r(); g.strokeStyle = v < 0.25 ? 'rgba(140,128,80,0.55)' : v < 0.6 ? 'rgba(' + (60 + r() * 40 | 0) + ',' + (90 + r() * 50 | 0) + ',42,0.6)' : 'rgba(20,34,18,0.55)'; g.lineWidth = 1; const x = r() * s, y = r() * s, l = 3 + r() * 7; g.beginPath(); g.moveTo(x, y); g.lineTo(x + l * 0.35, y - l); g.stroke(); }
     }); break;
     case 'hedge': t = canvasTex(128, (g, s, r) => {
       speckle(g, s, r, '#1d3018', 0.25, 1800, 4);
@@ -218,6 +223,19 @@ function worldMapped(mat, scale, sway, weather) {
   mat.userData.weather = !!weather;
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.bmTexScale = { value: scale };
+    // the world-space varyings first: the sway below replaces the projection include they hang off
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 bmWP;\nvarying vec3 bmWN;')
+      .replace('#include <project_vertex>', [
+        '#include <project_vertex>',
+        'vec4 bmW = vec4(transformed, 1.0);',
+        'mat3 bmN = mat3(modelMatrix);',
+        '#ifdef USE_INSTANCING',
+        'bmW = instanceMatrix * bmW; bmN = bmN * mat3(instanceMatrix);',
+        '#endif',
+        'bmWP = (modelMatrix * bmW).xyz;',
+        'bmWN = bmN * objectNormal;',
+      ].join('\n'));
     if (sway) {
       // branches, grass and willow strands bend with the wind; more the higher they are
       shader.uniforms.bmTime = BM.wind;
@@ -237,18 +255,6 @@ function worldMapped(mat, scale, sway, weather) {
           'gl_Position = projectionMatrix * mvPosition;',
         ].join('\n'));
     }
-    shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 bmWP;\nvarying vec3 bmWN;')
-      .replace('#include <project_vertex>', [
-        '#include <project_vertex>',
-        'vec4 bmW = vec4(transformed, 1.0);',
-        'mat3 bmN = mat3(modelMatrix);',
-        '#ifdef USE_INSTANCING',
-        'bmW = instanceMatrix * bmW; bmN = bmN * mat3(instanceMatrix);',
-        '#endif',
-        'bmWP = (modelMatrix * bmW).xyz;',
-        'bmWN = bmN * objectNormal;',
-      ].join('\n'));
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', '#include <common>\nvarying vec3 bmWP;\nvarying vec3 bmWN;\nuniform float bmTexScale;')
       .replace('#include <map_fragment>', [
@@ -325,6 +331,12 @@ const MAT_DEFS = {
   pine: [0x18231a, 'hedge', 0.35, 2, { sway: { base: 1.5, amount: 0.02 } }],
   pineDark: [0x111a13, 'hedge', 0.35, 2, { sway: { base: 1.5, amount: 0.02 } }],
   moss: [0x2c3a22, 'grass', 0.4, 2],
+  longGrass: [0x8a9a66, 'grass', 0.5, 2, { sway: { base: 0.0, amount: 0.22 } }],
+  dryGrass: [0xa89870, 'grass', 0.5, 2, { sway: { base: 0.0, amount: 0.25 } }],
+  beardMoss: [0x6a6e5a, 'hedge', 1.2, 2, { sway: { base: 1.5, amount: 0.05 } }],
+  birch: [0xd8d2c4, 'bark', 0.9, 4, { bump: 2 }],
+  scum: [0x22341a, 'water', 0.25, 40],
+  sapLeaves: [0x3a4a26, 'hedge', 0.6, 3, { sway: { base: 0.8, amount: 0.05 } }],
   tile: [0xffffff, 'tile', 0.8, 30],
   grate: [0xffffff, 'grate', 1.0, 30],
   roof: [0xffffff, 'roof', 0.5, 6, { bump: 2 }],
@@ -579,7 +591,6 @@ class Builder {
     const lower = this.box('glass', 0, h / 4, 0, axis === 'x' ? w : 0.02, h / 2, axis === 'x' ? 0.02 : w, 0, sashG); lower.userData.glass = true;
     this.box(sashFm, 0, h / 4, 0, axis === 'x' ? 0.04 : 0.065, h / 2, axis === 'x' ? 0.065 : 0.04, 0, sashG);                      // its glazing bar
     this.box(sashFm, 0, 0.03, 0, axis === 'x' ? w : 0.08, 0.06, axis === 'x' ? 0.08 : w, 0, sashG);                                 // bottom rail
-    for (const e2 of [-1, 1]) this.box(sashFm, axis === 'x' ? e2 * (w / 2 - 0.03) : 0, h / 4, axis === 'x' ? 0 : e2 * (w / 2 - 0.03), axis === 'x' ? 0.055 : 0.085, h / 2, axis === 'x' ? 0.085 : 0.055, 0, sashG);
     sashG.traverse(m => { m.userData.dynamic = true; });
     const g = axis === 'x' ? [s, e, c - 0.03, c + 0.03] : [c - 0.03, c + 0.03, s, e];
     this.phys.addWall(g[0], g[1], g[2], g[3], sill, head, { kind: 'glass' });

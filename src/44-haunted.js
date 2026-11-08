@@ -185,8 +185,8 @@ BM.buildHauntedGarden = function (B, game) {
   /* ---- dead grass clumps ---- */
   const grass = (x, z, s) => {
     for (let i = 0; i < 6; i++) {
-      const m = B.box('deadGrass', x + (rnd() - 0.5) * 0.4, 0.3 * s, z + (rnd() - 0.5) * 0.4, 0.03, 0.62 * s, 0.03);
-      m.rotation.set((rnd() - 0.5) * 0.7, rnd() * 3, (rnd() - 0.5) * 0.7); m.updateMatrix();
+      const m = B.mesh(G.blade, 'dryGrass', x + (rnd() - 0.5) * 0.4, 0, z + (rnd() - 0.5) * 0.4, 0.05 + rnd() * 0.04, 0.62 * s * (0.7 + rnd() * 0.5), 1);
+      m.rotation.set((rnd() - 0.5) * 0.6, rnd() * 3, (rnd() - 0.5) * 0.6); m.updateMatrix();
     }
   };
   let clumps = 0;

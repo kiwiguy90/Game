@@ -180,6 +180,7 @@ class Game {
     BM.buildHauntedGarden(this.B, this);
     BM.buildGothic(this.B, this);
     BM.buildRoad(this.B, this);
+    BM.buildOvergrown(this.B, this);
     BM.buildDressing(this.B, this);
     BM.buildSwitchboards(this.B, this);
     BM.buildHearths(this.B, this);
@@ -672,6 +673,7 @@ class Game {
     this.updateHingedDoors(dt);
     BM.updateWindows(this, dt);
     BM.updateGateMonitor(this, dt);
+    BM.updateOvergrown(this, dt, this.time);
     const sd = this.stormDoors;
     if (sd) {
       sd.boltT += ((sd.bolted ? 0 : 1) - sd.boltT) * Math.min(1, dt * 5); sd.bolt.position.x = -12 - 0.3 * sd.boltT;

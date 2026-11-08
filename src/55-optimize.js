@@ -78,7 +78,7 @@ BM.optimize = function (game) {
   Object.assign(stats, BM.dedupe(game.scene));
   stats.instancedMeshes = 0; stats.instancesAbsorbed = 0;
   for (const z in game.B.zones) {
-    const r = BM.instance(game.B.zones[z], 12);
+    const r = BM.instance(game.B.zones[z], 4);
     stats.instancedMeshes += r.made; stats.instancesAbsorbed += r.absorbed;
   }
   // shadows: everything receives; furniture-scale things cast

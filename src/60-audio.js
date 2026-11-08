@@ -65,6 +65,7 @@ class Synth {
     this.loops.record = this.toneLoop('triangle', 262, 'lowpass', 1400);
     this.loops.recordBass = this.toneLoop('sine', 131, 'lowpass', 400);
     this.loops.fire = this.noiseLoop(this.brown, 'lowpass', 900, 0.8);
+    this.loops.fountain = this.noiseLoop(this.white, 'bandpass', 1400, 0.6);
     this.loops.engine = this.toneLoop('sawtooth', 38, 'lowpass', 240);
     // the car radio: a song sequenced live through a small, tinny speaker
     { const g = ctx.createGain(); g.gain.value = 0; const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = 0.7;
@@ -389,6 +390,8 @@ class Synth {
     this.set('fire', fireV * 0.3, firePos ? pan(firePos) : 0);
     if (fireV > 0 && Math.random() < dt * 6) this.burst(this.white, 'highpass', 2500, 1, 0.12 * fireV, 0.001, 0.03);
     this.set('hum', grid.live('main') && zone === 'house' ? 0.03 : 0);
+    const fp = { x: 0, y: 1, z: 24 };
+    this.set('fountain', game.fountainFx && game.fountainFx.on ? near(fp, 22) * 0.22 : 0, pan(fp));
     // the arrival: your engine and your car radio, on low
     const intro = game.intro;
     this.set('engine', intro ? intro.engine : 0);

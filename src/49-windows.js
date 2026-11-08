@@ -56,7 +56,6 @@ BM.buildWindows = function (B, game) {
       const g = new THREE.Group(); g.position.set(px + tx * e * (w.w / 2 + 0.55), (top + bottom) / 2, pz + tz * e * (w.w / 2 + 0.55)); g.rotation.y = ry; B.root.add(g);
       // the panel's fixed edge is at the group's origin; it extends towards the window's centre
       B.box('drape', -e * 0.5, 0, 0, 1.0, H - 0.1, 0.09, 0, g);
-      for (let k = 0; k < 5; k++) B.box('drape', -e * (0.1 + k * 0.2), 0, 0.055, 0.07, H - 0.2, 0.03, 0, g); // folds
       g.traverse(m => { m.userData.dynamic = true; });
       return { g, e };
     });

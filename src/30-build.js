@@ -592,27 +592,34 @@ class Builder {
       ? this.box('glass', mid, cy + h / 4, c, w, h / 2, 0.02)
       : this.box('glass', c, cy + h / 4, mid, 0.02, h / 2, w);
     glass.userData.glass = true;
-    const sashG = new THREE.Group(); sashG.position.set(axis === 'x' ? mid : c, sill, axis === 'x' ? c : mid); this.root.add(sashG);
+    // the lower sash runs in its own track, just inside the upper one, so it can slide up in front of it
+    const inset = -outSign * 0.045;
+    const sashG = new THREE.Group(); sashG.position.set(axis === 'x' ? mid : c + inset, sill, axis === 'x' ? c + inset : mid); this.root.add(sashG);
     const sashFm = op.frame || 'white';
     const lower = this.box('glass', 0, h / 4, 0, axis === 'x' ? w : 0.02, h / 2, axis === 'x' ? 0.02 : w, 0, sashG); lower.userData.glass = true;
     this.box(sashFm, 0, h / 4, 0, axis === 'x' ? 0.04 : 0.065, h / 2, axis === 'x' ? 0.065 : 0.04, 0, sashG);                      // its glazing bar
     this.box(sashFm, 0, 0.03, 0, axis === 'x' ? w : 0.08, 0.06, axis === 'x' ? 0.08 : w, 0, sashG);                                 // bottom rail
+    this.box(sashFm, 0, h / 2 - 0.035, 0, axis === 'x' ? w : 0.08, 0.07, axis === 'x' ? 0.08 : w, 0, sashG);                       // its meeting rail
+    this.box(sashFm, 0, h / 4, 0, axis === 'x' ? w : 0.06, 0.04, axis === 'x' ? 0.06 : w, 0, sashG);                              // its cross bar
+    for (const e2 of [-1, 1]) this.box(sashFm, axis === 'x' ? e2 * (w / 2 - 0.03) : 0, h / 4, axis === 'x' ? 0 : e2 * (w / 2 - 0.03), axis === 'x' ? 0.05 : 0.07, h / 2, axis === 'x' ? 0.07 : 0.05, 0, sashG); // its stiles
     sashG.traverse(m => { m.userData.dynamic = true; });
     const g = axis === 'x' ? [s, e, c - 0.03, c + 0.03] : [c - 0.03, c + 0.03, s, e];
     this.phys.addWall(g[0], g[1], g[2], g[3], sill, head, { kind: 'glass' });
     // a sash window: stiles, a stout meeting rail, one glazing bar in each sash, a sill
     const bar = 0.04, fm = op.frame || 'white', sash = this.zone === 'mansion' || this.zone === 'exterior';
     if (axis === 'x') {
-      this.box(fm, mid, cy, c, bar, h, 0.07);
-      this.box(fm, mid, cy, c, w, 0.075, 0.09);
-      for (const e of [-1, 1]) { this.box(fm, mid + e * (w / 2 - 0.03), cy, c, 0.06, h, 0.09); this.box(fm, mid, cy + e * h / 4, c, w, bar, 0.06); }
+      this.box(fm, mid, cy + h / 4, c, bar, h / 2, 0.07);
+      this.box(fm, mid, cy + 0.03, c, w, 0.06, 0.09);
+      for (const e of [-1, 1]) this.box(fm, mid + e * (w / 2 - 0.03), cy, c + inset / 2, 0.06, h, 0.15);
+      this.box(fm, mid, cy + h / 4, c, w, bar, 0.06);
       this.box(fm, mid, head - 0.03, c, w, 0.06, 0.09);
       this.box('stone', mid, sill - 0.04, c + outSign * 0.05, w + 0.2, 0.08, t + 0.12);
       if (sash) for (const e of [-1, 1]) this.box('shutter', mid + e * (w / 2 + 0.12), cy, c - outSign * (t / 2 - 0.05), 0.2, h - 0.05, 0.05);
     } else {
-      this.box(fm, c, cy, mid, 0.07, h, bar);
-      this.box(fm, c, cy, mid, 0.09, 0.075, w);
-      for (const e of [-1, 1]) { this.box(fm, c, cy, mid + e * (w / 2 - 0.03), 0.09, h, 0.06); this.box(fm, c, cy + e * h / 4, mid, 0.06, bar, w); }
+      this.box(fm, c, cy + h / 4, mid, 0.07, h / 2, bar);
+      this.box(fm, c, cy + 0.03, mid, 0.09, 0.06, w);
+      for (const e of [-1, 1]) this.box(fm, c + inset / 2, cy, mid + e * (w / 2 - 0.03), 0.15, h, 0.06);
+      this.box(fm, c, cy + h / 4, mid, 0.06, bar, w);
       this.box(fm, c, head - 0.03, mid, 0.09, 0.06, w);
       this.box('stone', c + outSign * 0.05, sill - 0.04, mid, t + 0.12, 0.08, w + 0.2);
       if (sash) for (const e of [-1, 1]) this.box('shutter', c - outSign * (t / 2 - 0.05), cy, mid + e * (w / 2 + 0.12), 0.05, h - 0.05, 0.2);

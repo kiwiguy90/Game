@@ -325,13 +325,13 @@ BM.buildFurnishings = function (B, game) {
   game.lodgeBackDoor = B.hingedDoor({ id: 'lodge-back-door', axis: 'z', at: 83.05, c: -14, w: 0.9, h: 2.05, hinge: 'high', swing: -1, outside: 1, mat: 'shutter', panelMat: 'boards', dur: 1.2, sound: 'creak', label: 'the back room door', wallT: 0.4 });
   game.lodgeBackDoor.open = true; game.lodgeBackDoor.opened = true; game.lodgeBackDoor.t = 1; game.lodgeBackDoor.wall.enabled = false; game.lodgeBackDoor.angle(game.lodgeBackDoor.maxAngle);
   B.room = 'lodge back room';
-  B.furniture('iron', -16.05, 85.7, 0, 1.9, 0.5, 0.85, 'camp bed');
+  B.furniture('iron', -16.1, 85.7, 0, 1.85, 0.5, 0.85, 'camp bed');
   B.box('linen', -16.05, 0.55, 85.7, 1.8, 0.08, 0.8); B.box('fabricGreen', -15.7, 0.62, 85.7, 1.1, 0.05, 0.82); B.mesh(G.sphere, 'linen', -16.75, 0.64, 85.7, 0.4, 0.1, 0.55);
   B.furniture('darkWood', -16.75, 82.0, 0, 0.45, 0.8, 0.9, 'washstand');
   B.mesh(G.sphere, 'porcelain', -16.75, 0.86, 82.0, 0.36, 0.08, 0.36); B.mesh(G.sphere, 'porcelain', -16.7, 1.0, 81.8, 0.12, 0.24, 0.12);
   mirror(-17.02, 1.55, 82.0, Math.PI / 2, 0.36, 0.45);
-  B.furniture('darkWood', -14.75, 85.85, 0, 0.9, 0.85, 0.45, 'chest of drawers');
-  B.mesh(G.cyl, 'black', -14.75, 0.95, 85.85, 0.12, 0.2, 0.12); label('Woman\'s Realm', -14.55, 0.86, 85.75, 0.3, 0.2, 0.26, { w: 96, h: 128, size: 14, bg: '#c8384a', fg: '#fff' }).rotation.x = -Math.PI / 2;
+  B.furniture('darkWood', -14.65, 85.85, 0, 0.88, 0.85, 0.45, 'chest of drawers');
+  B.mesh(G.cyl, 'black', -14.65, 0.95, 85.85, 0.12, 0.2, 0.12); label('Woman\'s Realm', -14.45, 0.86, 85.75, 0.3, 0.2, 0.26, { w: 96, h: 128, size: 14, bg: '#c8384a', fg: '#fff' }).rotation.x = -Math.PI / 2;
   B.box('black', -15.2, 0.12, 81.4, 0.14, 0.24, 0.3); B.box('black', -15.0, 0.12, 81.4, 0.14, 0.24, 0.3); // wellingtons
   B.box('leather', -17.0, 1.7, 84.8, 0.08, 0.15, 1.1); // the shotgun case on its pegs
   for (const z of [84.4, 85.2]) B.box('darkWood', -17.0, 1.6, z, 0.12, 0.04, 0.04);

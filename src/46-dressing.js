@@ -156,7 +156,7 @@ BM.buildDressing = function (B, game) {
     B.mesh(G.wedge, 'armour', x + Math.cos(ang) * 0.38, y + 2.15, z - Math.sin(ang) * 0.38, 0.02, 0.35, 0.22, ang);
   };
   armour(-1.95, 0, 11.35, Math.PI, 'hall');
-  B.levelName = 'upper'; armour(3.6, 4.2, 0.45, 0, 'hall'); B.levelName = 'ground';
+  B.levelName = 'upper'; armour(5.3, 4.2, 0.45, 0, 'hall'); B.levelName = 'ground';
   const portrait = (x, y, z, ry, w, h, style) => B.picture(x, y, z, ry, w, h, style || 'portrait');
   portrait(-5.88, 2.6, 5.9, Math.PI / 2, 1.0, 1.4);
   portrait(5.88, 2.6, 5.9, -Math.PI / 2, 1.0, 1.4);
@@ -166,7 +166,7 @@ BM.buildDressing = function (B, game) {
   portrait(-17.88, 6.3, -11.0, Math.PI / 2, 0.7, 0.9); // eleanor's bedroom: a child's portrait
   B.levelName = 'ground';
   portrait(-15.6, 2.5, 4.12, 0, 1.2, 0.9, 'house');         // dining
-  portrait(-8.5, 2.4, -3.88, 0, 1.1, 0.8, 'stilllife');         // back sitting
+  portrait(-15.0, 2.2, -3.88, 0, 1.1, 0.8, 'stilllife');          // back sitting, west of the other picture
 
   function roomAt(w) { const r = R.find(q => w.x > q[2] - 0.6 && w.x < q[3] + 0.6 && w.z > q[4] - 0.6 && w.z < q[5] + 0.6 && w.y > q[6] && w.y < q[7]); return r ? r[0] : ''; }
 

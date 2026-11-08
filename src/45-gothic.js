@@ -79,7 +79,15 @@ BM.buildGothic = function (B, game) {
     F.box('gothicTrim', 0, 4.15, 0.07, len, 0.18, 0.14);
     F.box('gothicTrim', 0, EAVES - 0.1, 0.18, len + 0.4, 0.34, 0.36);
     for (let l = -len / 2 + 0.6; l < len / 2; l += 1.2) F.box('gothicTrim', l, EAVES - 0.42, 0.12, 0.2, 0.3, 0.24);
-    F.box('stone', 0, 0.25, 0.08, len + 0.2, 0.5, 0.16); // plinth course
+    // plinth course along the foot of the wall, broken at every doorway and the cellar steps so the doors meet the ground
+    const gaps = P.doorways.filter(d => d.y < 0.5 && d.y > -0.5 && (nz ? d.axis === 'x' && Math.abs(d.z - pz) < 0.4 : d.axis === 'z' && Math.abs(d.x - px) < 0.4))
+      .map(d => { const along = nz ? d.x * nz : -d.z * nx; return [along - d.width / 2 - 0.12, along + d.width / 2 + 0.12]; })
+      .sort((a, b) => a[0] - b[0]);
+    let from = -len / 2 - 0.1;
+    for (const [g0, g1] of gaps.concat([[len / 2 + 0.1, len / 2 + 0.1]])) {
+      if (g0 - from > 0.05) F.box('stone', (from + g0) / 2, 0.25, 0.08, g0 - from, 0.5, 0.16);
+      from = Math.max(from, g1);
+    }
   }
 
   /* ---- pointed hoods over every window, and shutters, some hanging ---- */

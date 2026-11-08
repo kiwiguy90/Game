@@ -276,6 +276,7 @@ B.picture = function (x, y, z, ry, w, h, style, seed) {
   }
   const canvas = this.mesh(G.plane, painting(style || 'landscape', seed || Math.round(x * 7 + y * 3 + z * 11)), x + s * 0.035, y, z + c * 0.035, w, h, 1, ry);
   canvas.userData.picture = true;
+  (this.pictures || (this.pictures = [])).push({ x, y, z, ry, w: w + fw * 2, h: h + fw * 2, level: this.levelName, room: this.room });
   return canvas;
 };
 })();

@@ -48,7 +48,8 @@ class TowerClock {
     if (c.running) {
       c.time += dt * RATE;
       const q = Math.floor(c.time / QUARTER);
-      if (q !== this.quarter) { this.quarter = q; this.chime(q % 4, Math.floor(c.time / 3600) % 12 || 12); }
+      // (if the grandfather clock in the hall is still chiming, the tower waits for it to finish)
+      if (q !== this.quarter && !(g.chimeBusyUntil > g.time)) { this.quarter = q; this.chime(q % 4, Math.floor(c.time / 3600) % 12 || 12); }
       // the escapement, heard close to
       this.tickT += dt;
       if (this.tickT >= 1.0) {
@@ -85,6 +86,7 @@ class TowerClock {
       g.ui.say(hour === 12 ? 'Midnight. Above the house, the great bell begins to strike twelve.' : `The clock tower strikes ${['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'][hour - 1]}.`, 6);
     } else if (this.chimes === 1) g.ui.say('From the tower over the hall, four notes carry across the grounds: the clock chimes the quarter.', 5);
     this.log.push({ quarter, hour });
+    g.chimeBusyUntil = g.time + when + 3; // let the last bell ring out before anything else chimes
   }
   strikeAt(when) {
     // the hammer's swing is scheduled in game time

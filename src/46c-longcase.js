@@ -84,9 +84,9 @@ BM.buildLongcase = function (B, game) {
   // place the hands on the dial's centre: the chapter ring sits at (128,192) of a 256x320 canvas
   for (const h of hands) h.position.y = 2.02 + 0.25 - 0.5 * (192 / 320);
   void dial;
-  game.longcase = { g, pend, hands, time: (23 * 3600 + 41 * 60 + 12), running: false, quarter: 0, tickT: 0, tock: false, chimes: 0, pos: { x: x + 0.3, y: 1.8, z } };
+  game.longcase = { g, pend, hands, time: (23 * 3600 + 47 * 60 + 30), running: false, quarter: 0, tickT: 0, tock: false, chimes: 0, pos: { x: x + 0.3, y: 1.8, z } };
   game.longcase.quarter = Math.floor(game.longcase.time / QUARTER);
-  B.readable('longcase', 'The grandfather clock', 'A longcase clock in a mahogany case, its brass dial signed "Jno. Blackthorn, Lichfield". A moon rides in the arch over the dial.\n\nInside the trunk door a card is pinned:\n\n"Converted to electric winding, Pardoe & Son, November 1961. DO NOT WIND BY HAND."\n\nThe hands stand at nineteen minutes to twelve.', [x + 0.33, 1.3, z], [1, 0], { visual: false }); // the card is on the trunk door itself
+  B.readable('longcase', 'The grandfather clock', 'A longcase clock in a mahogany case, its brass dial signed "Jno. Blackthorn, Lichfield". A moon rides in the arch over the dial.\n\nInside the trunk door a card is pinned:\n\n"Converted to electric winding, Pardoe & Son, November 1961. DO NOT WIND BY HAND."\n\nThe hands stand at thirteen minutes to twelve. It was always kept a few minutes fast, so that nobody in this house was ever late for anything.', [x + 0.33, 1.3, z], [1, 0], { visual: false }); // the card is on the trunk door itself
 
   /* ---------------- the garage door ---------------- */
   B.zone = 'exterior'; B.room = 'garage';
@@ -115,12 +115,13 @@ BM.updateLongcase = function (game, dt) {
     if (c.running) {
       c.time += dt * RATE;
       const q = Math.floor(c.time / QUARTER);
-      if (q !== c.quarter) {
+      // a few minutes fast on the tower, as these clocks always are; and never over the top of it
+      if (q !== c.quarter && !(game.chimeBusyUntil > game.time)) {
         c.quarter = q; const quarter = q % 4, hour = Math.floor(c.time / 3600) % 12 || 12;
         let when = 0.2;
         for (const ph of QUARTERS[quarter]) { for (const n of PHRASES[ph]) { A.bell && A.bell(NOTES[n], 0.22 * hear, when, 1.8); when += 0.6; } when += 0.35; }
         if (quarter === 0) { when += 1.0; for (let i = 0; i < hour; i++) { A.bell && A.bell(NOTES.b / 2, 0.35 * hear, when, 3.0); when += 1.6; } }
-        c.chimes++;
+        c.chimes++; game.chimeBusyUntil = game.time + when + 2.5;
         if (c.chimes === 1 && hear > 0.3) game.ui.say('In the hall the grandfather clock whirs, and chimes the quarter on its rods.', 4);
       }
       c.tickT += dt;

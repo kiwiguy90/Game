@@ -758,7 +758,12 @@ suite('longcase and garage', () => {
   game.grid.stormHasTripped = true; game.grid.setLodge(true); game.grid.throwMain(); run(1);
   assert(c.running, 'it runs on the hall circuit');
   const a0 = c.pend.rotation.z; run(0.5); assert(Math.abs(c.pend.rotation.z - a0) > 0.01, 'the pendulum swings');
-  run(240); assert(c.chimes >= 1, 'it chimes the quarter (chimes ' + c.chimes + ')');
+  const at = []; let lc = c.chimes, tw = game.clock_ ? game.clock_.chimes : 0;
+  for (let i = 0; i < 30 * 600; i++) { game.update(1 / 30);
+    if (c.chimes !== lc) { lc = c.chimes; at.push(['hall', game.time]); }
+    if (game.clock_ && game.clock_.chimes !== tw) { tw = game.clock_.chimes; at.push(['tower', game.time]); } }
+  assert(c.chimes >= 2 && at.some(e => e[0] === 'tower'), 'both clocks chime the quarters (' + at.map(e => e[0]).join(',') + ')');
+  for (let i = 1; i < at.length; i++) assert(at[i][1] - at[i - 1][1] > 40, 'the two clocks never chime over each other (' + at[i - 1][0] + ' then ' + at[i][0] + ' ' + (at[i][1] - at[i - 1][1]).toFixed(0) + 's apart)');
   void bells;
   // the garage door: up at the start, comes down and blocks the way, goes up again
   assert(gd.open && !gd.wall.enabled, 'the garage door is up');

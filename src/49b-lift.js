@@ -64,6 +64,16 @@ BM.buildLift = function (B, game) {
     wall(LIFT.wall, LIFT.x0, LIFT.gate1, LIFT.z1, y0, y1);
     wall(LIFT.wall, LIFT.x0, LIFT.gate0, LIFT.gate1, y0 + GATE_H + 0.1, y1);
     if (f.level === 'attic') wall(LIFT.x1, LIFT.x1 + 0.1, LIFT.z0, LIFT.z1, y0, y1);
+    else {
+      // set into the end of the corridor: the wall carries on either side of the shaft, closing off the
+      // space behind it, and the way through to the east wing stays open beyond (z below -4)
+      const zEnd = f.level === 'cellar' ? 1.8 : -0.1;
+      wall(LIFT.wall, LIFT.x0, LIFT.z1, zEnd, y0, y1);
+      wall(LIFT.wall, LIFT.x0, -4.1, LIFT.z0 - 0.1, y0, y1);
+      wall(LIFT.wall, 5.9, -4.1, -4.0, y0, y1);
+      // a cornice and a skirting run across the front, so it reads as one wall with the gate in it
+      if (f.level !== 'cellar') { B.boxE('darkWood', LIFT.wall - 0.04, LIFT.wall, y0, y0 + 0.18, -4.1, zEnd); B.boxE('plaster', LIFT.wall - 0.06, LIFT.wall, y1 - 0.14, y1 - 0.02, -4.1, zEnd); }
+    }
     // a brass frame round the opening
     for (const z of [LIFT.gate0, LIFT.gate1]) B.box('brass', LIFT.wall - 0.02, y0 + (GATE_H + 0.1) / 2, z, 0.05, GATE_H + 0.1, 0.06);
     B.box('brass', LIFT.wall - 0.02, y0 + GATE_H + 0.1, (LIFT.gate0 + LIFT.gate1) / 2, 0.05, 0.06, 1.06);

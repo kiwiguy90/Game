@@ -232,8 +232,8 @@ BM.buildFurnishings = function (B, game) {
   /* ================= THE LANDING AND UPPER CORRIDORS ================= */
   at('upper corridor', 'upper');
   B.furniture('wood', -5.45, -1.2, 4.2, 0.48, 0.95, 0.48, 'chair');
-  B.furniture('wood', 5.5, -0.42, 4.2, 0.48, 0.95, 0.48, 'chair');
-  B.furniture('darkWood', 4.5, -0.4, 4.2, 1.1, 0.55, 0.5, 'linen chest');
+  B.furniture('wood', 3.3, -0.45, 4.2, 0.48, 0.95, 0.48, 'chair');
+  B.furniture('darkWood', -3.6, -0.4, 4.2, 1.1, 0.55, 0.5, 'linen chest');
   vase(2.2, 5.0, -3.5, true);
   for (const x of [-3.5, 3.5]) B.picture(x, 6.0, -0.12, Math.PI, 0.55, 0.7, 'portrait', 70 + x);
   runner(-0.45, 0.45, -5.6, -0.6, 4.2);

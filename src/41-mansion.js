@@ -33,7 +33,7 @@ BM.buildMansion = function (B, game) {
   B.wall('z', 6, -4, 12, { mat: 'panel' }, [door(9.6, 'd-hall-drawing'), door(2.6, 'd-hall-library')]);
   B.wall('x', 4, -18, -6, { mat: 'wallpaperGreen' }, [door(-12, 'd-dining-backsitting')]);
   B.wall('x', 4, 6, 18, { mat: 'wallpaper' }, [door(12, 'd-drawing-library')]);
-  B.wall('x', 0, -6, 6, { mat: 'panel' }, [door(-5, 'd-hall-back-l'), door(5, 'd-hall-back-r')]);
+  B.wall('x', 0, -6, 6, { mat: 'panel' }, [door(-5, 'd-hall-back-l'), door(3, 'd-hall-back-r')]);
   B.wall('x', -4, -18, -6, { mat: 'plaster' }, [door(-12, 'd-backsitting-corridor')]);
   B.wall('x', -4, 6, 18, { mat: 'plaster' }, [door(12, 'd-library-corridor')]);
   B.wall('x', -6, -18, 18, { mat: 'plaster' }, [door(-12, 'd-kitchen'), door(-3, 'd-pantry'), door(3, 'd-bath'), door(9, 'd-service')]);
@@ -463,7 +463,7 @@ BM.buildMansion = function (B, game) {
   B.wall('z', -18, -12, 2, CEL); B.wall('z', 18, -12, 2, CEL);
   B.wall('x', -12, -18, 18, CEL, [{ at: -12, w: 1.3, type: 'door', head: 2.2, id: 'd-cellar-hatch', casing: 'brick' }]);
   B.wall('z', -6, -12, 2, { mat: 'brick', y0: CY, y1: 0 }, [door(-4, 'd-cellar-w')]);
-  B.wall('z', 6, -12, 2, { mat: 'brick', y0: CY, y1: 0 }, [door(-4, 'd-cellar-e')]);
+  B.wall('z', 6, -12, 2, { mat: 'brick', y0: CY, y1: 0 }, [door(-5, 'd-cellar-e')]);
   // wine racks, boiler, coal
   B.furniture('wood', -17.5, -5, CY, 0.6, 2.2, 6.0, 'wine rack');
   for (let i = 0; i < 24; i++) B.mesh(G.cyl, 'fabricGreen', -17.45, CY + 0.3 + (i % 6) * 0.33, -7.4 + Math.floor(i / 6) * 1.6, 0.09, 0.3, 0.09).userData.bottle = true;

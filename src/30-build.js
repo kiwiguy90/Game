@@ -635,7 +635,9 @@ class Builder {
     const style = o.style || 'pendant';
     const nx = o.nx || 0, nz = o.nz || 0; // wall normal for sconces
     let bulbSize = 0.12;
-    switch (style) {
+    const drawn = BM.drawFitting ? BM.drawFitting(this, style, o, rec) : undefined; // the finer fittings, in 31c
+    if (drawn !== undefined) bulbSize = drawn;
+    else switch (style) {
       case 'pendant':
         this.box('iron', x, (y + (o.ceiling || y + 0.8)) / 2 + 0.15, z, 0.015, (o.ceiling || y + 0.8) - y - 0.3, 0.015);
         this.mesh(G.cone, 'fabricCream', x, y + 0.15, z, 0.55, 0.3, 0.55);

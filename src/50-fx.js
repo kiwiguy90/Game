@@ -336,6 +336,7 @@ class FX {
       size[i] = a > 0.01 ? (l.kind === 'fire' ? 0.5 : 0.35 + 0.12 * l.target) : 0;
       const glow = l.target > 0 ? Math.min(1.4, l.intensity / l.target) : 0;
       if (l.bulb) l.bulb.material.color.setHex(l.colour).multiplyScalar(glow > 0.02 ? 0.3 + 0.75 * Math.min(1, glow) : 0.07);
+      if (l.glass) { const k = glow > 0.02 ? 0.18 + 0.62 * Math.min(1, glow) : 0; for (const m of l.glass) m.emissive.setHex(l.colour).multiplyScalar(k); }
       if (l.bulbBox) l.bulbBox.material.color.setHex(l.colour).multiplyScalar(glow > 0.02 ? 0.25 + 0.75 * Math.min(1, glow) : 0.06);
       if (l.scorch) l.scorch.visible = l.scorched;
     }

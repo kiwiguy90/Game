@@ -93,9 +93,9 @@ class FX {
     this.coronaGeo = cg;
     this.coronas = new THREE.Points(cg, new THREE.ShaderMaterial({
       uniforms: { map: { value: starTexture() }, scale: { value: 600 } },
-      vertexShader: 'attribute vec3 colour; attribute float csize; uniform float scale; varying vec3 vC; void main(){ vC = colour; vec4 mv = modelViewMatrix * vec4(position,1.0); gl_PointSize = clamp(csize * scale / max(0.5, -mv.z), 0.0, 320.0); gl_Position = projectionMatrix * mv; }',
+      vertexShader: 'attribute vec3 colour; attribute float csize; uniform float scale; varying vec3 vC; void main(){ vC = colour; vec4 mv = modelViewMatrix * vec4(position,1.0); float dl = length(mv.xyz); mv.xyz *= max(0.05, 1.0 - 0.45 / max(dl, 0.5)); gl_PointSize = clamp(csize * scale / max(0.5, -mv.z), 0.0, 320.0); gl_Position = projectionMatrix * mv; }',
       fragmentShader: 'uniform sampler2D map; varying vec3 vC; void main(){ vec4 t = texture2D(map, gl_PointCoord); gl_FragColor = vec4(vC * t.rgb * t.a, 1.0); }',
-      transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false,
+      transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: true, // drawn a little in front of its lamp, so a wall hides it but its own shade does not
     }));
     this.coronas.frustumCulled = false;
     this.coronas.renderOrder = 10;

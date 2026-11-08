@@ -15,7 +15,8 @@ const G = BM.G;
 const V = (x, y) => new THREE.Vector2(x, y);
 const cache = {};
 const geo = (k, f) => { if (!cache[k]) { cache[k] = f(); cache[k].userData.canonical = 'fitting:' + k; } return cache[k]; };
-const lathe = (k, pts, seg) => geo(k, () => { const g = new THREE.LatheGeometry(pts.map(p => V(p[0], p[1])), seg || 16); g.computeVertexNormals(); return g; });
+// a profile drawn downwards would turn its faces inwards: always lathe it bottom to top
+const lathe = (k, pts, seg) => geo(k, () => { const q = pts[0][1] > pts[pts.length - 1][1] ? pts.slice().reverse() : pts; const g = new THREE.LatheGeometry(q.map(p => V(p[0], p[1])), seg || 16); g.computeVertexNormals(); return g; });
 
 const _u = new THREE.Vector3(0, 1, 0), _d = new THREE.Vector3(), _q = new THREE.Quaternion();
 function rod(B, mat, a, b, r) {
@@ -59,7 +60,7 @@ BM.drawFitting = function (B, style, o, rec) {
         rod(B, 'brass', [x + ca * (r - 0.06), y - 0.12, z + sa * (r - 0.06)], [x + ca * r, y + 0.0, z + sa * r], 0.012);
         B.mesh(lathe('cup', [[0.001, 0], [0.06, 0.0], [0.065, 0.015], [0.03, 0.02], [0.025, 0.04], [0.001, 0.04]], 12), 'brass', x + ca * r, y, z + sa * r, 1, 1, 1);
         B.mesh(G.cyl, 'porcelain', x + ca * r, y + 0.09, z + sa * r, 0.035, 0.1, 0.035);                       // the candle sleeve
-        const flame = dyn(B.mesh(G.lowSphere, bm, x + ca * r, y + 0.165, z + sa * r, 0.035, 0.07, 0.035));
+        const flame = dyn(B.mesh(G.lowSphere, bm, x + ca * r, y + 0.175, z + sa * r, 0.05, 0.1, 0.05)); // a candle bulb, flame-shaped
         if (!i) rec.bulb = flame;
         // a glass drop hanging between the arms
         const b = a + Math.PI / 8;
@@ -77,9 +78,9 @@ BM.drawFitting = function (B, style, o, rec) {
       rod(B, 'brass', [x - nx * 0.03, y - 0.13, z - nz * 0.03], [x, y - 0.06, z], 0.011);
       B.mesh(geo('cupS', () => lathe('cup', [[0.001, 0], [0.06, 0.0], [0.065, 0.015], [0.03, 0.02], [0.025, 0.04], [0.001, 0.04]], 12)), 'brass', x, y - 0.06, z, 0.8, 0.8, 0.8);
       B.mesh(G.cyl, 'porcelain', x, y - 0.01, z, 0.03, 0.08, 0.03);
-      const silk = glowing(rec, 0xe6d3ae, 6);
-      B.mesh(lathe('silk', [[0.06, 0.11], [0.065, 0.1], [0.11, -0.02], [0.105, -0.03]], 18), silk, x, y + 0.04, z, 1, 1, 1);
-      rec.bulb = dyn(B.mesh(G.lowSphere, bulbMat(), x, y + 0.05, z, 0.05, 0.07, 0.05));
+      const opal = glowing(rec, 0xf1e9d8, 60);                      // a frosted tulip, mouth up
+      B.mesh(lathe('tulipUp', [[0.035, -0.02], [0.05, 0.0], [0.085, 0.06], [0.115, 0.13], [0.13, 0.16], [0.125, 0.165]], 20), opal, x, y - 0.02, z, 1, 1, 1);
+      rec.bulb = dyn(B.mesh(G.lowSphere, bulbMat(), x, y + 0.05, z, 0.06, 0.08, 0.06));
       return 0;
     }
     case 'lamp': {

@@ -851,7 +851,10 @@ suite('budgets', () => {
     if (o.isInstancedMesh && !(o.geometry.userData && o.geometry.userData.canonical)) nonCanon.add('instanced:' + o.geometry.type);
   });
   assert(!nonCanon.size, 'meshes not using canonical geometry: ' + [...nonCanon].join(', '));
-  assert(geos.size <= 20, 'unique geometries ' + geos.size);
+  // carved and turned statuary shares its own small set of shapes; everything else stays primitive
+  const sculpt = [...geos].filter(g => /^statuary:/.test(g.userData && g.userData.canonical || '')).length;
+  assert(geos.size - sculpt <= 20, 'unique geometries ' + (geos.size - sculpt));
+  assert(sculpt <= 30, 'statuary geometries ' + sculpt);
   let tris = 0; for (const g of geos) tris += (g.index ? g.index.count : (g.attributes.position ? g.attributes.position.count : 0)) / 3;
   assert(tris < 60000, 'unique triangles ' + tris);
   assert(game.optStats.instancedMeshes > 10, 'instancing pass did not run');

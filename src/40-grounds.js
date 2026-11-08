@@ -19,11 +19,9 @@ BM.buildGrounds = function (B, game) {
   B.boxE('soil', -64, 64, 0, 0.02, 89.5, 100.6, null);
   // limestone carriage drive, turning circle ring and paths (visual overlays)
   B.boxE('limestone', -3, 3, 0, 0.03, 33, 89.5);
-  const ring = 28;
-  for (let i = 0; i < ring; i++) {
-    const a = i / ring * Math.PI * 2, r = 6.75;
-    B.box('limestone', Math.sin(a) * r, 0.015, 24 + Math.cos(a) * r, 4.6, 0.03, 1.65, a);
-  }
+  // the turning circle: one smooth ring of limestone, kerbed round the lawn in its middle
+  B.mesh(BM.statuaryGeo('circleRoad', () => new THREE.RingGeometry(4.75, 8.75, 72, 1).rotateX(-Math.PI / 2)), 'limestone', 0, 0.03, 24, 1, 1, 1);
+  B.mesh(BM.statuaryGeo('circleKerb', () => new THREE.LatheGeometry([new THREE.Vector2(4.6, 0), new THREE.Vector2(4.78, 0), new THREE.Vector2(4.8, 0.09), new THREE.Vector2(4.62, 0.11), new THREE.Vector2(4.6, 0)], 72)), 'stone', 0, 0, 24, 1, 1, 1);
   B.boxE('limestone', -6, 6, 0, 0.03, 12, 16.5); // forecourt
   const gravelPath = (pts, w) => {
     for (let i = 0; i < pts.length - 1; i++) {
@@ -241,13 +239,9 @@ BM.buildGrounds = function (B, game) {
   }
 
   /* ---- turning circle and fountain ---- */
-  B.mesh(G.cyl, 'grass', 0, 0.06, 24, 8.6, 0.12, 8.6);
-  B.mesh(G.cyl, 'stone', 0, 0.25, 24, 6.4, 0.5, 6.4);
+  B.mesh(G.cyl, 'grass', 0, 0.06, 24, 9.3, 0.12, 9.3);
   B.mesh(G.cyl, 'water', 0, 0.42, 24, 5.8, 0.05, 5.8).userData.dynamic = true;
-  B.mesh(G.cyl, 'stone', 0, 1.0, 24, 0.7, 2.0, 0.7);
-  B.mesh(G.cyl, 'stone', 0, 2.0, 24, 2.4, 0.2, 2.4);
-  B.mesh(G.cyl, 'statue', 0, 2.6, 24, 0.4, 1.0, 0.4);
-  B.mesh(G.sphere, 'statue', 0, 3.25, 24, 0.5);
+  BM.buildFountain(B, game, 0, 24);
   for (let i = 0; i < 40; i++) {
     const a = i / 40 * Math.PI * 2;
     const x = Math.sin(a) * 3.05, z = 24 + Math.cos(a) * 3.05;
@@ -284,12 +278,10 @@ BM.buildGrounds = function (B, game) {
   }
   game.maze = { cells, x0: MZ.x0, z0: MZ.z0 };
   const hx = MZ.x0 + 10.5, hz = MZ.z0 + 10.5;
-  B.solid('stone', hx - 0.35, hx + 0.35, 0, 1.0, hz - 0.35, hz + 0.35, { kind: 'furniture', tag: 'statue plinth' });
-  B.mesh(G.cyl, 'statue', hx, 1.7, hz, 0.42, 1.4, 0.42);
-  B.mesh(G.sphere, 'statue', hx, 2.6, hz, 0.42);
-  B.box('statue', hx - 0.35, 1.9, hz, 0.12, 0.7, 0.12);
-  B.box('statue', hx + 0.3, 2.1, hz + 0.1, 0.12, 0.12, 0.6);
+  P.addWall(hx - 0.35, hx + 0.35, hz - 0.35, hz + 0.35, 0, 1.0, { kind: 'furniture', tag: 'statue plinth' });
+  BM.plinth(B, hx, hz, 0.7, 1.0, 'stone');
   const heart = at(3, 3), hn = !heart.s ? [0, 1] : !heart.n ? [0, -1] : !heart.e ? [1, 0] : [-1, 0];
+  BM.figure(B, hx, 1.0, hz, Math.atan2(hn[0], hn[1]), { pose: 'reach', scale: 1.05 }); // Mercy, holding out her hand to whoever finds the way in
   B.readable('plaque-statue', 'Plaque on the statue', 'MERCY, WHO WAITS\n\nGiven to the house by E.B., 1971.\n\nSomeone has scratched underneath, small, with a nail: "she is the only one of them who looked at us"', [hx + hn[0] * 0.37, 0.7, hz + hn[1] * 0.37], hn, { plaque: true });
 
   /* ---- sunken pool ---- */

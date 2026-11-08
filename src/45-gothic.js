@@ -332,27 +332,16 @@ BM.buildGothic = function (B, game) {
   B.zone = 'exterior'; B.room = 'grounds';
   /* ---- weeping angels by the porch, one beheaded ---- */
   const angel = (x, z, ang, headless) => {
-    B.solid('gothicStone', x - 0.45, x + 0.45, 0, 1.2, z - 0.45, z + 0.45, { kind: 'furniture', tag: 'angel plinth' });
-    B.box('gothicTrim', x, 1.25, z, 1.0, 0.1, 1.0);
-    B.mesh(G.cone, 'statue', x, 2.15, z, 0.85, 1.7, 0.75, ang);
-    B.mesh(G.cyl, 'statue', x, 3.05, z, 0.42, 0.55, 0.32, ang);
-    const s = Math.sin(ang), c = Math.cos(ang);
-    if (!headless) {
-      B.mesh(G.sphere, 'statue', x + s * 0.12, 3.42, z + c * 0.12, 0.3, 0.32, 0.3);
-      B.mesh(G.sphere, 'statue', x + s * 0.22, 3.25, z + c * 0.22, 0.26, 0.2, 0.14, ang); // hands over the face
-    } else {
-      B.mesh(G.sphere, 'statue', x + s * 1.1 + 0.4, 0.15, z + c * 1.1, 0.3, 0.3, 0.3); // the head, in the grass
-    }
-    for (const h of [-1, 1]) {
-      const w = B.mesh(G.wedge, 'statue', x - s * 0.22 + c * 0.28 * h, 2.2, z - c * 0.22 - s * 0.28 * h, 0.08, 1.6, 0.9, ang + h * 0.35);
-      w.rotation.set(0, ang + h * 0.35, h * -0.12); w.updateMatrix();
-    }
+    P.addWall(x - 0.45, x + 0.45, z - 0.45, z + 0.45, 0, 1.2, { kind: 'furniture', tag: 'angel plinth' });
+    BM.plinth(B, x, z, 0.9, 1.2);
+    BM.figure(B, x, 1.2, z, ang, { pose: 'weep', wings: true, headless, scale: 1.12 });
+    if (headless) BM.fallenHead(B, x + Math.sin(ang) * 1.0 + 0.5, z + Math.cos(ang) * 1.0, 0.8); // the head, in the grass
   };
   angel(-4.9, 15.6, 0.0, false);
   angel(4.9, 15.6, 0.0, true);
   /* ---- a toppled urn in the fountain garden ---- */
-  { const u = B.mesh(G.cyl, 'statue', 2.8, 0.35, 21.2, 0.6, 0.9, 0.6); u.rotation.set(Math.PI / 2, 0, 0.7); u.updateMatrix();
-    B.box('gothicStone', 2.2, 0.35, 20.6, 0.7, 0.7, 0.7);
+  { BM.urn(B, 2.9, 0.33, 21.3, 0.95, 0.7);
+    BM.plinth(B, 2.2, 20.6, 0.55, 0.7);
     P.addWall(2.2, 3.2, 20.6, 21.8, 0, 0.7, { kind: 'furniture', tag: 'urn' }); }
 
   /* ---- the family mausoleum ---- */

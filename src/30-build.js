@@ -389,6 +389,7 @@ const MAT_DEFS = {
   deadStalk: [0x3a3226, null, 0, 2],
   soil: [0x2a1e16, 'gravel', 0.4, 2],
   statue: [0x9a988f, 'limestone', 0.5, 10],
+  statueWorn: [0x8e8c84, 'limestone', 0.62, 6, { bump: 2, weather: true }],
   marble: [0xa8a6a0, 'limestone', 0.6, 60],
   rubber: [0x1a1a1a, null, 0, 5],
   leather: [0x3a2418, null, 0, 40],

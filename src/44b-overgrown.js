@@ -163,16 +163,6 @@ BM.buildOvergrown = function (B, game) {
   B.room = 'grounds';
   B.mesh(G.cyl, 'scum', 0, 0.452, 24, 5.7, 0.01, 5.7);
   for (let i = 0; i < 30; i++) { const a = rnd() * 6.3, r = 0.6 + rnd() * 2.1; B.box(rnd() < 0.5 ? 'leafLitter' : 'leafLitter2', Math.sin(a) * r, 0.46, 24 + Math.cos(a) * r, 0.14, 0.005, 0.09, rnd() * 3); }
-  const waterMat = BM.Basic(0xbfd6e0, { transparent: true, opacity: 0.0, depthWrite: false, blending: THREE.AdditiveBlending });
-  const jets = [];
-  { const top = new THREE.Mesh(G.cone, waterMat); top.position.set(0, 3.55, 24); top.scale.set(0.12, 0.6, 0.12); B.root.add(top); jets.push(top); }
-  for (let i = 0; i < 12; i++) { // the sheet falling from the bowl's lip into the basin
-    const a = i / 12 * Math.PI * 2, m = new THREE.Mesh(G.post, waterMat);
-    m.position.set(Math.sin(a) * 1.15, 1.45, 24 + Math.cos(a) * 1.15); m.scale.set(0.06, 1.1, 0.06); B.root.add(m); jets.push(m);
-  }
-  const splash = new THREE.Mesh(G.ring, waterMat); splash.position.set(0, 0.47, 24); splash.rotation.x = -Math.PI / 2; splash.scale.set(2.6, 2.6, 2.6); B.root.add(splash); jets.push(splash);
-  for (const j of jets) { j.userData.dynamic = true; j.frustumCulled = false; }
-  game.fountainFx = { jets, mat: waterMat, on: false };
 
   /* ---- the cemetery: knee-deep grass, stones leaning, ivy on them ---- */
   B.room = 'cemetery';
@@ -203,14 +193,8 @@ BM.buildOvergrown = function (B, game) {
 
 /* per frame: the fountain runs while the garden circuit does; the pool glows under its lights */
 BM.updateOvergrown = function (game, dt, t) {
-  const f = game.fountainFx, grid = game.grid;
-  if (f) {
-    const on = grid.live('lodge') && game.estateGroupOn('garden');
-    f.on = on;
-    f.mat.opacity += ((on ? 0.28 : 0) - f.mat.opacity) * Math.min(1, dt * 2);
-    for (const j of f.jets) j.visible = f.mat.opacity > 0.01;
-    if (f.jets[0]) { f.jets[0].scale.y = 0.6 + Math.sin(t * 7) * 0.08; f.jets[f.jets.length - 1].scale.setScalar(2.6 + Math.sin(t * 3) * 0.15); }
-  }
+  const grid = game.grid;
+  BM.updateFountain(game, dt, t);
   if (game.poolGlow && game.estateLights) {
     let k = 0;
     for (const id of game.estateLights.pool) { const l = grid.light(id); if (l && /pool-under/.test(id) && l.target > 0) k = Math.max(k, Math.min(1.2, l.intensity / l.target)); }

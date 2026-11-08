@@ -26,7 +26,7 @@ BM.buildFurnishings = function (B, game) {
   const mirror = (x, y, z, ry, w, h) => {
     const s = Math.sin(ry), c = Math.cos(ry);
     B.box('gilt', x, y, z, w + 0.16, h + 0.16, 0.05, ry);
-    B.box('darkGlass', x + s * 0.03, y, z + c * 0.03, w, h, 0.01, ry);
+    B.box(BM.mirrorGlass(), x + s * 0.03, y, z + c * 0.03, w, h, 0.01, ry);
   };
   const wallClock = (x, y, z, ry, r) => {
     const s = Math.sin(ry), c = Math.cos(ry); r = r || 0.2;

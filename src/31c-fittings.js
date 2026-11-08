@@ -144,4 +144,25 @@ BM.drawFitting = function (B, style, o, rec) {
   }
   return undefined;
 };
+/* A looking-glass, old and foxed: pale silvering with dark spots and a cloudy edge, shiny enough to catch the lamps. */
+let mirrorMat = null;
+BM.mirrorGlass = function () {
+  if (mirrorMat) return mirrorMat;
+  const c = document.createElement('canvas'); c.width = 128; c.height = 128; const g = c.getContext('2d'), rnd = BM.mulberry32(41);
+  const gr = g.createLinearGradient(0, 0, 128, 128); gr.addColorStop(0, '#9aa4aa'); gr.addColorStop(0.5, '#6c767c'); gr.addColorStop(1, '#8a9298'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+  const edge = g.createRadialGradient(64, 64, 30, 64, 64, 92); edge.addColorStop(0, 'rgba(40,36,30,0)'); edge.addColorStop(1, 'rgba(40,36,30,0.75)'); g.fillStyle = edge; g.fillRect(0, 0, 128, 128);
+  for (let i = 0; i < 90; i++) { g.fillStyle = 'rgba(30,26,20,' + (0.2 + rnd() * 0.5) + ')'; g.beginPath(); g.arc(rnd() * 128, rnd() * 128, 0.5 + rnd() * rnd() * 4, 0, 6.3); g.fill(); }
+  g.strokeStyle = 'rgba(255,255,255,0.18)'; g.lineWidth = 6; g.beginPath(); g.moveTo(10, 118); g.lineTo(118, 10); g.stroke();
+  const t = new THREE.CanvasTexture(c);
+  mirrorMat = new THREE.MeshPhongMaterial({ map: t, color: 0xffffff, shininess: 140, specular: 0xdddddd });
+  return mirrorMat;
+};
+/* Soft-edged damp: a stain that fades out at its edges. */
+BM.softenDamp = function () {
+  const m = BM.M('damp'); if (m.alphaMap) return;
+  const c = document.createElement('canvas'); c.width = 64; c.height = 64; const g = c.getContext('2d'), rnd = BM.mulberry32(7);
+  const gr = g.createRadialGradient(32, 26, 4, 32, 32, 31); gr.addColorStop(0, '#fff'); gr.addColorStop(0.55, '#999'); gr.addColorStop(1, '#000'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  for (let i = 0; i < 40; i++) { g.fillStyle = 'rgba(0,0,0,' + rnd() * 0.4 + ')'; g.beginPath(); g.arc(rnd() * 64, rnd() * 64, 2 + rnd() * 6, 0, 6.3); g.fill(); }
+  m.alphaMap = new THREE.CanvasTexture(c); m.opacity = 0.6; m.needsUpdate = true;
+};
 })();

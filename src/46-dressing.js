@@ -13,6 +13,7 @@ const BM = window.BM;
 const G = BM.G;
 
 BM.buildDressing = function (B, game) {
+  BM.softenDamp();
   const P = B.phys, rnd = BM.mulberry32(1974);
   B.zone = 'mansion';
 
@@ -73,8 +74,8 @@ BM.buildDressing = function (B, game) {
       B.mesh(G.ground, 'damp', x + Math.sin(ry) * 0.5, c - 0.012, z + Math.cos(ry) * 0.5, w * 1.2, 1, 1.1, ry).userData.instanceOK = true;
       // a strip of wallpaper hanging away from the wall
       if (name !== 'kitchen' && name !== 'pantry' && name !== 'bathroom' && name !== 'service') {
-        const len = 0.6 + rnd() * 0.5, peel = B.box('peel', x + Math.sin(ry) * 0.06 + Math.cos(ry) * (w * 0.3), c - 0.15 - len / 2, z + Math.cos(ry) * 0.06 - Math.sin(ry) * (w * 0.3), 0.32, len, 0.006, ry);
-        peel.rotation.set(0.18 + rnd() * 0.2, ry, (rnd() - 0.5) * 0.3, 'YXZ'); peel.updateMatrix();
+        const len = 0.6 + rnd() * 0.5, peel = B.box('peel', x + Math.sin(ry) * 0.025 + Math.cos(ry) * (w * 0.3), c - 0.15 - len / 2, z + Math.cos(ry) * 0.025 - Math.sin(ry) * (w * 0.3), 0.22, len, 0.004, ry);
+        peel.rotation.set(0.05 + rnd() * 0.06, ry, (rnd() - 0.5) * 0.12, 'YXZ'); peel.updateMatrix(); // curling just off the wall
       }
       // plaster fallen on the floor beneath
       for (let k = 0; k < 4; k++) B.box('plaster', x + Math.sin(ry) * (0.3 + rnd() * 0.5) + (rnd() - 0.5) * 0.6, f + 0.03, z + Math.cos(ry) * (0.3 + rnd() * 0.5) + (rnd() - 0.5) * 0.6, 0.1 + rnd() * 0.15, 0.05, 0.08 + rnd() * 0.12, rnd() * 3);

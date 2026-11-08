@@ -356,9 +356,20 @@ BM.buildGrounds = function (B, game) {
   P.rect(GA.x0 - 0.3, GA.x1 + 0.3, GA.z0 - 0.3, GA.z1 + 0.3, GA.h + 0.2, GA.h, 'garage-roof');
   B.boxE('roof', GA.x0 - 0.3, GA.x1 + 0.3, GA.h, GA.h + 0.2, GA.z0 - 0.3, GA.z1 + 0.3);
   // the car, a 1972 saloon under dust
-  B.furniture('carPaint', 30, 2.6, 0.35, 1.8, 0.75, 4.4, 'car body');
-  B.box('carPaint', 30, 1.4, 2.4, 1.6, 0.55, 2.2);
-  B.box('glass', 30, 1.4, 2.4, 1.62, 0.4, 2.0);
+  // ...laid up under a fitted cover: the sheet takes the car's shape, bonnet, screen, roof and boot, and hangs to the hubs
+  P.addWall(29.05, 30.95, 0.4, 4.8, 0, 1.45, { kind: 'furniture', tag: 'car under a sheet' });
+  { const geo = BM.statuaryGeo('sheetedCar', () => {
+      const pts = [[-2.2, 0.32], [-2.24, 0.62], [-2.15, 0.86], [-1.2, 0.98], [-0.55, 1.02], [0.05, 1.42], [1.0, 1.45], [1.45, 1.08], [2.1, 1.0], [2.24, 0.78], [2.2, 0.32]];
+      const sh = new THREE.Shape(pts.map(q => new THREE.Vector2(q[0], q[1])));
+      const g = new THREE.ExtrudeGeometry(sh, { depth: 1.6, bevelEnabled: true, bevelThickness: 0.12, bevelSize: 0.1, bevelSegments: 4, curveSegments: 8 });
+      g.translate(0, 0, -0.8); g.rotateY(Math.PI / 2);
+      // the cloth: let it sag between the high points, and ripple at the hem
+      const pos = g.attributes.position;
+      for (let i = 0; i < pos.count; i++) { const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+        pos.setY(i, y - 0.03 * Math.sin(z * 3.1) * Math.sin(x * 2.3) - (y < 0.5 ? 0.02 * Math.sin(z * 11 + x * 7) : 0)); }
+      g.computeVertexNormals();
+      return g; });
+    B.mesh(geo, 'dustSheet', 30, 0, 2.6, 1, 1, 1); }
   for (const [dx, dz] of [[-0.85, 1.2], [0.85, 1.2], [-0.85, 4.0], [0.85, 4.0]]) { const w = B.mesh(G.cyl, 'rubber', 30 + dx, 0.35, dz, 0.7, 0.25, 0.7); w.rotation.z = Math.PI / 2; w.updateMatrix(); }
   B.furniture('wood', 33.35, 5.5, 0, 0.7, 0.9, 2.4, 'workbench');
   // a spare wheel leaning on the wall by the door, the tyre still good

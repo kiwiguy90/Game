@@ -261,6 +261,21 @@ class Synth {
     this.burst(this.white, 'highpass', 4200, 0.7, 0.16, 0.06, 1.9, 0.05);
     for (let i = 0; i < 46; i++) { const w = 0.05 + Math.pow(Math.random(), 1.6) * 1.9; this.burst(this.white, 'bandpass', 2500 + Math.random() * 4500, 9, 0.06 + Math.random() * 0.16, 0.001, 0.015 + Math.random() * 0.03, w); }
   }
+  /* A loose shutter knocking back against the stone, and the creak of its hinges. */
+  shutterKnock(v, pan) {
+    this.burst(this.brown, 'lowpass', 520, 1.5, 0.55 * v, 0.003, 0.14, 0, pan);
+    this.burst(this.white, 'bandpass', 1300, 3, 0.18 * v, 0.002, 0.07, 0, pan);
+    if (Math.random() < 0.5) this.burst(this.brown, 'lowpass', 520, 1.5, 0.25 * v, 0.003, 0.1, 0.12 + Math.random() * 0.08, pan);
+  }
+  shutterCreak(v) {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime, dur = 0.5 + Math.random() * 0.6;
+    const o = ctx.createOscillator(); o.type = 'sawtooth';
+    const f0 = 380 + Math.random() * 200; o.frequency.setValueAtTime(f0, t); o.frequency.linearRampToValueAtTime(f0 * (0.7 + Math.random() * 0.5), t + dur);
+    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1100; f.Q.value = 6;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.05 * v + 0.0002, t + 0.08); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(f); f.connect(g); g.connect(this.master); o.start(t); o.stop(t + dur + 0.05);
+  }
   /* The car's engine coughing and dying. */
   cough() {
     for (const [w, v] of [[0, 0.9], [0.45, 0.7], [0.8, 0.5], [1.05, 0.3]]) { this.burst(this.brown, 'lowpass', 260, 2, 0.8 * v, 0.01, 0.16, w); this.tone('sawtooth', 44, 26, 0.25 * v, 0.01, 0.2, w); }

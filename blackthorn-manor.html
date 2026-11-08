@@ -3702,6 +3702,7 @@ BM.buildGothic = function (B, game) {
   }
 
   /* ---- pointed hoods over every window, and shutters, some hanging ---- */
+  game.shutters = [];
   P.windows.filter(w => w.zone === 'mansion').forEach((w, i) => {
     const F = face(B, w.nx, w.nz, w.x + w.nx * 0.2, w.z + w.nz * 0.2);
     F.wedge('gothicTrim', 0, w.head + 0.02, 0.1, w.w + 0.45, Math.min(0.9, w.w * 0.6), 0.22);
@@ -3710,10 +3711,18 @@ BM.buildGothic = function (B, game) {
     F.box('gothicTrim', w.w / 2 + 0.22, w.head + 0.05, 0.12, 0.14, 0.2, 0.24);
     if (i % 3 !== 1) {
       const sh = (w.head - w.sill), sw = w.w / 2 + 0.04;
-      F.box('shutter', -w.w / 2 - sw / 2 - 0.16, w.sill + sh / 2, 0.08, sw, sh, 0.05);
-      // every so often one hangs from a single hinge
-      if (i % 5 === 2) F.box('shutter', w.w / 2 + sw / 2 + 0.3, w.sill + sh / 2 - 0.3, 0.1, sw, sh, 0.05, -0.35);
-      else F.box('shutter', w.w / 2 + sw / 2 + 0.16, w.sill + sh / 2, 0.08, sw, sh, 0.05);
+      for (const e of [-1, 1]) {
+        // every so often one hangs from a single hinge; a few more have lost their catches and swing in the wind
+        if (e === 1 && i % 5 === 2) { F.box('shutter', w.w / 2 + sw / 2 + 0.3, w.sill + sh / 2 - 0.3, 0.1, sw, sh, 0.05, -0.35); continue; }
+        const loose = (i * 3 + (e > 0 ? 1 : 0)) % 5 === 0 && game.shutters.length < 14;
+        if (!loose) { F.box('shutter', e * (w.w / 2 + sw / 2 + 0.16), w.sill + sh / 2, 0.08, sw, sh, 0.05); continue; }
+        const [hx, hz] = F.at(e * (w.w / 2 + 0.16), 0.08);
+        const pv = new THREE.Group(); pv.position.set(hx, w.sill + sh / 2, hz); pv.rotation.y = F.ry; B.root.add(pv);
+        B.box('shutter', e * sw / 2, 0, 0, sw, sh, 0.05, 0, pv);
+        for (const ry of [-0.3, 0.3]) { B.box('shutter', e * sw / 2, ry * sh, 0.03, sw - 0.04, 0.08, 0.02, 0, pv); B.box('black', e * 0.12, ry * sh, 0.035, 0.24, 0.025, 0.012, 0, pv); }
+        pv.traverse(o => { o.userData.dynamic = true; });
+        game.shutters.push({ pv, e, ry: F.ry, a: 0, v: 0, phase: rnd() * 100, reach: 0.8 + rnd() * 0.9, x: hx, y: w.sill + sh / 2, z: hz });
+      }
     }
   });
 
@@ -4001,6 +4010,28 @@ BM.buildGothic = function (B, game) {
     B.box('boards', 0, -L, 0, 0.6, 0.05, 0.22, 0, pivot);
     pivot.traverse(o => { o.userData.dynamic = true; });
     game.swings.push({ pivot, phase: rnd() * 6 });
+  }
+};
+/* The loose shutters: the wind takes them out from the wall, slowly, and lets them fall back with a knock. */
+BM.updateShutters = function (game, dt, t) {
+  const list = game.shutters; if (!list || !list.length) return;
+  const p = game.player, A = game.audio;
+  const gust = Math.max(0, BM.noise1(t * 0.13) * 1.3 - 0.25); // the storm's own gusts, shared by every shutter
+  for (const s of list) {
+    const local = Math.max(0, BM.noise1(t * 0.31 + s.phase)); // and each one catching it differently
+    const target = Math.min(1.9, gust * local * s.reach * 2.2) - 0.5 * (1 - local); // out on a gust; pressed back to the wall when it turns
+    s.v += ((target - s.a) * 1.6 - s.v * 1.1) * dt;                 // a soft spring: slow swings, not snaps
+    s.a += s.v * dt;
+    if (s.a < 0) {
+      if (s.v < -0.35) {
+        const d = Math.hypot(s.x - p.x, s.z - p.z), vol = Math.max(0, 1 - d / 30) * Math.min(1, -s.v / 1.5);
+        if (vol > 0.03 && A.shutterKnock) { const dx = (s.x - p.x) / (d || 1), dz = (s.z - p.z) / (d || 1); A.shutterKnock(vol, Math.max(-1, Math.min(1, dx * Math.cos(p.yaw) - dz * Math.sin(p.yaw)))); }
+      }
+      s.a = 0; s.v = -s.v * 0.25;
+    }
+    if (Math.abs(s.v) > 0.5 && !s.creaking && A.shutterCreak) { const d = Math.hypot(s.x - p.x, s.z - p.z); if (d < 18) { s.creaking = true; A.shutterCreak(Math.max(0, 1 - d / 18) * 0.6); } }
+    if (Math.abs(s.v) < 0.2) s.creaking = false;
+    s.pv.rotation.y = s.ry - s.e * s.a; s.pv.updateMatrix();
   }
 };
 })();
@@ -7266,6 +7297,21 @@ class Synth {
     this.burst(this.white, 'highpass', 4200, 0.7, 0.16, 0.06, 1.9, 0.05);
     for (let i = 0; i < 46; i++) { const w = 0.05 + Math.pow(Math.random(), 1.6) * 1.9; this.burst(this.white, 'bandpass', 2500 + Math.random() * 4500, 9, 0.06 + Math.random() * 0.16, 0.001, 0.015 + Math.random() * 0.03, w); }
   }
+  /* A loose shutter knocking back against the stone, and the creak of its hinges. */
+  shutterKnock(v, pan) {
+    this.burst(this.brown, 'lowpass', 520, 1.5, 0.55 * v, 0.003, 0.14, 0, pan);
+    this.burst(this.white, 'bandpass', 1300, 3, 0.18 * v, 0.002, 0.07, 0, pan);
+    if (Math.random() < 0.5) this.burst(this.brown, 'lowpass', 520, 1.5, 0.25 * v, 0.003, 0.1, 0.12 + Math.random() * 0.08, pan);
+  }
+  shutterCreak(v) {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime, dur = 0.5 + Math.random() * 0.6;
+    const o = ctx.createOscillator(); o.type = 'sawtooth';
+    const f0 = 380 + Math.random() * 200; o.frequency.setValueAtTime(f0, t); o.frequency.linearRampToValueAtTime(f0 * (0.7 + Math.random() * 0.5), t + dur);
+    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1100; f.Q.value = 6;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.05 * v + 0.0002, t + 0.08); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(f); f.connect(g); g.connect(this.master); o.start(t); o.stop(t + dur + 0.05);
+  }
   /* The car's engine coughing and dying. */
   cough() {
     for (const [w, v] of [[0, 0.9], [0.45, 0.7], [0.8, 0.5], [1.05, 0.3]]) { this.burst(this.brown, 'lowpass', 260, 2, 0.8 * v, 0.01, 0.16, w); this.tone('sawtooth', 44, 26, 0.25 * v, 0.01, 0.2, w); }
@@ -8118,6 +8164,7 @@ class Game {
     BM.updateWindows(this, dt);
     BM.updateGateMonitor(this, dt);
     BM.updateOvergrown(this, dt, this.time);
+    BM.updateShutters(this, dt, this.time);
     const sd = this.stormDoors;
     if (sd) {
       sd.boltT += ((sd.bolted ? 0 : 1) - sd.boltT) * Math.min(1, dt * 5); sd.bolt.position.x = -12 - 0.3 * sd.boltT;

@@ -83,6 +83,7 @@ BM.buildGothic = function (B, game) {
   }
 
   /* ---- pointed hoods over every window, and shutters, some hanging ---- */
+  game.shutters = [];
   P.windows.filter(w => w.zone === 'mansion').forEach((w, i) => {
     const F = face(B, w.nx, w.nz, w.x + w.nx * 0.2, w.z + w.nz * 0.2);
     F.wedge('gothicTrim', 0, w.head + 0.02, 0.1, w.w + 0.45, Math.min(0.9, w.w * 0.6), 0.22);
@@ -91,10 +92,18 @@ BM.buildGothic = function (B, game) {
     F.box('gothicTrim', w.w / 2 + 0.22, w.head + 0.05, 0.12, 0.14, 0.2, 0.24);
     if (i % 3 !== 1) {
       const sh = (w.head - w.sill), sw = w.w / 2 + 0.04;
-      F.box('shutter', -w.w / 2 - sw / 2 - 0.16, w.sill + sh / 2, 0.08, sw, sh, 0.05);
-      // every so often one hangs from a single hinge
-      if (i % 5 === 2) F.box('shutter', w.w / 2 + sw / 2 + 0.3, w.sill + sh / 2 - 0.3, 0.1, sw, sh, 0.05, -0.35);
-      else F.box('shutter', w.w / 2 + sw / 2 + 0.16, w.sill + sh / 2, 0.08, sw, sh, 0.05);
+      for (const e of [-1, 1]) {
+        // every so often one hangs from a single hinge; a few more have lost their catches and swing in the wind
+        if (e === 1 && i % 5 === 2) { F.box('shutter', w.w / 2 + sw / 2 + 0.3, w.sill + sh / 2 - 0.3, 0.1, sw, sh, 0.05, -0.35); continue; }
+        const loose = (i * 3 + (e > 0 ? 1 : 0)) % 5 === 0 && game.shutters.length < 14;
+        if (!loose) { F.box('shutter', e * (w.w / 2 + sw / 2 + 0.16), w.sill + sh / 2, 0.08, sw, sh, 0.05); continue; }
+        const [hx, hz] = F.at(e * (w.w / 2 + 0.16), 0.08);
+        const pv = new THREE.Group(); pv.position.set(hx, w.sill + sh / 2, hz); pv.rotation.y = F.ry; B.root.add(pv);
+        B.box('shutter', e * sw / 2, 0, 0, sw, sh, 0.05, 0, pv);
+        for (const ry of [-0.3, 0.3]) { B.box('shutter', e * sw / 2, ry * sh, 0.03, sw - 0.04, 0.08, 0.02, 0, pv); B.box('black', e * 0.12, ry * sh, 0.035, 0.24, 0.025, 0.012, 0, pv); }
+        pv.traverse(o => { o.userData.dynamic = true; });
+        game.shutters.push({ pv, e, ry: F.ry, a: 0, v: 0, phase: rnd() * 100, reach: 0.8 + rnd() * 0.9, x: hx, y: w.sill + sh / 2, z: hz });
+      }
     }
   });
 
@@ -382,6 +391,28 @@ BM.buildGothic = function (B, game) {
     B.box('boards', 0, -L, 0, 0.6, 0.05, 0.22, 0, pivot);
     pivot.traverse(o => { o.userData.dynamic = true; });
     game.swings.push({ pivot, phase: rnd() * 6 });
+  }
+};
+/* The loose shutters: the wind takes them out from the wall, slowly, and lets them fall back with a knock. */
+BM.updateShutters = function (game, dt, t) {
+  const list = game.shutters; if (!list || !list.length) return;
+  const p = game.player, A = game.audio;
+  const gust = Math.max(0, BM.noise1(t * 0.13) * 1.3 - 0.25); // the storm's own gusts, shared by every shutter
+  for (const s of list) {
+    const local = Math.max(0, BM.noise1(t * 0.31 + s.phase)); // and each one catching it differently
+    const target = Math.min(1.9, gust * local * s.reach * 2.2) - 0.5 * (1 - local); // out on a gust; pressed back to the wall when it turns
+    s.v += ((target - s.a) * 1.6 - s.v * 1.1) * dt;                 // a soft spring: slow swings, not snaps
+    s.a += s.v * dt;
+    if (s.a < 0) {
+      if (s.v < -0.35) {
+        const d = Math.hypot(s.x - p.x, s.z - p.z), vol = Math.max(0, 1 - d / 30) * Math.min(1, -s.v / 1.5);
+        if (vol > 0.03 && A.shutterKnock) { const dx = (s.x - p.x) / (d || 1), dz = (s.z - p.z) / (d || 1); A.shutterKnock(vol, Math.max(-1, Math.min(1, dx * Math.cos(p.yaw) - dz * Math.sin(p.yaw)))); }
+      }
+      s.a = 0; s.v = -s.v * 0.25;
+    }
+    if (Math.abs(s.v) > 0.5 && !s.creaking && A.shutterCreak) { const d = Math.hypot(s.x - p.x, s.z - p.z); if (d < 18) { s.creaking = true; A.shutterCreak(Math.max(0, 1 - d / 18) * 0.6); } }
+    if (Math.abs(s.v) < 0.2) s.creaking = false;
+    s.pv.rotation.y = s.ry - s.e * s.a; s.pv.updateMatrix();
   }
 };
 })();

@@ -66,6 +66,7 @@ class Synth {
     this.loops.recordBass = this.toneLoop('sine', 131, 'lowpass', 400);
     this.loops.fire = this.noiseLoop(this.brown, 'lowpass', 900, 0.8);
     this.loops.fountain = this.noiseLoop(this.white, 'bandpass', 1400, 0.6);
+    this.loops.lift = this.toneLoop('sawtooth', 46, 'lowpass', 180); // the lift motor, felt more than heard
     this.loops.engine = this.toneLoop('sawtooth', 38, 'lowpass', 240);
     // the car radio: a song sequenced live through a small, tinny speaker
     { const g = ctx.createGain(); g.gain.value = 0; const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = 0.7;
@@ -261,6 +262,9 @@ class Synth {
     this.burst(this.white, 'highpass', 4200, 0.7, 0.16, 0.06, 1.9, 0.05);
     for (let i = 0; i < 46; i++) { const w = 0.05 + Math.pow(Math.random(), 1.6) * 1.9; this.burst(this.white, 'bandpass', 2500 + Math.random() * 4500, 9, 0.06 + Math.random() * 0.16, 0.001, 0.015 + Math.random() * 0.03, w); }
   }
+  /* The lift: a clank as the brake lifts; at the floor, a clunk and a bell. */
+  liftStart() { this.burst(this.brown, 'lowpass', 300, 1, 0.5, 0.005, 0.3); this.tone('square', 90, 60, 0.12, 0.005, 0.2); }
+  liftStop() { this.burst(this.brown, 'lowpass', 260, 1, 0.55, 0.005, 0.35); this.tone('sine', 1318, 1318, 0.12, 0.005, 1.6, 0.35); this.tone('sine', 1046, 1046, 0.1, 0.005, 1.8, 0.8); }
   /* A loose shutter knocking back against the stone, and the creak of its hinges. */
   shutterKnock(v, pan) {
     this.burst(this.brown, 'lowpass', 520, 1.5, 0.55 * v, 0.003, 0.14, 0, pan);

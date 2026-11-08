@@ -232,8 +232,8 @@ BM.buildFurnishings = function (B, game) {
   /* ================= THE LANDING AND UPPER CORRIDORS ================= */
   at('upper corridor', 'upper');
   B.furniture('wood', -5.45, -1.2, 4.2, 0.48, 0.95, 0.48, 'chair');
-  B.furniture('wood', 5.45, -1.2, 4.2, 0.48, 0.95, 0.48, 'chair');
-  B.furniture('darkWood', 4.6, -0.5, 4.2, 1.2, 0.55, 0.5, 'linen chest');
+  B.furniture('wood', 5.5, -0.42, 4.2, 0.48, 0.95, 0.48, 'chair');
+  B.furniture('darkWood', 4.5, -0.4, 4.2, 1.1, 0.55, 0.5, 'linen chest');
   vase(2.2, 5.0, -3.5, true);
   for (const x of [-3.5, 3.5]) B.picture(x, 6.0, -0.12, Math.PI, 0.55, 0.7, 'portrait', 70 + x);
   runner(-0.45, 0.45, -5.6, -0.6, 4.2);
@@ -300,11 +300,11 @@ BM.buildFurnishings = function (B, game) {
   at('cellar', 'cellar');
   B.furniture('darkWood', -14.0, 1.55, -3.2, 4.0, 1.9, 0.4, 'jar shelves');
   for (let r = 0; r < 3; r++) { B.box('darkWood', -14.0, -3.2 + 0.5 + r * 0.55, 1.55, 4.0, 0.03, 0.4); jars(-15.9, -12.1, -3.2 + 0.52 + r * 0.55, 1.55); }
-  B.furniture('iron', 3.6, -1.0, -3.2, 0.8, 1.3, 0.5, 'mangle');
-  for (const y of [-2.2, -2.05]) { const r = B.mesh(G.cyl, 'wood', 3.6, y, -1.0, 0.14, 0.72, 0.14); r.rotation.z = Math.PI / 2; r.updateMatrix(); }
-  { const w = B.mesh(G.ring, 'iron', 4.05, -2.1, -1.0, 0.5, 0.5, 0.5); w.rotation.y = Math.PI / 2; w.updateMatrix(); }
-  B.furniture('brick', 3.8, -3.4, -3.2, 0.9, 0.95, 0.9, 'copper');
-  B.mesh(G.cyl, 'brass', 3.8, -2.2, -3.4, 0.7, 0.06, 0.7);
+  B.furniture('iron', 2.4, -0.2, -3.2, 0.8, 1.3, 0.5, 'mangle');
+  for (const y of [-2.2, -2.05]) { const r = B.mesh(G.cyl, 'wood', 2.4, y, -0.2, 0.14, 0.72, 0.14); r.rotation.z = Math.PI / 2; r.updateMatrix(); }
+  { const w = B.mesh(G.ring, 'iron', 2.85, -2.1, -0.2, 0.5, 0.5, 0.5); w.rotation.y = Math.PI / 2; w.updateMatrix(); }
+  B.furniture('brick', 4.4, -9.4, -3.2, 0.9, 0.95, 0.9, 'copper');
+  B.mesh(G.cyl, 'brass', 4.4, -2.2, -9.4, 0.7, 0.06, 0.7);
   B.furniture('darkWood', 2.3, -11.55, -3.2, 3.2, 1.8, 0.4, 'jar shelves');
   for (let r = 0; r < 3; r++) { B.box('darkWood', 2.3, -3.2 + 0.45 + r * 0.5, -11.55, 3.2, 0.03, 0.4); jars(0.9, 3.7, -3.2 + 0.47 + r * 0.5, -11.55); }
   for (const x of [-1.6, -1.2]) { B.mesh(G.cyl, 'flowersRed', x, -2.98, -0.9, 0.3, 0.44, 0.22); B.mesh(G.cyl, 'black', x, -2.72, -0.9, 0.06, 0.08, 0.06); } // paraffin cans by the boiler

@@ -188,6 +188,7 @@ class Game {
     BM.buildFurnishings(this.B, this);
     BM.buildInterior(this.B, this);
     BM.buildWindows(this.B, this);
+    BM.buildLift(this.B, this);
     this.interactables = this.B.interactables;
     this.byId = {};
     for (const it of this.interactables) this.byId[it.id] = it;
@@ -675,6 +676,7 @@ class Game {
     BM.updateGateMonitor(this, dt);
     BM.updateOvergrown(this, dt, this.time);
     BM.updateShutters(this, dt, this.time);
+    BM.updateLift(this, dt);
     const sd = this.stormDoors;
     if (sd) {
       sd.boltT += ((sd.bolted ? 0 : 1) - sd.boltT) * Math.min(1, dt * 5); sd.bolt.position.x = -12 - 0.3 * sd.boltT;
@@ -742,6 +744,25 @@ class Game {
     sd.moving = true; sd.target = sd.open ? 0 : 1;
     this.audio.stormDoors && this.audio.stormDoors(!sd.open);
     this.ui.say(sd.open ? 'You haul the doors down. They meet with a clang.' : 'The doors go up on their hinges and fall open on the setts with a clang. Rain comes in down the steps.', 4);
+  }
+  /* The lift: call it to your floor, or ride it to another. */
+  liftCall(i) {
+    const L = this.lift;
+    if (!this.grid.live('main')) { this.audio.click(); this.ui.say('The button sinks with a click. Nothing: the lift runs on the house supply.'); return; }
+    this.audio.click();
+    if (L.phase !== 'idle') { this.ui.say('Somewhere in the shaft the lift is already moving.'); return; }
+    if (L.at === i) { if (L.gate[i] < 0.5) { L.phase = 'opening'; L.t = 0; } this.ui.say('The lift is here. The gate folds back.'); return; }
+    L.to = i; L.rideWith = false; L.phase = 'closing'; L.t = 0;
+    this.ui.say('A clank deep in the house, and the hum of a motor. The needle over the gate begins to creep round.', 4);
+  }
+  liftPress(i, k) {
+    const L = this.lift, F = BM.LIFT_FLOORS;
+    this.audio.click();
+    if (!this.grid.live('main')) { this.ui.say('The button goes in and stays in. No power: the lift runs on the house supply.'); return; }
+    if (L.phase !== 'idle') return;
+    if (k === i) { this.ui.say('You are on the ' + F[k].name.toLowerCase() + ' already.'); return; }
+    L.to = k; L.rideWith = BM.inLift(this, i); L.phase = 'closing'; L.t = 0;
+    this.ui.say(k === 3 ? 'The gate rattles shut. The car lurches, and climbs into the roof.' : k === 0 ? 'The gate rattles shut, and the car sinks, slow, into the cold.' : 'The gate rattles shut and the car shudders into motion.', 4);
   }
   startOutro() {
     const p = this.player, car = this.car, c = car.group.position;

@@ -19,6 +19,7 @@ function openEverything(game) {
   g.setLodge(true); game.openGates(); g.throwMain();
   for (const d of game.B.doors) if (!d.open) game.toggleDoor(d);
   game.story.journalRead = true;
+  if (game.lift) for (let i = 0; i < 4; i++) { game.lift.gate[i] = game.lift.gateTarget[i] = 1; game.lift.floors[i].gateWall.enabled = false; }
   for (let i = 0; i < 400; i++) game.updateDoors(1 / 30);
   game.fx.updateAppliances(0, 0);
 }
@@ -716,6 +717,35 @@ suite('controls', () => {
   assert(game.story.ended, 'reached the ending with the keyboard alone');
   assert(game.frameErrors === 0, 'frame errors');
   return `ending reached by keyboard in ${(AP.frames / 60 / 60).toFixed(1)} game minutes, ${AP.stuck} recoveries from snags`;
+});
+
+suite('lift', () => {
+  const env = H.load({ quiet: true });
+  const { game, BM } = env, L = game.lift, F = BM.LIFT_FLOORS;
+  if (game.intro) game.intro.skip();
+  const run = s => { for (let i = 0; i < s * 30; i++) game.update(1 / 30); };
+  const press = id => { game.standAt(game.byId[id]); assert(game.pick() === game.byId[id], 'can press ' + id + ' (picked ' + (game.pick() && game.pick().id) + ')'); game.interact(); };
+  assert(L && L.floors.length === 4 && F.map(f => f.key).join('') === 'BG1A', 'four floors: cellar, ground, first, attic');
+  // no house supply: nothing
+  game.teleport(3.0, 0, -3.07, 0); press('lift-call-1'); run(1);
+  assert(L.phase === 'idle' && /supply/.test(game.ui.lastSay), 'no power, no lift');
+  game.grid.stormHasTripped = true; // the storm trip in the attic is its own test
+  game.grid.setLodge(true); game.grid.throwMain(); run(0.5);
+  // ride from the ground floor to the attic
+  run(2); assert(L.at === 1 && L.gate[1] === 1 && !L.floors[1].gateWall.enabled, 'waiting at the ground floor with the gate open');
+  press('lift-1-A'); assert(L.phase === 'closing' && L.rideWith, 'the gate closes with you inside');
+  run(0.6); assert(L.floors[1].gateWall.enabled, 'you cannot step out while it closes');
+  run(12);
+  assert(L.at === 3 && L.phase === 'idle' && Math.abs(game.player.y - 8.2) < 0.05 && BM.inLift(game, 3), 'up to the attic, still standing in the car (y ' + game.player.y.toFixed(2) + ')');
+  assert(L.gate[3] === 1 && !L.floors[3].gateWall.enabled && L.floors[3].car.visible && !L.floors[1].car.visible, 'the gate opens on the attic; the ground floor shaft is empty');
+  // and down to the cellar
+  press('lift-3-B'); run(14);
+  assert(L.at === 0 && Math.abs(game.player.y + 3.2) < 0.05, 'down to the cellar');
+  // walk out, and call it from the first floor while it is in the cellar
+  game.teleport(3.0, 4.2, -3.07, -Math.PI / 2); press('lift-call-2'); assert(!L.rideWith, 'called empty'); run(10);
+  assert(L.at === 2 && L.gate[2] === 1 && L.gate[0] === 0, 'it comes up to the first floor, and the cellar gate is shut');
+  assert(game.frameErrors === 0, 'frame errors');
+  return 'ground to attic to cellar with you in it, and called empty to the first floor';
 });
 
 suite('reachability', () => {

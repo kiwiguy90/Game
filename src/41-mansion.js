@@ -65,26 +65,7 @@ BM.buildMansion = function (B, game) {
   const SC = { cx: 0, cz: 6, r0: 2.6, r1: 4.0 };
   P.arc(SC.cx, SC.cz, SC.r0, SC.r1, 0.5, Math.PI, 0, 4.2, 0, 'stair-right');
   P.arc(SC.cx, SC.cz, SC.r0, SC.r1, -Math.PI, -0.5, 4.2, 0, 0, 'stair-left');
-  const steps = 22;
-  for (const side of [1, -1]) {
-    for (let i = 0; i < steps; i++) {
-      const t0 = i / steps, t1 = (i + 1) / steps;
-      const a = side * (0.5 + (Math.PI - 0.5) * (t0 + t1) / 2);
-      const top = 4.2 * t1;
-      const rm = (SC.r0 + SC.r1) / 2;
-      const len = rm * (Math.PI - 0.5) / steps * 1.12;
-      const m = B.box('carpet', SC.cx + Math.sin(a) * rm, top / 2, SC.cz + Math.cos(a) * rm, len, top, SC.r1 - SC.r0, a);
-      m.userData.stair = true;
-      // balusters along the inner edge, handrail posts
-      if (i % 2 === 0) {
-        const bx = SC.cx + Math.sin(a) * (SC.r0 + 0.08), bz = SC.cz + Math.cos(a) * (SC.r0 + 0.08);
-        B.mesh(G.post, 'darkWood', bx, top + 0.45, bz, 0.05, 0.9, 0.05);
-        B.box('darkWood', bx, top + 0.92, bz, len * 2.1, 0.06, 0.08, a);
-      }
-    }
-  }
-  // newel posts
-  for (const sx of [-1, 1]) B.mesh(G.post, 'darkWood', sx * 1.3, 0.6, 8.35, 0.16, 1.2, 0.16);
+  BM.buildGrandStair(B, SC, 4.2, 22); // the treads, runner, strings, balusters, rails and newels: see 31d
   // upper floor slab with the void cut out; balcony rails
   B.levelName = 'upper';
   const upperSlab = B.floor('floor', -18, 18, -12, 12, 4.2, 0.2, [[-4.6, 4.6, 2, 12]]);
@@ -385,10 +366,10 @@ BM.buildMansion = function (B, game) {
 
   /* ---- Eleanor's bedroom (west, rear) ---- */
   B.room = "eleanor's bedroom";
-  B.furniture('fabricCream', -15.5, -9, 4.2, 2.2, 0.6, 1.4, 'narrow bed');
+  B.furniture('fabricCream', -15.5, -11.0, 4.2, 2.2, 0.6, 1.4, 'narrow bed');
   B.furniture('wood', -7.0, -11.4, 4.2, 1.2, 0.76, 0.6, 'school desk');
   B.fixture({ id: 'eleanor-bed-light', name: 'Bedroom light', circuit: 'west', style: 'pendant', pos: [-12, 7.3, -9], ceiling: 8, colour: 0xffd29a, target: 1.0, range: 8 });
-  roomSwitch('sw-eleanor-bed', "Eleanor's bedroom light", [-10.6, 5.6, -6.2], [0, -1], ['eleanor-bed-light']);
+  roomSwitch('sw-eleanor-bed', "Eleanor's bedroom light", [-6.25, 5.6, -6.9], [-1, 0], ['eleanor-bed-light']);
   B.readable('note-voss', 'Letter to Eleanor', "Miss Blackthorn — I am told you have been writing to the newspapers. Your family has explained your condition to them. You will find nobody prints the letters of a cursed girl.\n\nIf you want to help those people, sign the order and let it be finished quietly. If you do not, it will be finished anyway, and you will have to live in this house knowing you could not stop it.\n\nP. Voss", [-7.0, 4.97, -11.2], [0, 1]);
 
   /* ---- Nursery (east, rear) ---- */
@@ -396,7 +377,7 @@ BM.buildMansion = function (B, game) {
   B.furniture('wood', 15.5, -10.5, 4.2, 1.4, 0.9, 0.8, 'cot');
   B.furniture('fabricRed', 8.5, -11.2, 4.2, 0.8, 0.9, 0.9, 'rocking horse');
   B.fixture({ id: 'nursery-light', name: 'Nursery light', circuit: 'east', style: 'pendant', pos: [12, 7.3, -9], ceiling: 8, colour: 0xffd29a, target: 1.0, range: 8 });
-  roomSwitch('sw-nursery', 'Nursery light', [13.4, 5.6, -6.2], [0, -1], ['nursery-light']);
+  roomSwitch('sw-nursery', 'Nursery light', [6.25, 5.6, -6.9], [1, 0], ['nursery-light']);
 
   /* ---- Linen room ---- */
   B.room = 'linen';

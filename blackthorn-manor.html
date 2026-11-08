@@ -2252,6 +2252,117 @@ BM.softenDamp = function () {
 };
 })();
 </script>
+<script id="bm-31d-staircase">
+/* ==========================================================================
+   BLACKTHORN MANOR — 3d. THE GRAND STAIRCASE
+   The two curved flights in the hall, built as a joiner would: polished
+   treads with rounded nosings over painted risers, a carpet runner held
+   down by brass stair rods, a moulded string along each edge over a
+   panelled curved spandrel, turned balusters on both sides carrying a
+   handrail that sweeps up the curve in one piece, and turned newel posts
+   with finials at the foot.
+   ========================================================================== */
+(function () {
+'use strict';
+const BM = window.BM;
+const G = BM.G;
+const V2 = (x, y) => new THREE.Vector2(x, y);
+const cache = {};
+const geo = (k, f) => { if (!cache[k]) { cache[k] = f(); cache[k].userData.canonical = 'stair:' + k; } return cache[k]; };
+
+/* A solid in polar coordinates round (cx, cz): angle a0..a1, radius r0..r1, height lo(a)..hi(a).
+   Appended as triangles (faces turned outwards) to arrays pos. */
+function polarPrism(pos, cx, cz, a0, a1, r0, r1, lo, hi, segs) {
+  if (a1 < a0) { const t = a0; a0 = a1; a1 = t; }
+  const L = typeof lo === 'function' ? lo : () => lo, H = typeof hi === 'function' ? hi : () => hi;
+  const P = (a, r, y) => [cx + Math.sin(a) * r, y, cz + Math.cos(a) * r];
+  const quad = (p, q, r, s, centre) => {
+    // two triangles p q r, p r s; flip if the normal points at the centre
+    const ux = q[0] - p[0], uy = q[1] - p[1], uz = q[2] - p[2], vx = r[0] - p[0], vy = r[1] - p[1], vz = r[2] - p[2];
+    const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    const mx = (p[0] + r[0]) / 2 - centre[0], my = (p[1] + r[1]) / 2 - centre[1], mz = (p[2] + r[2]) / 2 - centre[2];
+    if (nx * mx + ny * my + nz * mz < 0) { pos.push(...p, ...s, ...r, ...p, ...r, ...q); } else { pos.push(...p, ...q, ...r, ...p, ...r, ...s); }
+  };
+  for (let k = 0; k < segs; k++) {
+    const b0 = a0 + (a1 - a0) * k / segs, b1 = a0 + (a1 - a0) * (k + 1) / segs, bm = (b0 + b1) / 2;
+    const l0 = L(b0), l1 = L(b1), h0 = H(b0), h1 = H(b1);
+    const c = P(bm, (r0 + r1) / 2, (L(bm) + H(bm)) / 2);
+    quad(P(b0, r0, h0), P(b1, r0, h1), P(b1, r1, h1), P(b0, r1, h0), c);   // top
+    quad(P(b0, r0, l0), P(b1, r0, l1), P(b1, r1, l1), P(b0, r1, l0), c);   // underside
+    quad(P(b0, r1, l0), P(b1, r1, l1), P(b1, r1, h1), P(b0, r1, h0), c);   // outer face
+    quad(P(b0, r0, l0), P(b1, r0, l1), P(b1, r0, h1), P(b0, r0, h0), c);   // inner face
+    if (k === 0) quad(P(b0, r0, l0), P(b0, r1, l0), P(b0, r1, h0), P(b0, r0, h0), c);
+    if (k === segs - 1) quad(P(b1, r0, l1), P(b1, r1, l1), P(b1, r1, h1), P(b1, r0, h1), c);
+  }
+}
+function finish(pos) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(new Array(pos.length / 3 * 2).fill(0), 2));
+  g.computeVertexNormals();
+  return g;
+}
+
+/* One flight: side +1 rises clockwise from the front of the hall to the balcony, side -1 mirrors it. */
+BM.buildGrandStair = function (B, SC, rise, steps) {
+  const { cx, cz, r0, r1 } = SC, A0 = 0.5, A1 = Math.PI, N = steps, step = rise / N;
+  const angle = (side, t) => side * (A0 + (A1 - A0) * t);
+  const ins = 0.07;                                     // balusters stand this far in from each edge
+  const railY = t => rise * t + step + 0.92;            // the rail follows the line of the nosings
+  const balGeo = geo('baluster', () => { const pts = [[0.001, 0], [0.035, 0], [0.035, 0.06], [0.022, 0.1], [0.03, 0.2], [0.018, 0.45], [0.016, 0.62], [0.026, 0.7], [0.016, 0.78], [0.02, 0.94], [0.03, 0.96], [0.03, 1.0], [0.001, 1.0]]; const g = new THREE.LatheGeometry(pts.map(p => V2(p[0], p[1])), 10); g.computeVertexNormals(); return g; });
+  const newelGeo = geo('newel', () => { const pts = [[0.001, 0], [0.11, 0], [0.11, 0.08], [0.085, 0.12], [0.085, 0.82], [0.1, 0.86], [0.1, 0.92], [0.065, 0.96], [0.05, 1.02], [0.075, 1.08], [0.075, 1.12], [0.04, 1.16], [0.07, 1.22], [0.075, 1.28], [0.06, 1.34], [0.02, 1.38], [0.001, 1.39]]; const g = new THREE.LatheGeometry(pts.map(p => V2(p[0], p[1])), 16); g.computeVertexNormals(); return g; });
+  for (const side of [1, -1]) {
+    const tag = side > 0 ? 'R' : 'L';
+    // the treads, nosings and risers: each step a solid of polished wood over a white-painted riser
+    B.mesh(geo('treads' + tag, () => { const p = [];
+      for (let i = 0; i < N; i++) { const t0 = i / N, t1 = (i + 1) / N, top = step * (i + 1), da = side * 0.035 / ((r0 + r1) / 2);
+        polarPrism(p, cx, cz, angle(side, t0) - da, angle(side, t1), r0 - 0.02, r1 + 0.02, top - 0.045, top, 4); }
+      return finish(p); }), 'darkWood', 0, 0, 0, 1, 1, 1);
+    B.mesh(geo('risers' + tag, () => { const p = [];
+      for (let i = 0; i < N; i++) { const t0 = i / N, t1 = (i + 1) / N, top = step * (i + 1);
+        polarPrism(p, cx, cz, angle(side, t0), angle(side, t1), r0, r1, Math.max(0, top - step - 0.01), top - 0.045, 4); }
+      return finish(p); }), 'paintedWood', 0, 0, 0, 1, 1, 1);
+    // the runner, over tread and riser, and the brass rod at the back of each tread
+    B.mesh(geo('runner' + tag, () => { const p = [], a = r0 + 0.32, b = r1 - 0.32;
+      for (let i = 0; i < N; i++) { const t0 = i / N, t1 = (i + 1) / N, top = step * (i + 1), da = side * 0.04 / ((r0 + r1) / 2);
+        polarPrism(p, cx, cz, angle(side, t0) - da, angle(side, t1), a, b, top, top + 0.012, 4);
+        polarPrism(p, cx, cz, angle(side, t0) - da, angle(side, t0) - da - side * 0.012 / ((r0 + r1) / 2), a, b, top - step, top + 0.012, 1); }
+      return finish(p); }), 'carpet', 0, 0, 0, 1, 1, 1);
+    for (let i = 1; i < N; i++) {
+      const a = angle(side, i / N), top = step * i, rm = (r0 + r1) / 2;
+      const rod = B.mesh(G.post, 'brass', cx + Math.sin(a) * rm, top + 0.02, cz + Math.cos(a) * rm, 0.018, r1 - r0 - 0.5, 0.018);
+      rod.rotation.set(Math.PI / 2, a, 0, 'YXZ'); rod.updateMatrix();
+    }
+    // the curved sides: a panelled spandrel down to the floor, and a moulded string along the top of it
+    const strTop = a => rise * ((Math.abs(a) - A0) / (A1 - A0)) + step + 0.06, strBot = a => Math.max(0, rise * ((Math.abs(a) - A0) / (A1 - A0)) - 0.25);
+    B.mesh(geo('spandrel' + tag, () => { const p = [];
+      polarPrism(p, cx, cz, angle(side, 0), angle(side, 1), r1 - 0.01, r1 + 0.01, 0, strBot, 64);
+      polarPrism(p, cx, cz, angle(side, 0), angle(side, 1), r0 - 0.01, r0 + 0.01, 0, strBot, 64);
+      return finish(p); }), 'panel', 0, 0, 0, 1, 1, 1);
+    B.mesh(geo('strings' + tag, () => { const p = [];
+      polarPrism(p, cx, cz, angle(side, 0), angle(side, 1), r1, r1 + 0.06, strBot, strTop, 64);
+      polarPrism(p, cx, cz, angle(side, 0), angle(side, 1), r0 - 0.06, r0, strBot, strTop, 64);
+      polarPrism(p, cx, cz, angle(side, 0), angle(side, 1), r1 + 0.04, r1 + 0.08, a => strTop(a) - 0.05, strTop, 64);   // the moulding
+      polarPrism(p, cx, cz, angle(side, 0), angle(side, 1), r0 - 0.08, r0 - 0.04, a => strTop(a) - 0.05, strTop, 64);
+      return finish(p); }), 'darkWood', 0, 0, 0, 1, 1, 1);
+    // balusters, two to a tread on each side, and the handrails over them
+    for (const r of [r0 + ins, r1 - ins]) {
+      for (let i = 0; i < N; i++) for (const f of [0.28, 0.72]) {
+        const t = (i + f) / N, a = angle(side, t), top = step * (i + 1), h = railY(t) - top - 0.02;
+        if (i === 0 && f < 0.5) continue; // the newel stands there
+        B.mesh(balGeo, 'darkWood', cx + Math.sin(a) * r, top, cz + Math.cos(a) * r, 1, h, 1);
+      }
+      const pts = []; for (let k = 0; k <= 48; k++) { const t = 0.02 + 0.98 * k / 48, a = angle(side, t); pts.push(new THREE.Vector3(cx + Math.sin(a) * r, railY(t), cz + Math.cos(a) * r)); }
+      const rail = geo('rail' + tag + (r < (r0 + r1) / 2 ? 'i' : 'o'), () => new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 96, 0.035, 8, false));
+      B.mesh(rail, 'darkWood', 0, 0, 0, 1, 1, 1);
+      // the newel at the foot
+      const a = angle(side, 0.012);
+      B.mesh(newelGeo, 'darkWood', cx + Math.sin(a) * r, 0, cz + Math.cos(a) * r, 1, 1, 1);
+    }
+  }
+};
+})();
+</script>
 <script id="bm-40-grounds">
 /* ==========================================================================
    BLACKTHORN MANOR — 4. THE GROUNDS
@@ -2747,26 +2858,7 @@ BM.buildMansion = function (B, game) {
   const SC = { cx: 0, cz: 6, r0: 2.6, r1: 4.0 };
   P.arc(SC.cx, SC.cz, SC.r0, SC.r1, 0.5, Math.PI, 0, 4.2, 0, 'stair-right');
   P.arc(SC.cx, SC.cz, SC.r0, SC.r1, -Math.PI, -0.5, 4.2, 0, 0, 'stair-left');
-  const steps = 22;
-  for (const side of [1, -1]) {
-    for (let i = 0; i < steps; i++) {
-      const t0 = i / steps, t1 = (i + 1) / steps;
-      const a = side * (0.5 + (Math.PI - 0.5) * (t0 + t1) / 2);
-      const top = 4.2 * t1;
-      const rm = (SC.r0 + SC.r1) / 2;
-      const len = rm * (Math.PI - 0.5) / steps * 1.12;
-      const m = B.box('carpet', SC.cx + Math.sin(a) * rm, top / 2, SC.cz + Math.cos(a) * rm, len, top, SC.r1 - SC.r0, a);
-      m.userData.stair = true;
-      // balusters along the inner edge, handrail posts
-      if (i % 2 === 0) {
-        const bx = SC.cx + Math.sin(a) * (SC.r0 + 0.08), bz = SC.cz + Math.cos(a) * (SC.r0 + 0.08);
-        B.mesh(G.post, 'darkWood', bx, top + 0.45, bz, 0.05, 0.9, 0.05);
-        B.box('darkWood', bx, top + 0.92, bz, len * 2.1, 0.06, 0.08, a);
-      }
-    }
-  }
-  // newel posts
-  for (const sx of [-1, 1]) B.mesh(G.post, 'darkWood', sx * 1.3, 0.6, 8.35, 0.16, 1.2, 0.16);
+  BM.buildGrandStair(B, SC, 4.2, 22); // the treads, runner, strings, balusters, rails and newels: see 31d
   // upper floor slab with the void cut out; balcony rails
   B.levelName = 'upper';
   const upperSlab = B.floor('floor', -18, 18, -12, 12, 4.2, 0.2, [[-4.6, 4.6, 2, 12]]);
@@ -3067,10 +3159,10 @@ BM.buildMansion = function (B, game) {
 
   /* ---- Eleanor's bedroom (west, rear) ---- */
   B.room = "eleanor's bedroom";
-  B.furniture('fabricCream', -15.5, -9, 4.2, 2.2, 0.6, 1.4, 'narrow bed');
+  B.furniture('fabricCream', -15.5, -11.0, 4.2, 2.2, 0.6, 1.4, 'narrow bed');
   B.furniture('wood', -7.0, -11.4, 4.2, 1.2, 0.76, 0.6, 'school desk');
   B.fixture({ id: 'eleanor-bed-light', name: 'Bedroom light', circuit: 'west', style: 'pendant', pos: [-12, 7.3, -9], ceiling: 8, colour: 0xffd29a, target: 1.0, range: 8 });
-  roomSwitch('sw-eleanor-bed', "Eleanor's bedroom light", [-10.6, 5.6, -6.2], [0, -1], ['eleanor-bed-light']);
+  roomSwitch('sw-eleanor-bed', "Eleanor's bedroom light", [-6.25, 5.6, -6.9], [-1, 0], ['eleanor-bed-light']);
   B.readable('note-voss', 'Letter to Eleanor', "Miss Blackthorn — I am told you have been writing to the newspapers. Your family has explained your condition to them. You will find nobody prints the letters of a cursed girl.\n\nIf you want to help those people, sign the order and let it be finished quietly. If you do not, it will be finished anyway, and you will have to live in this house knowing you could not stop it.\n\nP. Voss", [-7.0, 4.97, -11.2], [0, 1]);
 
   /* ---- Nursery (east, rear) ---- */
@@ -3078,7 +3170,7 @@ BM.buildMansion = function (B, game) {
   B.furniture('wood', 15.5, -10.5, 4.2, 1.4, 0.9, 0.8, 'cot');
   B.furniture('fabricRed', 8.5, -11.2, 4.2, 0.8, 0.9, 0.9, 'rocking horse');
   B.fixture({ id: 'nursery-light', name: 'Nursery light', circuit: 'east', style: 'pendant', pos: [12, 7.3, -9], ceiling: 8, colour: 0xffd29a, target: 1.0, range: 8 });
-  roomSwitch('sw-nursery', 'Nursery light', [13.4, 5.6, -6.2], [0, -1], ['nursery-light']);
+  roomSwitch('sw-nursery', 'Nursery light', [6.25, 5.6, -6.9], [1, 0], ['nursery-light']);
 
   /* ---- Linen room ---- */
   B.room = 'linen';
@@ -4626,7 +4718,7 @@ BM.buildFurnishings = function (B, game) {
   for (let i = 0; i < 5; i++) B.mesh(G.cyl, i % 2 ? 'metalDark' : 'flowersRed', -17.4 + i * 0.3, 1.82, -4.45, 0.09, 0.13, 0.09);
   B.furniture('wood', -17.45, -10.6, 0, 0.6, 0.85, 1.6, 'meat safe');
   B.mesh(G.cyl, 'metalDark', -15.0, 0.18, -11.4, 0.3, 0.36, 0.3); B.box('black', -15.6, 0.12, -11.5, 0.12, 0.24, 0.28); B.box('black', -15.8, 0.12, -11.5, 0.12, 0.24, 0.28); // a pail and boots
-  B.box('wood', -16.4, 1.5, -11.85, 0.6, 0.3, 0.12); label('MATCHES', -16.4, 1.5, -11.78, 0, 0.18, 0.05, { w: 128, h: 36, size: 20 });
+  B.box('wood', -17.85, 1.5, -6.2, 0.12, 0.3, 0.6); label('MATCHES', -17.78, 1.5, -6.2, Math.PI / 2, 0.18, 0.05, { w: 128, h: 36, size: 20 });
 
   /* ================= THE BATHROOM ================= */
   at('bathroom');
@@ -5132,7 +5224,7 @@ BM.buildHearths = function (B, game) {
   B.levelName = 'upper'; B.room = 'gallery';
   B.furniture('darkWood', 12.0, -0.2, 4.2, 0.5, 0.8, 0.5, 'gallery stand'); candle({ id: 'candle-gallery', pos: [12.0, 5.0, -0.2], n: [0, 1] });
   B.levelName = 'upper'; B.room = "eleanor's bedroom";
-  B.furniture('wood', -13.9, -9.6, 4.2, 0.4, 0.7, 0.4, 'bedside stand'); candle({ id: 'candle-eleanor-bed', pos: [-13.9, 4.9, -9.6], n: [1, 0] });
+  B.furniture('wood', -13.95, -11.4, 4.2, 0.4, 0.7, 0.4, 'bedside stand'); candle({ id: 'candle-eleanor-bed', pos: [-13.95, 4.9, -11.4], n: [1, 0] });
   B.levelName = 'upper'; B.room = 'nursery';
   B.furniture('wood', 12.5, -8.5, 4.2, 0.5, 0.8, 0.5, 'nursery table'); candle({ id: 'candle-nursery', pos: [12.5, 5.0, -8.5], n: [0, 1] });
   C('candle-linen', 'linen', [0.6, 5.4, -11.2], [0, 1], 'upper');

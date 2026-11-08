@@ -133,7 +133,7 @@ BM.buildHearths = function (B, game) {
   B.levelName = 'upper'; B.room = 'gallery';
   B.furniture('darkWood', 12.0, -0.2, 4.2, 0.5, 0.8, 0.5, 'gallery stand'); candle({ id: 'candle-gallery', pos: [12.0, 5.0, -0.2], n: [0, 1] });
   B.levelName = 'upper'; B.room = "eleanor's bedroom";
-  B.furniture('wood', -13.9, -9.6, 4.2, 0.4, 0.7, 0.4, 'bedside stand'); candle({ id: 'candle-eleanor-bed', pos: [-13.9, 4.9, -9.6], n: [1, 0] });
+  B.furniture('wood', -13.95, -11.4, 4.2, 0.4, 0.7, 0.4, 'bedside stand'); candle({ id: 'candle-eleanor-bed', pos: [-13.95, 4.9, -11.4], n: [1, 0] });
   B.levelName = 'upper'; B.room = 'nursery';
   B.furniture('wood', 12.5, -8.5, 4.2, 0.5, 0.8, 0.5, 'nursery table'); candle({ id: 'candle-nursery', pos: [12.5, 5.0, -8.5], n: [0, 1] });
   C('candle-linen', 'linen', [0.6, 5.4, -11.2], [0, 1], 'upper');

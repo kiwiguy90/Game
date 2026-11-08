@@ -875,7 +875,25 @@ suite('windows', () => {
     if (occ || furn) { fails.push(`${w.id}: view blocked by ${occ ? (occ.kind || occ.tag) : furn.tag}`); break; }
   }
   assert(!fails.length, fails.join('\n'));
-  return `${P.windows.length} windows (${P.windows.filter(w => w.zone === 'mansion').length} in the house) can be seen out of`;
+  // open every sash: nothing but the sash itself may be left in the lower half of the opening
+  const game = env.game, THREE = env.window.THREE, wins = game.B.windows;
+  for (const w of wins) if (w.sash) w.open = true;
+  for (let i = 0; i < 120; i++) env.BM.updateWindows(game, 1 / 30);
+  game.scene.updateMatrixWorld(true);
+  const boxes = [], m4 = new THREE.Matrix4();
+  game.scene.traverse(o => { if (!o.isMesh || o.material.type === 'ShaderMaterial' || o.material.blending === THREE.AdditiveBlending) return;
+    if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+    if (o.isInstancedMesh) { for (let i = 0; i < o.count; i++) { o.getMatrixAt(i, m4); m4.premultiply(o.matrixWorld); boxes.push({ o, b: o.geometry.boundingBox.clone().applyMatrix4(m4) }); } }
+    else boxes.push({ o, b: o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld) }); });
+  const inSash = (o, w) => { for (let p = o; p; p = p.parent) if (p === w.sash) return true; return false; };
+  const blocked = [];
+  for (const w of wins) { if (!w.sash) continue;
+    const ax = w.nz !== 0, a0 = (ax ? w.x : w.z) - w.w / 2 + 0.09, a1 = (ax ? w.x : w.z) + w.w / 2 - 0.09, c = ax ? w.z : w.x, y0 = w.sill + 0.08, y1 = w.sill + w.h / 2 - 0.15;
+    const hit = boxes.find(({ o, b }) => !inSash(o, w) && !o.userData.glass && b.max.y > y0 && b.min.y < y1 &&
+      (ax ? b.max.x > a0 && b.min.x < a1 && b.max.z > c - 0.12 && b.min.z < c + 0.12 : b.max.z > a0 && b.min.z < a1 && b.max.x > c - 0.12 && b.min.x < c + 0.12));
+    if (hit) blocked.push(w.id + ' (' + (hit.o.material.name || hit.o.material.type) + ')'); }
+  assert(!blocked.length, 'open windows with something left across the opening: ' + blocked.join(', '));
+  return `${P.windows.length} windows (${P.windows.filter(w => w.zone === 'mansion').length} in the house) can be seen out of, and open clear`;
 });
 
 suite('readables', () => {
@@ -913,9 +931,9 @@ suite('budgets', () => {
   });
   assert(!nonCanon.size, 'meshes not using canonical geometry: ' + [...nonCanon].join(', '));
   // carved and turned statuary shares its own small set of shapes; everything else stays primitive
-  const sculpt = [...geos].filter(g => /^(statuary|car|fitting):/.test(g.userData && g.userData.canonical || '')).length;
+  const sculpt = [...geos].filter(g => /^(statuary|car|fitting|stair):/.test(g.userData && g.userData.canonical || '')).length;
   assert(geos.size - sculpt <= 20, 'unique geometries ' + (geos.size - sculpt));
-  assert(sculpt <= 64, 'statuary, car and fitting geometries ' + sculpt);
+  assert(sculpt <= 84, 'statuary, car, fitting and stair geometries ' + sculpt);
   let tris = 0; for (const g of geos) tris += (g.index ? g.index.count : (g.attributes.position ? g.attributes.position.count : 0)) / 3;
   assert(tris < 60000, 'unique triangles ' + tris);
   assert(game.optStats.instancedMeshes > 10, 'instancing pass did not run');

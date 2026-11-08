@@ -170,7 +170,7 @@ BM.buildFurnishings = function (B, game) {
   for (let i = 0; i < 5; i++) B.mesh(G.cyl, i % 2 ? 'metalDark' : 'flowersRed', -17.4 + i * 0.3, 1.82, -4.45, 0.09, 0.13, 0.09);
   B.furniture('wood', -17.45, -10.6, 0, 0.6, 0.85, 1.6, 'meat safe');
   B.mesh(G.cyl, 'metalDark', -15.0, 0.18, -11.4, 0.3, 0.36, 0.3); B.box('black', -15.6, 0.12, -11.5, 0.12, 0.24, 0.28); B.box('black', -15.8, 0.12, -11.5, 0.12, 0.24, 0.28); // a pail and boots
-  B.box('wood', -16.4, 1.5, -11.85, 0.6, 0.3, 0.12); label('MATCHES', -16.4, 1.5, -11.78, 0, 0.18, 0.05, { w: 128, h: 36, size: 20 });
+  B.box('wood', -17.85, 1.5, -6.2, 0.12, 0.3, 0.6); label('MATCHES', -17.78, 1.5, -6.2, Math.PI / 2, 0.18, 0.05, { w: 128, h: 36, size: 20 });
 
   /* ================= THE BATHROOM ================= */
   at('bathroom');

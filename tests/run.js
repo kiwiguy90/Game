@@ -748,6 +748,27 @@ suite('lift', () => {
   return 'ground to attic to cellar with you in it, and called empty to the first floor';
 });
 
+suite('longcase and garage', () => {
+  const env = H.load({ quiet: true });
+  const { game } = env, c = game.longcase, gd = game.garageDoor;
+  if (game.intro) game.intro.skip();
+  const run = s => { for (let i = 0; i < s * 30; i++) game.update(1 / 30); };
+  const bells = () => game.audioLog ? 0 : 0;
+  run(2); assert(!c.running && c.chimes === 0, 'the grandfather clock is still without power');
+  game.grid.stormHasTripped = true; game.grid.setLodge(true); game.grid.throwMain(); run(1);
+  assert(c.running, 'it runs on the hall circuit');
+  const a0 = c.pend.rotation.z; run(0.5); assert(Math.abs(c.pend.rotation.z - a0) > 0.01, 'the pendulum swings');
+  run(240); assert(c.chimes >= 1, 'it chimes the quarter (chimes ' + c.chimes + ')');
+  void bells;
+  // the garage door: up at the start, comes down and blocks the way, goes up again
+  assert(gd.open && !gd.wall.enabled, 'the garage door is up');
+  game.standAt(game.byId['garage-door-out']); assert(game.pick() === game.byId['garage-door-out'], 'its handle can be reached from outside'); game.interact(); run(2);
+  assert(!gd.open && gd.t === 0 && gd.wall.enabled, 'pulled down, it shuts the garage');
+  game.interact(); run(3); assert(gd.open && gd.t === 1 && !gd.wall.enabled, 'and lifts again');
+  assert(game.frameErrors === 0, 'frame errors');
+  return 'the clock runs, swings and chimes; the garage door goes down and up';
+});
+
 suite('reachability', () => {
   const env = H.load({ quiet: true });
   const { game, BM } = env;

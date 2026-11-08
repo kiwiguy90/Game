@@ -395,6 +395,7 @@ const MAT_DEFS = {
   leather: [0x3a2418, null, 0, 40],
   linen: [0xcfc6b2, 'plaster', 0.6, 4],
   carPaint: [0x3c4a3a, null, 0, 120],
+  garageGreen: [0x5f8268, 'metal', 0.3, 30],
   suvPaint: [0x39444e, null, 0, 160],
   carTrim: [0x0c0d0e, null, 0, 90],
   cladding: [0x19191a, null, 0, 6],

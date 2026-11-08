@@ -677,6 +677,7 @@ class Game {
     BM.updateOvergrown(this, dt, this.time);
     BM.updateShutters(this, dt, this.time);
     BM.updateLift(this, dt);
+    BM.updateLongcase(this, dt);
     const sd = this.stormDoors;
     if (sd) {
       sd.boltT += ((sd.bolted ? 0 : 1) - sd.boltT) * Math.min(1, dt * 5); sd.bolt.position.x = -12 - 0.3 * sd.boltT;
@@ -763,6 +764,12 @@ class Game {
     if (k === i) { this.ui.say('You are on the ' + F[k].name.toLowerCase() + ' already.'); return; }
     L.to = k; L.rideWith = BM.inLift(this, i); L.phase = 'closing'; L.t = 0;
     this.ui.say(k === 3 ? 'The gate rattles shut. The car lurches, and climbs into the roof.' : k === 0 ? 'The gate rattles shut, and the car sinks, slow, into the cold.' : 'The gate rattles shut and the car shudders into motion.', 4);
+  }
+  toggleGarageDoor() {
+    const gd = this.garageDoor; if (gd.moving) return;
+    gd.open = !gd.open; gd.moving = true;
+    this.audio.stormDoors ? this.audio.rattle() : this.audio.click();
+    this.ui.say(gd.open ? 'You heave the handle. The springs take it, and the door swings up into the roof with a shriek of runners.' : 'You reach up for the handle and pull. The door comes down on its springs and shuts with a bang.', 4);
   }
   startOutro() {
     const p = this.player, car = this.car, c = car.group.position;

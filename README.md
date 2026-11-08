@@ -54,7 +54,9 @@ walled kitchen courtyard with two steel storm doors over steps down to the
 cellar, bolted from inside. The clock tower over the hall is electric: with
 the attic circuit on it ticks, chimes the quarters and strikes the hours, its
 dial lit from behind on its own switch; a ladder from the attic goes up to the
-clock room and the belfry. At the east end of the back corridor a 1931 cage lift
+clock room and the belfry. In the hall the grandfather clock was electrified with the house: with the
+hall circuit on its pendulum swings and it chimes the quarters on its rods.
+The garage has an up-and-over door you can pull down and lift again. At the east end of the back corridor a 1931 cage lift
 runs from the cellar to the attic on the house supply: call it, step in, press
 a floor, and the brass gate rattles shut behind you.
 

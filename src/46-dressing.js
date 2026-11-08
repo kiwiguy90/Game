@@ -131,17 +131,8 @@ BM.buildDressing = function (B, game) {
 
   /* ---- the hall: grandfather clock, suit of armour, portraits ---- */
   B.room = 'hall';
-  { const x = -5.55, z = 8.4;
-    B.furniture('darkWood', x, z, 0, 0.6, 2.3, 0.6, 'grandfather clock');
-    B.box('gilt', x + 0.31, 1.95, z, 0.02, 0.5, 0.5);
-    B.mesh(G.disc, 'paper', x + 0.33, 1.95, z, 0.42, 0.42, 1, Math.PI / 2);
-    B.box('black', x + 0.34, 1.97, z - 0.04, 0.01, 0.16, 0.02);   // stopped
-    B.box('black', x + 0.34, 2.0, z + 0.03, 0.01, 0.2, 0.015);
-    B.box('darkGlass', x + 0.31, 1.05, z, 0.02, 0.9, 0.3);
-    B.mesh(G.cyl, 'brass', x + 0.27, 0.85, z, 0.16, 0.02, 0.16).rotation.z = Math.PI / 2;
-    B.root.children[B.root.children.length - 1].updateMatrix();
-    B.mesh(G.pyramid, 'darkWood', x, 2.45, z, 0.62, 0.3, 0.62);
-  }
+  BM.buildLongcase(B, game); // the longcase clock, in 46c
+  B.zone = 'mansion'; B.levelName = 'ground'; B.room = 'hall';
   const armour = (x, y, z, ang, room) => {
     B.room = room;
     B.furniture(null, x, z, y, 0.55, 1.9, 0.55, 'suit of armour');

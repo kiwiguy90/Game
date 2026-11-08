@@ -265,6 +265,66 @@ class Synth {
   /* The lift: a clank as the brake lifts; at the floor, a clunk and a bell. */
   liftStart() { this.burst(this.brown, 'lowpass', 300, 1, 0.5, 0.005, 0.3); this.tone('square', 90, 60, 0.12, 0.005, 0.2); }
   liftStop() { this.burst(this.brown, 'lowpass', 260, 1, 0.55, 0.005, 0.35); this.tone('sine', 1318, 1318, 0.12, 0.005, 1.6, 0.35); this.tone('sine', 1046, 1046, 0.1, 0.005, 1.8, 0.8); }
+  /* The old house and the grounds around you, never quite quiet: timbers settle and tick, a board
+     takes weight somewhere upstairs, water drips in the cellar, the wind whistles under the slates,
+     owls call in the trees. Each on its own loose timer, placed off to one side. */
+  ambience(dt, p, zone, storm) {
+    const A = this.amb || (this.amb = { creak: 6, knock: 18, drip: 2, whistle: 9, owl: 12 });
+    for (const k in A) A[k] -= dt;
+    const side = () => (Math.random() < 0.5 ? -1 : 1) * (0.3 + Math.random() * 0.7);
+    const inHouse = zone === 'house', cellar = inHouse && p.y < -1, attic = inHouse && p.y > 8;
+    if (inHouse && A.creak <= 0) { A.creak = 7 + Math.random() * 14; this.creakBoard(0.5 + Math.random() * 0.5, side()); }
+    if (inHouse && A.knock <= 0) { A.knock = 20 + Math.random() * 30; const pn = side(); for (let i = 0, n = 1 + Math.floor(Math.random() * 3); i < n; i++) this.burst(this.brown, 'lowpass', 420, 1.2, 0.18, 0.003, 0.12, i * (0.3 + Math.random() * 0.25), pn); }
+    if (cellar && A.drip <= 0) { A.drip = 1.2 + Math.random() * 3.5; this.drip(side()); }
+    if (attic && storm && A.whistle <= 0) { A.whistle = 8 + Math.random() * 10; this.whistle(); }
+    if (zone === 'exterior' && A.owl <= 0) { A.owl = 25 + Math.random() * 35; this.owl(side()); }
+  }
+  creakBoard(v, pn) {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime, dur = 0.35 + Math.random() * 0.5;
+    const o = ctx.createOscillator(); o.type = 'sawtooth';
+    const f0 = 90 + Math.random() * 70; o.frequency.setValueAtTime(f0, t); o.frequency.linearRampToValueAtTime(f0 * (1.3 + Math.random() * 0.5), t + dur);
+    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 700; f.Q.value = 4;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.06 * v, t + 0.06); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(f); f.connect(g);
+    if (ctx.createStereoPanner) { const pp = ctx.createStereoPanner(); pp.pan.value = pn; g.connect(pp); pp.connect(this.master); } else g.connect(this.master);
+    o.start(t); o.stop(t + dur + 0.05);
+  }
+  drip(pn) {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime, f0 = 900 + Math.random() * 900;
+    const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f0 * 2.2, t + 0.05);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.07, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+    o.connect(g);
+    if (ctx.createStereoPanner) { const pp = ctx.createStereoPanner(); pp.pan.value = pn; g.connect(pp); pp.connect(this.master); } else g.connect(this.master);
+    o.start(t); o.stop(t + 0.15);
+  }
+  whistle() {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime, dur = 2.5 + Math.random() * 2;
+    const s = ctx.createBufferSource(); s.buffer = this.white; s.loop = true;
+    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 18; const f0 = 700 + Math.random() * 500;
+    f.frequency.setValueAtTime(f0, t); f.frequency.linearRampToValueAtTime(f0 * 1.4, t + dur * 0.4); f.frequency.linearRampToValueAtTime(f0 * 0.9, t + dur);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.12, t + dur * 0.35); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    s.connect(f); f.connect(g); g.connect(this.master); s.start(t); s.stop(t + dur + 0.05);
+  }
+  /* A tawny owl: the long quavering hoot, answered sometimes from further off. */
+  owl(pn) {
+    if (!this.ctx) return;
+    const ctx = this.ctx, call = (when, v, p2) => {
+      const t = ctx.currentTime + when;
+      for (const [d, f0, f1, len] of [[0, 380, 360, 0.45], [0.9, 360, 400, 0.18], [1.25, 400, 350, 0.9]]) {
+        const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(f0, t + d); o.frequency.linearRampToValueAtTime(f1, t + d + len);
+        const lfo = ctx.createOscillator(); lfo.frequency.value = 9; const lg = ctx.createGain(); lg.gain.value = d > 1 ? 14 : 0; lfo.connect(lg); lg.connect(o.frequency);
+        const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(0.05 * v, t + d + 0.05); g.gain.exponentialRampToValueAtTime(0.0001, t + d + len);
+        o.connect(g);
+        if (ctx.createStereoPanner) { const pp = ctx.createStereoPanner(); pp.pan.value = p2; g.connect(pp); pp.connect(this.master); } else g.connect(this.master);
+        o.start(t + d); o.stop(t + d + len + 0.05); lfo.start(t + d); lfo.stop(t + d + len + 0.05);
+      }
+    };
+    call(0, 1, pn);
+    if (Math.random() < 0.5) call(3 + Math.random() * 2, 0.45, -pn);
+  }
   /* A loose shutter knocking back against the stone, and the creak of its hinges. */
   shutterKnock(v, pan) {
     this.burst(this.brown, 'lowpass', 520, 1.5, 0.55 * v, 0.003, 0.14, 0, pan);
@@ -374,6 +434,7 @@ class Synth {
     this.set('rain', storm ? 0.2 * out + (zone === 'house' && p.y > 7.5 ? 0.15 : 0) + winIn * 0.22 : 0);
     this.set('rainLow', storm ? 0.25 * out : 0);
     this.set('wind', storm ? 0.12 * out + 0.04 + winIn * 0.1 : 0.02);
+    this.ambience(dt, p, zone, storm);
     // every lit fitting hums: the nearest ones get the voices
     this.humTargets = this.pickHums(p);
     const tNow = this.ctx.currentTime;

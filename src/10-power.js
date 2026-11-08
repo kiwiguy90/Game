@@ -186,7 +186,6 @@ class PowerGrid {
       case 'street': case 'fire': case 'always': return true;
       case 'lodge': return this.lodge;
       case 'car': return true; // the car's own battery: its lamps are switched by the intro
-      case 'hall': return this.lodge && !this.tripped && this.breakers.hall;
       case 'main': return this.lodge && !this.tripped && this.breakers.main;
     }
     if (HOUSE_CIRCUITS.indexOf(c) >= 0) return this.live('main') && this.breakers[c];

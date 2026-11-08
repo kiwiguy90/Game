@@ -278,7 +278,7 @@ class Game {
     if (!gates.open && !gates.lockedIn) return 'There is power at the lodge. Work the gate release — and the estate lighting panel under the window lights the grounds.';
     if (!gates.lockedIn) return 'Go up the drive to the house.';
     if (!this.frontDoors.opened) return 'The gates have shut and bolted behind you. There is nothing for it but the house.';
-    if (!g.breakers.main && !g.stormHasTripped) return this.hallLit() ? 'The hall is lit. Find the fuse board for the rest of the house — try the pantry, at the back.' : 'It is dark. There are switches by the door.';
+    if (!g.breakers.main && !g.stormHasTripped) return s.hallSwitchTried ? 'The switches by the door do nothing: the house main is off. Find the fuse board — try the pantry, at the back.' : 'It is dark. There are switches by the door.';
     if (g.tripped) return 'The storm has tripped MAIN. Go back down to the pantry fuse board and reset it.';
     if (!s.journalRead) return 'Look round the house. Eleanor\'s rooms are upstairs, and the attic above them.';
     if (!g.live('cellar')) return 'Eleanor\'s father wired the gates to a switch in the cellar, on the house supply. The cellar circuit must be on.';
@@ -293,7 +293,7 @@ class Game {
     for (const l of lights) if (!l.dead) l.on = !anyOn;
     this.audio.click();
     const powered = lights.some(l => this.grid.live(l.circuit));
-    if (!powered) this.ui.say('The switch clicks. Nothing — that circuit is dead.');
+    if (!powered) { if (!this.grid.live('main') && lights.some(l => this.grid.isHouseCircuit(l.circuit))) { this.story.hallSwitchTried = true; this.ui.say('The switch clicks. Nothing. The house main must be off: there will be a fuse board somewhere at the back.'); } else this.ui.say('The switch clicks. Nothing — that circuit is dead.'); }
     return !anyOn;
   }
   /* Rows for the side lighting panel: estate groups, then every room's switch. */

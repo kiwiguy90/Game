@@ -143,9 +143,9 @@ suite('circuits', () => {
   // dark, except one candle someone has left burning in a gable window
   assert(g.lights.filter(l => l.circuit !== 'battery' && l.id !== 'gable-candle').every(l => !l.powered), 'the whole estate starts dark');
   assert(g.light('gable-candle').powered, 'the candle in the gable window is burning');
-  // lodge on: hall is live immediately, everything else waits for MAIN
+  // lodge on: the estate is live, but the whole house, hall included, waits for MAIN
   g.setLodge(true);
-  assert(g.live('hall') && !g.live('main') && ['ground', 'east', 'west', 'attic', 'cellar'].every(c => !g.live(c)), 'hall live, rest waiting for main');
+  assert(!g.live('main') && BM.HOUSE_CIRCUITS.every(c => !g.live(c)), 'house dark until main, hall included');
   assert(lit('lodge-lamp') || (settle(env, 3), lit('lodge-lamp')), 'lodge lamp on lodge supply');
   // the estate lighting panel in the lodge: every outdoor group
   const est = game.estateLights;
@@ -169,6 +169,10 @@ suite('circuits', () => {
   g.setLodge(true);
   // the hall panel: fittings start off; incandescent: two false starts then holds
   assert(game.hallLights.every(id => !g.light(id).on), 'hall fittings start switched off');
+  game.toggleFittings(game.hallLights); g.update(1 / 60);
+  assert(game.hallLights.every(id => !g.light(id).powered) && /main/.test(game.ui.lastSay), 'hall switches do nothing until the house main is on');
+  game.toggleFittings(game.hallLights);
+  g.breakers.main = true; g.events.emit('power:changed');
   game.toggleFittings(game.hallLights);
   // the hall's fittings come on one after another: follow the first to start
   const trace = [];
@@ -629,7 +633,7 @@ suite('playthrough', () => {
   go(env, 'front-doors-in'); settle(env, 4); assert(!game.frontDoors.open && game.frontDoors.wall.enabled, 'and can be shut from inside');
   go(env, 'front-doors-in'); settle(env, 4);
   go(env, 'sw-hall-chandelier'); settle(env, 3);
-  assert(game.hallLit(), 'hall lit from the panel before the fuse board');
+  assert(!game.hallLit() && game.story.hallSwitchTried && /fuse board/.test(game.objective()), 'the hall stays dark until the fuse board, and says so');
   assert(!g.live('ground'), 'the rest of the house still dark');
   go(env, 'fuse-board'); assert(game.ui.mode === 'fuse', 'fuse board opens');
   game.keyDown('KeyM'); game.keyDown('KeyE');

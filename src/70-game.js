@@ -201,6 +201,8 @@ class Game {
     this.optStats = BM.optimize(this);
     this.quality = new BM.Quality(s => this.applyQuality(s), this.opts.quality !== undefined ? this.opts.quality : 2);
     this.applyQuality(this.quality.settings);
+    this.menu = BM.Menu ? new BM.Menu(this) : null; // pause, settings, mouse look
+    if (this.menu) this.menu.apply();
     this.wireEvents();
     this.stormTimer = -1;
     this.climbing = null;
@@ -279,7 +281,7 @@ class Game {
     if (!gates.open && !gates.lockedIn) return 'There is power at the lodge. Work the gate release — and the estate lighting panel under the window lights the grounds.';
     if (!gates.lockedIn) return 'Go up the drive to the house.';
     if (!this.frontDoors.opened) return 'The gates have shut and bolted behind you. There is nothing for it but the house.';
-    if (!g.breakers.main && !g.stormHasTripped) return s.hallSwitchTried ? 'The switches by the door do nothing: the house main is off. Find the fuse board — try the pantry, at the back.' : 'It is dark. There are switches by the door.';
+    if (!g.breakers.main && !g.stormHasTripped) return s.hallSwitchTried ? 'The switches by the door do nothing: the house main is off. Find the fuse board — try the pantry, through the kitchen at the back.' : 'It is dark. There are switches by the door.';
     if (g.tripped) return 'The storm has tripped MAIN. Go back down to the pantry fuse board and reset it.';
     if (!s.journalRead) return 'Look round the house. Eleanor\'s rooms are upstairs, and the attic above them.';
     if (!g.live('cellar')) return 'Eleanor\'s father wired the gates to a switch in the cellar, on the house supply. The cellar circuit must be on.';
@@ -313,7 +315,7 @@ class Game {
     });
     const allOn = this.estateGroups.every(([k]) => this.estateGroupOn(k));
     rows.push({ section: 'ESTATE', supply: g.lodge ? 'lodge supply ●' : 'no supply ○', k: 'estate-all', key: '', name: allOn ? 'All estate lights off' : 'All estate lights on', on: allOn, lit: false, live: g.lodge });
-    const houseSupply = g.live('main') ? 'house supply ●' : g.live('hall') ? 'hall only ◐' : 'no supply ○';
+    const houseSupply = g.live('main') ? 'house supply ●' : 'no supply ○';
     for (const it of this.interactables) {
       if (!it.switchVisual) continue;
       const name = (typeof it.label === 'function' ? it.label() : it.label).replace(/ light panel$| lights$| light$/i, '');
@@ -464,6 +466,7 @@ class Game {
   }
   endGame() {
     this.story.ended = true;
+    if (BM.Save) BM.Save.clear();
     this.ui.mode = 'ending';
     const text = [
       'Three miles on, the lane ends at a river with no bridge in it. You stop on the bank with the engine running, the heater on, and the doors locked, and you wait for the light. By morning the water will be down. By morning somebody will come.',
@@ -516,7 +519,12 @@ class Game {
   keyDown(code) {
     this.keys[code] = true;
     const ui = this.ui;
-    if (ui.mode === 'title') { this.begin(); return; }
+    if (ui.mode === 'title') {
+      // with a night saved, only a deliberate key starts again: Enter or C continues, N begins a new night
+      if (BM.Save && BM.Save.has()) { if (code === 'Enter' || code === 'KeyC') this.continueGame(); else if (code === 'KeyN') this.begin(); return; }
+      this.begin(); return;
+    }
+    if (ui.mode === 'pause') { if (code === 'Escape' || code === 'KeyP') this.menu.resume(); return; }
     if (this.intro) { if (['KeyE', 'Space', 'Enter', 'Escape'].includes(code) && this.intro.t > 0.6) this.intro.skip(); return; }
     if (this.outro) return;
     if (ui.mode === 'ending') return;
@@ -537,6 +545,7 @@ class Game {
       else { const i = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0'].indexOf(code); if (i >= 0 && i < this.estateGroups.length) this.toggleEstate(this.estateGroups[i][0]); }
       return;
     }
+    if (code === 'Escape' && !ui.mode && this.menu) { this.menu.pause(); return; }
     if (code === 'KeyP') { ui.phone(); return; }
     if (code === 'KeyL') { ui.lightsVisible = !ui.lightsVisible; ui.lightsT = 0; return; }
     if (code === 'KeyO' && !ui.mode) { this.masterOutside(); ui.lightsT = 0; return; }
@@ -550,10 +559,24 @@ class Game {
   }
   keyUp(code) { this.keys[code] = false; }
   begin() {
+    if (BM.Save) BM.Save.clear();
     this.ui.mode = null;
     if (this.ui.el.title) this.ui.el.title.style.display = 'none';
     this.audio.start();
     this.intro = new BM.Intro(this); // your car arrives; when it dies, you walk
+    if (this.menu) this.menu.lock();
+  }
+
+  /* Go back to a saved night: the arrival is skipped and the world is put back as it was. */
+  continueGame() {
+    const s = BM.Save && BM.Save.read(); if (!s) { this.begin(); return; }
+    this.ui.mode = null;
+    if (this.ui.el.title) this.ui.el.title.style.display = 'none';
+    this.audio.start();
+    this.intro = new BM.Intro(this); this.intro.skip();
+    BM.Save.restore(this, s);
+    this.ui.say('You pick up where you left off.', 3);
+    if (this.menu) this.menu.lock();
   }
 
   /* -------------------------------------------------------- update ---- */
@@ -592,19 +615,23 @@ class Game {
 
   updatePlayer(dt) {
     const p = this.player, k = this.keys, phys = this.phys;
-    const turn = (k.KeyA || k.ArrowLeft ? 1 : 0) - (k.KeyD || k.ArrowRight ? 1 : 0);
+    // the arrow keys turn; the mouse looks; A and D step to the side
+    const turn = (k.ArrowLeft ? 1 : 0) - (k.ArrowRight ? 1 : 0);
     p.yaw += turn * 1.9 * dt;
-    if (k.KeyR) p.pitch = Math.min(0.9, p.pitch + dt * 1.2);
-    if (k.KeyF) p.pitch = Math.max(-0.9, p.pitch - dt * 1.2);
-    if (!k.KeyR && !k.KeyF) p.pitch *= Math.max(0, 1 - dt * 2);
+    if (k.KeyR) p.pitch = Math.min(1.25, p.pitch + dt * 1.2);
+    if (k.KeyF) p.pitch = Math.max(-1.25, p.pitch - dt * 1.2);
+    if (!k.KeyR && !k.KeyF && !this.mouseLook) p.pitch *= Math.max(0, 1 - dt * 2);
     const fwd = (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 0.6 : 0);
+    const side = (k.KeyD ? 0.8 : 0) - (k.KeyA ? 0.8 : 0);
     const running = (k.ShiftLeft || k.ShiftRight) && fwd > 0;
     const speed = running ? 5.2 : 2.8;
-    const f = this.forward();
+    const f = this.forward(), rx = -f.z, rz = f.x;
     const y0 = p.y;
-    if (fwd !== 0) {
-      const hit = phys.move(p, f.x * fwd * speed * dt, f.z * fwd * speed * dt);
-      p.bob += dt * (running ? 12 : 8); p.stepAcc += Math.abs(fwd) * speed * dt;
+    if (fwd !== 0 || side !== 0) {
+      let mx = f.x * fwd + rx * side, mz = f.z * fwd + rz * side; const ml = Math.hypot(mx, mz), amt = Math.max(Math.abs(fwd), Math.abs(side));
+      mx = mx / ml * amt; mz = mz / ml * amt;
+      const hit = phys.move(p, mx * speed * dt, mz * speed * dt);
+      p.bob += dt * (running ? 12 : 8); p.stepAcc += amt * speed * dt;
       if (p.stepAcc > (running ? 1.1 : 0.75) && p.grounded) { p.stepAcc = 0; this.audio.step(this.surfaceAt(p)); }
     }
     // vertical
@@ -678,6 +705,7 @@ class Game {
     BM.updateShutters(this, dt, this.time);
     BM.updateLift(this, dt);
     BM.updateLongcase(this, dt);
+    BM.updateSave(this, dt);
     const sd = this.stormDoors;
     if (sd) {
       sd.boltT += ((sd.bolted ? 0 : 1) - sd.boltT) * Math.min(1, dt * 5); sd.bolt.position.x = -12 - 0.3 * sd.boltT;
@@ -867,7 +895,8 @@ class Game {
   frame(dt, rawMs) {
     const t0 = typeof performance !== 'undefined' && performance.now ? performance.now() : 0;
     try {
-      this.update(Math.min(0.05, dt));
+      if (this.ui.mode !== 'pause') this.update(Math.min(0.05, dt));
+      if (this.menu) this.menu.update(dt);
       this.render();
     } catch (e) {
       this.frameErrors++;
@@ -878,7 +907,7 @@ class Game {
       // a vsync'd frame always takes a whole refresh period, so judge the work inside it
       const work = t0 ? performance.now() - t0 : rawMs;
       this.quality.sample(this.opts.sampleRaw ? rawMs : Math.min(rawMs, work));
-      this.quality.update(dt);
+      if (!this.quality.fixed) this.quality.update(dt);
     }
   }
 
@@ -902,7 +931,18 @@ BM.boot = function (opts) {
   window.addEventListener('blur', () => { game.keys = {}; });
   window.addEventListener('resize', () => game.resize(window.innerWidth, window.innerHeight));
   const title = document.getElementById('title');
-  if (title) title.addEventListener('click', () => game.begin());
+  if (title) {
+    // a saved night: Continue, or a new one; otherwise a click anywhere begins
+    const keys = title.querySelector('.keys'), saved = BM.Save && BM.Save.has();
+    if (saved) {
+      const b = document.createElement('div'); b.className = 'title-btns';
+      b.innerHTML = '<button id="t-continue">Continue</button><button id="t-new">New game</button>';
+      title.appendChild(b);
+      document.getElementById('t-continue').addEventListener('click', e => { e.stopPropagation(); game.continueGame(); });
+      document.getElementById('t-new').addEventListener('click', e => { e.stopPropagation(); if (window.confirm('Start a new night? The saved one will be lost.')) game.begin(); });
+      if (keys) keys.innerHTML = keys.innerHTML.replace('Click to begin', 'Enter to continue · N for a new game');
+    } else title.addEventListener('click', () => game.begin());
+  }
   let last = performance.now();
   const loop = (now) => {
     const raw = now - last; last = now;

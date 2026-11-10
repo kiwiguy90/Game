@@ -774,6 +774,68 @@ suite('longcase and garage', () => {
   return 'the clock runs, swings and chimes; the garage door goes down and up';
 });
 
+suite('menu', () => {
+  const env = H.load({ quiet: true });
+  const { game } = env, m = game.menu;
+  assert(m, 'there is a pause menu');
+  game.ui.mode = 'title'; game.keyDown('KeyX'); game.intro.skip();
+  game.teleport(0, 0, 6, 0); const t0 = game.time;
+  game.keyDown('Escape'); assert(game.ui.mode === 'pause', 'Esc pauses');
+  for (let i = 0; i < 30; i++) game.frame(1 / 30); assert(game.time === t0, 'nothing moves while paused');
+  game.keyDown('KeyW'); assert(!game.keys.KeyW || game.player.z === 6, 'keys do nothing while paused');
+  game.keyDown('Escape'); assert(!game.ui.mode, 'Esc again resumes');
+  game.keys = {};
+  // A and D step sideways without turning; the arrow keys turn
+  const yaw = game.player.yaw, x0 = game.player.x;
+  game.keyDown('KeyD'); for (let i = 0; i < 20; i++) game.update(1 / 30); game.keyUp('KeyD');
+  assert(game.player.x > x0 + 0.5 && Math.abs(game.player.yaw - yaw) < 1e-6, 'D steps to the right without turning');
+  game.keyDown('ArrowLeft'); for (let i = 0; i < 10; i++) game.update(1 / 30); game.keyUp('ArrowLeft');
+  assert(game.player.yaw > yaw + 0.3, 'the left arrow turns');
+  // settings take effect
+  m.settings.fov = 80; m.settings.volume = 0.3; m.settings.quality = 'low'; m.apply();
+  assert(game.camera.fov === 80 && game.quality.fixed && game.quality.level === 0, 'field of view and fixed graphics apply');
+  m.settings.quality = 'auto'; m.apply(); assert(!game.quality.fixed, 'auto graphics adapts again');
+  assert(game.frameErrors === 0, 'frame errors');
+  return 'Esc pauses and resumes, strafe and turn, settings apply';
+});
+
+suite('save', () => {
+  // one browser's storage, shared by two visits
+  const mem = {}; const ls = { getItem: k => (k in mem ? mem[k] : null), setItem: (k, v) => { mem[k] = String(v); }, removeItem: k => { delete mem[k]; } };
+  const env = H.load({ quiet: true }); env.window.localStorage = ls;
+  const { game, BM } = env, g = game.grid;
+  game.ui.mode = 'title'; game.keyDown('KeyX'); game.intro.skip();
+  assert(!BM.Save.has(), 'a new game starts with nothing saved');
+  // a night half done: power on, locked in, inside, the main on, a door, a window, a candle, the spare in hand, the lift sent up
+  g.setLodge(true); game.gates.lockedIn = true; g.stormHasTripped = true; g.throwMain();
+  const door = game.B.doors.find(d => d.id === 'front-doors'); game.toggleDoor(door);
+  const win = game.B.windows.find(w => w.id === 'w-library'); game.toggleWindow(win);
+  const candle = game.fires.find(f => f.id === 'candle-hall'); game.lightCandle(candle);
+  game.spare.taken = true; game.carry = 'spare wheel'; game.spare.mesh.visible = false;
+  game.story.journalRead = true; game.story.read.add('note-solicitor');
+  game.lift.at = game.lift.pos = 3; game.lift.gate = [0, 0, 0, 1]; game.lift.gateTarget = [0, 0, 0, 1];
+  for (let i = 0; i < 120; i++) game.update(1 / 30);
+  game.teleport(12, 0, 0, 1.2);
+  assert(BM.Save.write(game) && BM.Save.has(), 'the night is saved when everything is at rest');
+  // a second visit: Enter on the title continues
+  const env2 = H.load({ quiet: true }); env2.window.localStorage = ls;
+  const g2 = env2.game; g2.ui.mode = 'title';
+  g2.keyDown('KeyX'); assert(g2.ui.mode === 'title', 'with a night saved, a stray key does not start again');
+  g2.keyDown('Enter'); for (let i = 0; i < 60; i++) g2.update(1 / 30);
+  assert(!g2.intro && g2.ui.mode === null, 'Enter continues straight into the house');
+  assert(g2.grid.lodge && g2.grid.live('main') && g2.gates.lockedIn, 'the power and the gates are as they were');
+  assert(g2.B.doors.find(d => d.id === 'front-doors').open && !g2.B.doors.find(d => d.id === 'front-doors').wall.enabled, 'the front doors stand open');
+  assert(g2.B.windows.find(w => w.id === 'w-library').open, 'the window is open');
+  assert(g2.fires.find(f => f.id === 'candle-hall').lit, 'the candle is burning');
+  assert(g2.carry === 'spare wheel' && !g2.spare.mesh.visible && g2.story.journalRead && g2.story.read.has('note-solicitor'), 'you still have the wheel, and have read what you read');
+  assert(g2.lift.at === 3 && Math.abs(g2.player.x - 12) < 0.01 && Math.abs(g2.player.yaw - 1.2) < 0.01, 'the lift and you are where you were');
+  assert(game.grid.lights.filter(l => l.on).map(l => l.id).join() === g2.grid.lights.filter(l => l.on).map(l => l.id).join(), 'every light switched as it was');
+  // finishing the night clears it
+  g2.endGame(); assert(!BM.Save.has(), 'the ending clears the save');
+  assert(game.frameErrors === 0 && g2.frameErrors === 0, 'frame errors');
+  return 'saved at rest, Enter continues, power, gates, doors, windows, fires, items, lift and position restored';
+});
+
 suite('reachability', () => {
   const env = H.load({ quiet: true });
   const { game, BM } = env;

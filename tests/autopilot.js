@@ -88,21 +88,21 @@
       if (d < 0.22 && Math.abs(w.y - p.y) < 0.7) { wi++; best = Infinity; lastProgress = AP.frames; continue; }
       const want = Math.atan2(-dx, -dz);
       let err = want - p.yaw; while (err > Math.PI) err -= Math.PI * 2; while (err < -Math.PI) err += Math.PI * 2;
-      key('KeyA', err > 0.04); key('KeyD', err < -0.04);
+      key('ArrowLeft', err > 0.04); key('ArrowRight', err < -0.04);
       key('KeyW', Math.abs(err) < 0.2);
       step(1);
       if (d < best - 0.05) { best = d; lastProgress = AP.frames; }
       if (AP.frames - lastProgress > 240) {
         AP.stuck++; AP.log.push({ stuck: label, at: [p.x.toFixed(2), p.y.toFixed(2), p.z.toFixed(2)], waypoint: [w.x, w.y, w.z] });
-        key('KeyW', false); key('KeyA', false); key('KeyD', false);
+        key('KeyW', false); key('ArrowLeft', false); key('ArrowRight', false);
         // like a player: back off a step, turn a little, try again
         key('KeyS', true); step(36); key('KeyS', false);
-        key(replans % 2 ? 'KeyA' : 'KeyD', true); step(20); key('KeyA', false); key('KeyD', false);
+        key(replans % 2 ? 'ArrowLeft' : 'ArrowRight', true); step(20); key('ArrowLeft', false); key('ArrowRight', false);
         if (++replans > 5) return false;
         return 'replan';
       }
     }
-    key('KeyW', false); key('KeyA', false); key('KeyD', false);
+    key('KeyW', false); key('ArrowLeft', false); key('ArrowRight', false);
     return true;
   }
 
@@ -126,10 +126,10 @@
       const tx = Math.sin(th + dir) * 3.3, tz = 6 + Math.cos(th + dir) * 3.3;
       const want = Math.atan2(-(tx - p.x), -(tz - p.z));
       let e = want - p.yaw; while (e > Math.PI) e -= Math.PI * 2; while (e < -Math.PI) e += Math.PI * 2;
-      key('KeyA', e > 0.03); key('KeyD', e < -0.03); key('KeyW', Math.abs(e) < 0.4); step(1);
+      key('ArrowLeft', e > 0.03); key('ArrowRight', e < -0.03); key('KeyW', Math.abs(e) < 0.4); step(1);
       if (up ? p.y > 4.15 : p.y < 0.05) break;
     }
-    key('KeyW', false); key('KeyA', false); key('KeyD', false);
+    key('KeyW', false); key('ArrowLeft', false); key('ArrowRight', false);
     return up ? p.y > 4.1 : p.y < 0.1;
   }
   const levelOf = (y) => y > 7 ? 'attic' : y > 3 ? 'upper' : y > -1 ? 'ground' : 'cellar';
@@ -157,9 +157,9 @@
     for (let i = 0; i < 400; i++) {
       let err = want - g.player.yaw; while (err > Math.PI) err -= Math.PI * 2; while (err < -Math.PI) err += Math.PI * 2;
       if (Math.abs(err) < 0.05) break;
-      key('KeyA', err > 0); key('KeyD', err < 0); step(1);
+      key('ArrowLeft', err > 0); key('ArrowRight', err < 0); step(1);
     }
-    key('KeyA', false); key('KeyD', false); step(2);
+    key('ArrowLeft', false); key('ArrowRight', false); step(2);
     const picked = g.pick();
     const prompt = document.getElementById('prompt').textContent;
     if (picked !== it) return { id, ok: false, why: 'picked ' + (picked && picked.id), prompt };

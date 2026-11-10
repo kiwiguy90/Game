@@ -75,7 +75,7 @@ BM.buildCourtyard = function (B, game) {
   B.box('iron', -17.6, 2.2, -12.3, 0.1, 4.4, 0.1); B.box('iron', -17.45, 1.3, -12.6, 0.08, 0.08, 0.5);
   for (const x of [-6.9, -7.6]) { B.mesh(G.cyl, 'metalDark', x, 0.45, -23.3, 0.55, 0.9, 0.55); B.mesh(G.cyl, 'metalDark', x, 0.93, -23.3, 0.6, 0.06, 0.6); P.addWall(x - 0.3, x + 0.3, -23.6, -23.0, 0, 1, { kind: 'furniture', tag: 'dustbin' }); }
   B.box('iron', -7.2, 0.02, -22.4, 0.6, 0.04, 0.3, 0.4); // a lid blown off
-  B.furniture('iron', -15.2, -23.3, 0, 0.8, 1.2, 0.5, 'mangle'); B.mesh(G.cyl, 'iron', -15.2, 1.1, -23.3, 0.14, 0.7, 0.14).rotation.z = Math.PI / 2;
+  B.furniture('iron', -8.6, -23.4, 0, 0.8, 1.2, 0.5, 'mangle'); B.mesh(G.cyl, 'iron', -8.6, 1.1, -23.4, 0.14, 0.7, 0.14).rotation.z = Math.PI / 2;
   for (const [x, z] of [[-13.6, -23.2], [-14.3, -23.5]]) B.furniture('boards', x, z, 0, 0.6, 0.4, 0.5, 'crate');
   for (const x of [-16, -9.8]) B.mesh(G.post, 'boards', x, 1.1, -18.6, 0.08, 2.2, 0.08);
   B.box('wire', -12.9, 2.05, -18.6, 6.2, 0.012, 0.012);

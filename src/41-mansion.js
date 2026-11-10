@@ -246,8 +246,8 @@ BM.buildMansion = function (B, game) {
     id: 'fuse-board', label: 'Fuse board', pos: [-14.3, 1.75, -8.0], n: [-1, 0], kind: 'control', approachDist: 0.95,
     act: g => g.ui.openFuseBoard(),
   });
-  roomSwitch('sw-pantry', 'Pantry light', [-14.25, 1.4, -6.3], [-1, 0], ['pantry-tube']);
-  B.readable('note-electrician', "Electrician's tag", "ESTATE SUPPLY — BLACKTHORN\n\nLodge main must be ON before anything in the house will take.\nHall circuit runs direct from the lodge.\nEverything else is fed through MAIN here. Throwing MAIN brings every circuit and every fitting back as it was left.\n\nLeft as instructed 21/10/74: ALL ON. Do not touch. — W.G.", [-14.3, 1.35, -9.4], [-1, 0], { plaque: true });
+  roomSwitch('sw-pantry', 'Pantry light', [-14.25, 1.4, -6.75], [-1, 0], ['pantry-tube']);
+  B.readable('note-electrician', "Electrician's tag", "ESTATE SUPPLY — BLACKTHORN\n\nLodge main must be ON before anything in the house will take.\nEverything in the house, the hall included, is fed through MAIN here. Throwing MAIN brings every circuit and every fitting back as it was left.\n\nLeft as instructed 21/10/74: ALL ON. Do not touch. — W.G.", [-14.3, 1.35, -9.4], [-1, 0], { plaque: true });
 
   /* ---- BATHROOM ---- */
   B.room = 'bathroom';
@@ -260,7 +260,7 @@ BM.buildMansion = function (B, game) {
   /* ---- THE BOOT ROOM, off the library, with the side door ---- */
   B.room = 'service';
   B.furniture('wood', 17.4, -6.95, 0, 0.8, 1.8, 1.6, 'linen press');
-  B.fixture({ id: 'service-light', name: 'Service room light', circuit: 'ground', style: 'pendant', pos: [14, 3.3, -8], ceiling: 4, colour: 0xffc786, target: 1.0, range: 8 });
+  B.fixture({ id: 'service-light', name: 'Boot room light', circuit: 'ground', style: 'pendant', pos: [14, 3.3, -8], ceiling: 4, colour: 0xffc786, target: 1.0, range: 8 });
   roomSwitch('sw-service', 'Boot room light', [15.1, 1.4, -4.25], [0, -1], ['service-light']);
 
   /* ======================= UPPER FLOOR ======================= */
@@ -290,8 +290,8 @@ BM.buildMansion = function (B, game) {
   /* ---- landing and upper corridor (east circuit); the loft ladder ---- */
   B.room = 'upper corridor';
   B.fixture({ id: 'landing-pendant', name: 'Landing light', circuit: 'east', style: 'pendant', pos: [0, 7.3, -2], ceiling: 8, colour: 0xffc786, target: 1.1, range: 8 });
-  B.fixture({ id: 'upcorr-w', name: 'Upper corridor light', circuit: 'west', style: 'pendant', pos: [-2.5, 7.3, -8.5], ceiling: 8, colour: 0xffc786, target: 0.9, range: 7 });
-  B.fixture({ id: 'upcorr-e', name: 'Upper corridor light', circuit: 'east', style: 'pendant', pos: [2.5, 7.3, -8.5], ceiling: 8, colour: 0xffc786, target: 0.9, range: 7, dead: true });
+  B.fixture({ id: 'upcorr-w', name: 'Landing light', circuit: 'west', style: 'pendant', pos: [-2.5, 7.3, -8.5], ceiling: 8, colour: 0xffc786, target: 0.9, range: 7 });
+  B.fixture({ id: 'upcorr-e', name: 'Landing light', circuit: 'east', style: 'pendant', pos: [2.5, 7.3, -8.5], ceiling: 8, colour: 0xffc786, target: 0.9, range: 7, dead: true });
   roomSwitch('sw-landing', 'Landing lights', [1.4, 5.6, -0.15], [0, -1], ['landing-pendant', 'upcorr-w', 'upcorr-e']);
   // loft ladder from the landing up through a hatch
   for (let i = 0; i < 10; i++) B.box('wood', -3.5, 4.4 + i * 0.4, -4.75, 0.6, 0.05, 0.08);

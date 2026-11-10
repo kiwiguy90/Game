@@ -14,18 +14,21 @@ requests. There is no build step.
 
 | Key | Action |
 | --- | --- |
-| W / S | Move forward / back |
+| Mouse | Look around (click the view to capture the mouse) |
+| W / A / S / D | Move and step sideways |
 | Left Shift | Run (hold with W) |
-| A / D | Turn (tank controls) |
+| ← / → | Turn without the mouse |
+| R / F | Look up / down without the mouse |
 | Space | Jump |
 | E | Interact: switches, doors (open and close), documents, appliances |
 | T | Torch (starts off) |
 | P | Phone (objective and documents) |
-| R / F | Look up / down |
 | L | Show / hide the lighting panel |
 | O / I | Master switches: all outside supply (the lodge), all inside supply (MAIN) |
 | 1 – 0 | Switch an estate lighting group from anywhere (while no panel is open) |
-| Mouse | Click a row on the lighting panel to switch it |
+| Esc | Pause: mouse sensitivity, invert, volume, field of view, graphics, objective, start again |
+
+Settings are remembered between visits in the same browser.
 
 It begins in your own car, coming up Blackthorn Lane after midnight with the
 radio playing: an old abandoned country road through miles of pine forest,

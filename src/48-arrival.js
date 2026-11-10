@@ -448,7 +448,7 @@ BM.Intro = class {
     this.engine = t < T.cough ? 0.16 * (0.5 + 0.5 * Math.min(1, speed / 6)) * labour : Math.max(0, 0.16 * (1 - (t - T.cough) / 1.0));
     this.engineRev = (0.6 + Math.min(1, speed / 8) * 0.6) * (t >= T.pop && t < T.cough ? 0.85 + 0.15 * BM.noise1(t * 9) : 1);
     if (t >= T.cough && this.once('coughSnd')) A.cough && A.cough();
-    this.say('arrive', 'Blackthorn Lane, after midnight. Miles of forest and not another car. The radio is down low and the wipers can barely keep up.', 4.5);
+    this.say('arrive', 'Blackthorn Lane, after midnight, on the way to a house you have inherited and never seen. Miles of forest, not another car, the radio down low.', 4.5);
     if (t >= 2.4) this.say('road', 'No signal since the turning. The bridge back there is under the river; the nearest town is a hundred and fifty kilometres the other way.', 2.1);
     if (t >= T.bang + 0.1) this.say('bang', 'BANG. The wheel snatches in your hands and something starts slapping round under the front: a blowout.', 2.5);
     if (t >= T.pop + 0.05) this.say('pop', 'A loud pop under the bonnet, a fizzing like fat in a pan, and the whole dash flickers.', 2.8);

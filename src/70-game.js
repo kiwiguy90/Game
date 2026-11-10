@@ -920,9 +920,22 @@ class Game {
 BM.Game = Game;
 
 /* --------------------------------------------------------------- boot ---- */
+/* Tell the player plainly when the browser cannot run the game, instead of a black screen. */
+BM.showFatal = function (title, body) {
+  const t = document.getElementById('title');
+  if (t) { t.style.display = 'flex'; t.innerHTML = '<h1>BLACKTHORN MANOR</h1><p style="opacity:.9">' + title + '</p><p>' + body + '</p>'; }
+};
 BM.boot = function (opts) {
   const game = new Game(opts);
-  game.init(document.getElementById('view'));
+  try { game.init(document.getElementById('view')); }
+  catch (e) {
+    BM.showFatal('This browser could not start the 3D view.', 'Blackthorn Manor needs WebGL. Try the latest Chrome, Edge, Firefox or Safari, and make sure hardware acceleration is switched on in the browser settings.');
+    if (typeof console !== 'undefined') console.error(e);
+    return null;
+  }
+  // switching away pauses the night; a lost graphics context asks for a reload
+  document.addEventListener('visibilitychange', () => { if (document.hidden && game.menu) game.menu.pause(); });
+  game.renderer.domElement.addEventListener('webglcontextlost', e => { e.preventDefault(); BM.showFatal('The graphics driver reset.', 'Your progress is saved every few seconds. Reload the page and choose Continue.'); });
   BM.game = game;
   game.ui.mode = 'title';
   window.addEventListener('keydown', e => { if (['Space', 'ArrowUp', 'ArrowDown'].indexOf(e.code) >= 0) e.preventDefault(); if (!e.repeat) game.keyDown(e.code); if (game.ui.mode !== 'title') game.audio.start(); });

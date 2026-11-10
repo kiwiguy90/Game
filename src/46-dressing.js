@@ -166,8 +166,13 @@ BM.buildDressing = function (B, game) {
   B.levelName = 'upper'; B.room = 'bedroom1';
   for (const [x, z] of [[-13.0, 8.5], [-11.0, 8.5], [-13.0, 11.3], [-11.0, 11.3]]) B.mesh(G.post, 'darkWood', x, 4.2 + 1.2, z, 0.12, 2.4, 0.12);
   B.boxE('darkWood', -13.06, -10.94, 6.55, 6.65, 8.44, 11.36);
-  for (const [x, z, sx, sz] of [[-13.0, 9.9, 0.06, 2.8], [-11.0, 9.9, 0.06, 2.8], [-12.0, 8.5, 2.0, 0.06]]) {
-    const d = B.box('drape', x, 5.55, z, sx, 2.0, sz); d.rotation.set(0.05 * (rnd() - 0.5), 0, 0.04 * (rnd() - 0.5)); d.updateMatrix();
+  // the hangings: a valance round the top, and the curtains drawn back and tied to each post, so the bed shows
+  for (const [x0, x1, z0, z1] of [[-13.08, -10.92, 8.44, 8.5], [-13.08, -13.02, 8.44, 11.36], [-10.98, -10.92, 8.44, 11.36]]) B.boxE('drape', x0, x1, 6.25, 6.55, z0, z1);
+  for (const [x, z] of [[-13.0, 8.5], [-11.0, 8.5], [-13.0, 11.3], [-11.0, 11.3]]) {
+    const inX = x < -12 ? 1 : -1, inZ = z < 10 ? 1 : -1;
+    B.mesh(G.cyl, 'drape', x + inX * 0.12, 5.3, z + inZ * 0.05, 0.26, 2.3, 0.2);                        // gathered against the post
+    B.mesh(G.sphere, 'drape', x + inX * 0.13, 5.2, z + inZ * 0.05, 0.3, 0.16, 0.24);                   // pinched in by the tie
+    B.box('gilt', x + inX * 0.1, 5.2, z + inZ * 0.05, 0.05, 0.04, 0.24);                                // the tasselled tie-back
   }
 
   /* ---- the nursery: a rocking chair that rocks, and dolls ---- */

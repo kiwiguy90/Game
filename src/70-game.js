@@ -189,6 +189,7 @@ class Game {
     BM.buildInterior(this.B, this);
     BM.buildWindows(this.B, this);
     BM.buildLift(this.B, this);
+    BM.buildGlimpses(this.B, this);
     this.interactables = this.B.interactables;
     this.byId = {};
     for (const it of this.interactables) this.byId[it.id] = it;
@@ -706,6 +707,7 @@ class Game {
     BM.updateLift(this, dt);
     BM.updateLongcase(this, dt);
     BM.updateSave(this, dt);
+    BM.updateGlimpses(this, dt);
     const sd = this.stormDoors;
     if (sd) {
       sd.boltT += ((sd.bolted ? 0 : 1) - sd.boltT) * Math.min(1, dt * 5); sd.bolt.position.x = -12 - 0.3 * sd.boltT;

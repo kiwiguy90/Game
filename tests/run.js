@@ -836,6 +836,31 @@ suite('save', () => {
   return 'saved at rest, Enter continues, power, gates, doors, windows, fires, items, lift and position restored';
 });
 
+suite('glimpses', () => {
+  const env = H.load({ quiet: true });
+  const { game } = env, G = game.glimpses, g = game.grid;
+  if (game.intro) game.intro.skip();
+  const run = s => { for (let i = 0; i < s * 30; i++) game.update(1 / 30); };
+  const lookAt = (x, z) => { game.player.yaw = Math.atan2(-(x - game.player.x), -(z - game.player.z)); };
+  // the window, from the drive, once locked in
+  game.gates.lockedIn = true; game.teleport(-4, 0, 40, 0); lookAt(-9, 12.3); run(0.2);
+  assert(G.active && G.winFig.visible && G.candle.on, 'a figure in the upstairs window, a candle behind her');
+  run(4); assert(!G.active && !G.winFig.visible && !G.candle.on && game.story.glimpses.window, 'and she is gone');
+  game.teleport(-4, 0, 40, 0); lookAt(-9, 12.3); run(0.5); assert(!G.active, 'only once');
+  // footsteps over the hall
+  g.setLodge(true); g.stormHasTripped = true; g.throwMain(); game.teleport(0, 0, 6, 0); run(7);
+  assert(game.story.glimpses.steps, 'footsteps cross the balcony while you stand in the hall');
+  // the landing figure: gone when you come close
+  game.teleport(0, 4.2, -2.5, 0); lookAt(-5, -9.6); run(0.2);
+  assert(G.active && G.landFig.visible, 'a figure by her door at the end of the landing');
+  game.teleport(-3.5, 4.2, -8, 0); run(1.5); assert(!G.active && !G.landFig.visible, 'gone when you come close');
+  // the music box, and the knocks
+  game.teleport(3, 4.2, -6, 0); run(0.2); assert(game.story.glimpses.musicbox, 'a music box in the nursery');
+  game.gates.escaping = true; run(0.2); assert(game.story.glimpses.knocks, 'three knocks when the gates are let go');
+  assert(game.frameErrors === 0, 'frame errors');
+  return 'window, footsteps, landing figure, music box and knocks: each once, each in its place';
+});
+
 suite('reachability', () => {
   const env = H.load({ quiet: true });
   const { game, BM } = env;

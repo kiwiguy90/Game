@@ -477,7 +477,17 @@ class Game {
       'You put the lights on. You looked. And you got out.',
       'BLACKTHORN MANOR',
     ].join('\n\n');
-    if (this.ui.el.ending) { this.ui.el.endingText.textContent = text; this.ui.el.ending.style.display = 'flex'; }
+    if (this.ui.el.ending) {
+      // clear the screen of everything else, and leave a way back to the start
+      this.ui.msgT = 0; for (const k of ['msg', 'prompt', 'objective', 'lights']) if (this.ui.el[k]) this.ui.el[k].style.display = 'none';
+      this.ui.el.endingText.textContent = text; this.ui.el.ending.style.display = 'flex';
+      if (typeof document !== 'undefined' && !document.getElementById('play-again')) {
+        const b = document.createElement('button'); b.id = 'play-again'; b.textContent = 'Play again';
+        b.style.cssText = 'position:fixed;left:50%;bottom:7vh;transform:translateX(-50%);background:#2a2016;color:#ecdcbc;border:1px solid #6a5434;padding:10px 26px;font:16px Georgia,serif;letter-spacing:.08em;cursor:pointer';
+        b.addEventListener('click', () => window.location.reload()); this.ui.el.ending.appendChild(b);
+      }
+      if (this.menu) this.menu.unlock();
+    }
     this.endingText = text;
   }
   onReadClosed() {}

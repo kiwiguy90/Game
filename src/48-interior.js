@@ -128,8 +128,9 @@ BM.roomOfPoint = function (x, y, z) { const r = ROOMS.find(q => x >= q[2] - 0.3 
 BM.buildInterior = function (B, game) {
   const P = B.phys;
   B.zone = 'mansion';
-  const doorsOn = (axis, c, a0, a1) => P.doorways.filter(d => d.axis === axis && Math.abs((axis === 'x' ? d.z : d.x) - c) < 0.35 && (axis === 'x' ? d.x : d.z) > a0 - 0.1 && (axis === 'x' ? d.x : d.z) < a1 + 0.1);
-  const windowsOn = (axis, c, a0, a1) => B.windows.filter(w => (axis === 'x' ? w.nz !== 0 : w.nx !== 0) && Math.abs((axis === 'x' ? w.z : w.x) - c) < 0.35 && (axis === 'x' ? w.x : w.z) > a0 - 0.1 && (axis === 'x' ? w.x : w.z) < a1 + 0.1);
+  // (only the openings on this floor: a door upstairs is not a hole in the wall downstairs)
+  const doorsOn = (axis, c, a0, a1, f) => P.doorways.filter(d => Math.abs(d.y - f) < 0.5 && d.axis === axis && Math.abs((axis === 'x' ? d.z : d.x) - c) < 0.35 && (axis === 'x' ? d.x : d.z) > a0 - 0.1 && (axis === 'x' ? d.x : d.z) < a1 + 0.1);
+  const windowsOn = (axis, c, a0, a1, f) => B.windows.filter(w => w.sill > f - 0.1 && w.sill < f + 3.6 && (axis === 'x' ? w.nz !== 0 : w.nx !== 0) && Math.abs((axis === 'x' ? w.z : w.x) - c) < 0.35 && (axis === 'x' ? w.x : w.z) > a0 - 0.1 && (axis === 'x' ? w.x : w.z) < a1 + 0.1);
 
   for (const [room, schemeName, x0, x1, z0, z1, f, c] of ROOMS) {
     const S = SCHEMES[schemeName];
@@ -154,8 +155,16 @@ BM.buildInterior = function (B, game) {
       };
       // the holes: doorways (full height to their head) and windows (sill to head, plus the shutter boxes)
       let holes = [];
-      for (const d of doorsOn(sd.axis, sd.c, sd.a0, sd.a1)) { const u = sd.axis === 'x' ? d.x : d.z; holes.push({ u0: u - d.width / 2 - 0.09, u1: u + d.width / 2 + 0.09, v0: f, v1: f + 2.42 }); }
-      for (const w of windowsOn(sd.axis, sd.c, sd.a0, sd.a1)) { const u = sd.axis === 'x' ? w.x : w.z; holes.push({ u0: u - w.w / 2 - 0.36, u1: u + w.w / 2 + 0.36, v0: w.sill - 0.1, v1: w.head + 0.06 }); }
+      for (const d of doorsOn(sd.axis, sd.c, sd.a0, sd.a1, f)) { const u = sd.axis === 'x' ? d.x : d.z; holes.push({ u0: u - d.width / 2 - 0.09, u1: u + d.width / 2 + 0.09, v0: f, v1: f + 2.42 }); }
+      for (const w of windowsOn(sd.axis, sd.c, sd.a0, sd.a1, f)) { const u = sd.axis === 'x' ? w.x : w.z; holes.push({ u0: u - w.w / 2 - 0.36, u1: u + w.w / 2 + 0.36, v0: w.sill - 0.1, v1: w.head + 0.06 }); }
+      // the shutter boxes beside each window: painted panelled reveals where the folding shutters live
+      for (const w of windowsOn(sd.axis, sd.c, sd.a0, sd.a1, f)) {
+        const u = sd.axis === 'x' ? w.x : w.z, v0 = w.sill - 0.1, v1 = w.head + 0.06, vm = (v0 + v1) * 0.5;
+        for (const [a, bb] of [[u - w.w / 2 - 0.36, u - w.w / 2 - 0.01], [u + w.w / 2 + 0.01, u + w.w / 2 + 0.36]]) {
+          lay('paintedWood', [{ u0: a, u1: bb, v0, v1 }], 0.035);
+          lay('paintedWood', [{ u0: a + 0.06, u1: bb - 0.06, v0: v0 + 0.08, v1: vm - 0.04 }, { u0: a + 0.06, u1: bb - 0.06, v0: vm + 0.04, v1: v1 - 0.08 }], 0.012, 0.035);
+        }
+      }
       const band = (v0, v1) => { let r = [{ u0: sd.a0 + 0.02, u1: sd.a1 - 0.02, v0, v1 }]; for (const h of holes) r = cut(r, h); return r; };
       const skirtH = f > 4 ? 0.2 : 0.26, dadoH = S.dado ? S.dadoH : 0, friezeH = S.frieze ? 0.45 : 0, cornice = S.cornice || 0;
       // paper: field (and frieze), the dado below the rail, the skirting

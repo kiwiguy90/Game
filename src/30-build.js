@@ -543,7 +543,8 @@ class Builder {
         this.boxE(mat, inner[0], inner[1], ya, yb, inner[2], inner[3]);
         this.boxE(o.matOut, outer[0], outer[1], ya, yb, outer[2], outer[3]);
       } else {
-        this.boxE(mat, ex[0], ex[1], ya, yb, ex[2], ex[3]);
+        // an inside wall stops just under the floor above, so its top never shows through (and flickers in) that floor
+        this.boxE(mat, ex[0], ex[1], ya, yb === y1 ? yb - 0.025 : yb, ex[2], ex[3]);
       }
     };
     let cur = a0;

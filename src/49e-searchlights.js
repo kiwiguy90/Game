@@ -35,8 +35,9 @@ function washMaterial(n) {
       '  float open = min(1.0, 0.16 + v * (vS < 0.5 ? 5.0 : 2.6));',                                   // how far the pool of light has spread
       '  float across = 1.0 - smoothstep(open * 0.5, open, u);',
       '  float foot = smoothstep(0.0, 0.02, v) * (1.0 + 1.3 * exp(-v * 16.0));',
-      '  float fade = vS < 0.5 ? (1.0 - 0.38 * v) * (1.0 - smoothstep(0.94, 1.0, v)) : pow(1.0 - v, 0.85);', // towers: carried to the top
-      '  gl_FragColor = vec4(vec3(0.5, 0.53, 0.58) * across * foot * fade * level, 1.0);',
+      '  float fade = vS < 0.5 ? 0.5 * (1.0 - 0.6 * v) * (1.0 - smoothstep(0.9, 1.0, v)) : pow(1.0 - v, 0.85);', // towers: softer, but carried to the top
+      '  vec3 tint = vS < 0.5 ? vec3(0.52, 0.5, 0.46) : vec3(0.5, 0.53, 0.58);',               // the towers a warmer, older light
+      '  gl_FragColor = vec4(tint * across * foot * fade * level, 1.0);',
       '}',
     ].join('\n'),
     transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
@@ -47,9 +48,9 @@ function washMaterial(n) {
 function beamMaterial(n) {
   return new THREE.ShaderMaterial({
     uniforms: { levels: { value: new Array(n).fill(0) }, time: { value: 0 } },
-    vertexShader: 'attribute float along; attribute float gid; varying float vZ; varying float vG; varying vec3 vN; varying vec3 vV; void main(){ vZ = along; vG = gid; vec4 mv = modelViewMatrix * vec4(position,1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }',
+    vertexShader: 'attribute float along; attribute float gid; attribute float style; varying float vZ; varying float vG; varying float vS; varying vec3 vN; varying vec3 vV; void main(){ vZ = along; vG = gid; vS = style; vec4 mv = modelViewMatrix * vec4(position,1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }',
     fragmentShader: [
-      'uniform float levels[' + n + ']; uniform float time; varying float vZ; varying float vG; varying vec3 vN; varying vec3 vV;',
+      'uniform float levels[' + n + ']; uniform float time; varying float vZ; varying float vG; varying float vS; varying vec3 vN; varying vec3 vV;',
       'void main(){',
       '  float level = 0.0;',
       '  for (int i = 0; i < ' + n + '; i++) { if (abs(float(i) - vG) < 0.5) level = levels[i]; }',
@@ -57,7 +58,7 @@ function beamMaterial(n) {
       '  float edge = pow(abs(dot(vN, vV)), 1.4);',
       '  float fall = pow(clamp(1.0 - vZ, 0.0, 1.0), 1.4) * smoothstep(0.0, 0.03, vZ);',
       '  float rain = 0.85 + 0.15 * sin(vZ * 60.0 - time * 7.0);',
-      '  gl_FragColor = vec4(vec3(0.92, 0.95, 1.0) * edge * fall * rain * level * 0.14, 1.0);',
+      '  gl_FragColor = vec4(vec3(0.92, 0.95, 1.0) * edge * fall * rain * level * (vS < 0.5 ? 0.07 : 0.14), 1.0);',
       '}',
     ].join('\n'),
     transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
@@ -113,7 +114,7 @@ BM.buildSearchlights = function (B, game) {
     const off = Math.hypot(lx - fx, lz - fz), len = h * 0.95, lean = Math.atan2(Math.max(0, off - 0.3), len);
     const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(Math.cos(a), 0, -Math.sin(a)), -lean);
     const c = cone(len, Math.min(1.3, w * 0.45));
-    beams.push({ geo: c, gid, len, matrix: new THREE.Matrix4().compose(new THREE.Vector3(lx, ly + 0.03, lz), q, new THREE.Vector3(1, 1, 1)) });
+    beams.push({ geo: c, gid, len, style, matrix: new THREE.Matrix4().compose(new THREE.Vector3(lx, ly + 0.03, lz), q, new THREE.Vector3(1, 1, 1)) });
   };
 
   /* ---- the four corner towers: the three faces turned away from the house, lit to the battlements ---- */
@@ -121,7 +122,7 @@ BM.buildSearchlights = function (B, game) {
   const R = 3.2, apothem = R * Math.cos(Math.PI / 8), faceW = 2 * R * Math.sin(Math.PI / 8);
   towers.forEach(([tx, tz], i) => {
     const out = Math.atan2(tx, tz);
-    const gid = estate({ id: 'tower-flood-' + i, name: 'Tower floodlight', spot: true, target: 1.6, range: 18,
+    const gid = estate({ id: 'tower-flood-' + i, name: 'Tower floodlight', spot: true, target: 0.9, range: 16, colour: 0xf2e6d0,
       pos: [tx + Math.sin(out) * (apothem + 0.9), 0.7, tz + Math.cos(out) * (apothem + 0.9)], dir: [-Math.sin(out) * 0.18, 1, -Math.cos(out) * 0.18] });
     for (let k = 0; k < 8; k++) {
       const a = k * Math.PI / 4; let d = Math.abs(a - out) % (Math.PI * 2); if (d > Math.PI) d = Math.PI * 2 - d;

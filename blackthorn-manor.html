@@ -6963,7 +6963,11 @@ class FX {
         'float h(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }',
         'float n(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f); return mix(mix(h(i), h(i+vec2(1,0)), f.x), mix(h(i+vec2(0,1)), h(i+vec2(1,1)), f.x), f.y); }',
         'void main(){ vec2 p = vW.xz * 0.06 + vec2(time * 0.02, time * 0.013); float v = n(p) * 0.6 + n(p * 2.3 - time * 0.03) * 0.4; v = smoothstep(0.35, 0.95, v);',
+        // no mist indoors: the house, the lodge and its back room, the garage, the shed
         'if (vW.x > -18.4 && vW.x < 18.4 && vW.z > -12.4 && vW.z < 12.4) discard;',
+        'if (vW.x > -17.6 && vW.x < -5.6 && vW.z > 79.6 && vW.z < 88.4) discard;',
+        'if (vW.x > 25.7 && vW.x < 34.3 && vW.z > -2.3 && vW.z < 8.3) discard;',
+        'if (vW.x > -32.2 && vW.x < -26.8 && vW.z > -4.2 && vW.z < 2.2) discard;',
         'gl_FragColor = vec4(vec3(0.42,0.47,0.55) * (1.0 + flash * 3.0), v * 0.16); }',
       ].join('\n'),
       transparent: true, depthWrite: false,

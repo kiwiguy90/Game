@@ -222,5 +222,6 @@ BM.updateFountain = function (game, dt, t) {
   f.ringMat.uniforms.time.value = t; f.ringMat.uniforms.level.value = f.level * 0.3;
   return true;
 };
-BM.statuaryGeo = once; // for one-off turned shapes elsewhere in the grounds
+BM.statuaryGeo = once;
+BM.waterMaterial = waterMaterial; // running water, for the pool garden // for one-off turned shapes elsewhere in the grounds
 })();

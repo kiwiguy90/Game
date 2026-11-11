@@ -491,7 +491,10 @@ class Synth {
     if (fireV > 0 && Math.random() < dt * 6) this.burst(this.white, 'highpass', 2500, 1, 0.12 * fireV, 0.001, 0.03);
     this.set('hum', grid.live('main') && zone === 'house' ? 0.03 : 0);
     const fp = { x: 0, y: 1, z: 24 };
-    this.set('fountain', game.fountainFx && game.fountainFx.on ? near(fp, 22) * 0.22 : 0, pan(fp));
+    // the fountain, or the pool's weir, whichever is nearer and running
+    const pf = game.poolFx && game.poolFx.on ? game.poolFx.pos : null;
+    const fv = game.fountainFx && game.fountainFx.on ? near(fp, 22) * 0.22 : 0, pv = pf ? near(pf, 24) * 0.26 : 0;
+    this.set('fountain', Math.max(fv, pv), pan(pv > fv ? pf : fp));
     // the arrival: your engine and your car radio, on low
     const intro = game.intro;
     this.set('engine', intro ? intro.engine : 0);

@@ -24,7 +24,7 @@ const ESTATE_SAY = {
   flood: 'Floodlights thump on, one after another. The front of the house and the garage yard leap out of the rain, and up on the four towers the searchlights stutter alight and begin to sweep the sky. Behind the house, the floodlights over the old tennis court bang on.',
   drive: 'Lamps come up along the drive, two by two, all the way to the turning circle.',
   garden: 'Small lights wake round the fountain, and all round the maze the uplights come on one by one, washing the yew walls a pale, cold green.',
-  pool: 'The sunken pool lights from underneath, a cold blue.',
+  pool: 'Down in the pool garden the pumps knock and start, the upper pool begins to spill over its weir, and both pools light from underneath, blue and green, the light swimming on the water.',
   pond: 'Lamps come on at the edge of the pond. The ducks complain.',
   garage: 'The garage tube strobes and catches; a lantern lights over its door.',
   shed: 'The shed bulb comes on, and the lantern by its door.',
@@ -193,6 +193,7 @@ class Game {
     BM.buildMausoleum(this.B, this);
     BM.buildSearchlights(this.B, this);
     BM.buildGroundsLights(this.B, this);
+    BM.buildPoolGarden(this.B, this);
     BM.buildGlimpses(this.B, this);
     this.interactables = this.B.interactables;
     this.byId = {};

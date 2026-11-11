@@ -22,7 +22,7 @@ BM.buildOvergrown = function (B, game) {
   /* where nothing grows: buildings, water, the lane */
   const NOGO = [
     [-18.4, 18.4, -12.4, 12.4], [-17.6, -5.6, 79.6, 88.4], [26, 34, -2, 8], [-34, -26, -6, 4],
-    [-40.2, -23.8, 55.8, 68.2], [-64, 64, 88, 101], [33, 43, 21, 29.5], [52.4, 61.6, 30.4, 37.6], [31.4, 47.4, 13.6, 25.4], [-17.6, 17.6, -51.2, -33.0], [-18, -6, -24, -12], [-6, 18, -15, -12], [-5.3, -3.7, -30, -15], [-6, 16, -22.7, -21.3], [5.3, 6.7, -30, -15], [12, 18, -30, -23.4],
+    [-50.5, -21.5, 50.8, 75.2], [-64, 64, 88, 101], [33, 43, 21, 29.5], [52.4, 61.6, 30.4, 37.6], [31.4, 47.4, 13.6, 25.4], [-17.6, 17.6, -51.2, -33.0], [-18, -6, -24, -12], [-6, 18, -15, -12], [-5.3, -3.7, -30, -15], [-6, 16, -22.7, -21.3], [5.3, 6.7, -30, -15], [12, 18, -30, -23.4],
   ];
   const WATER = [[0, 24, 3.4], [34, 62, 6.4]];
   const grows = (x, z) => Math.abs(x) < 63.5 && z > -53.5 && z < 87.5 && !NOGO.some(q => x > q[0] && x < q[1] && z > q[2] && z < q[3]) && !WATER.some(c => Math.hypot(x - c[0], z - c[1]) < c[2]);
@@ -86,7 +86,7 @@ BM.buildOvergrown = function (B, game) {
     if (!grows(x, z) || onPath(x, z, 0.9)) continue;
     brambleAt.push([x, z]); bramble(x, z, 0.8 + rnd() * 0.7);
   }
-  for (const [x, z] of [[-40.8, 58], [-40.8, 64], [-23.2, 57.5], [-23.2, 66.5], [-32, 69], [-28, 55]]) bramble(x, z, 1.1); // round the pool
+  for (const [x, z] of [[-47.4, 51.5], [-44, 72.6], [-23.2, 57.5], [-23.2, 66.5], [-26, 72.8], [-36, 51.4]]) bramble(x, z, 1.1); // round the pool
   for (let z = 30.5; z < 44; z += 2.6) { bramble(29.2, z, 0.7); bramble(46.8, z, 0.7); }                            // the cemetery railings
 
   /* ---- nettles and hogweed ---- */
@@ -142,23 +142,6 @@ BM.buildOvergrown = function (B, game) {
     }
   }
 
-  /* ---- the pool: green scum, leaves floating and sunk, algae on the walls, a ladder, an old chair in it ---- */
-  B.room = 'sunken pool';
-  B.boxE('scum', -36, -28, -0.56, -0.545, 59, 65);
-  for (let i = 0; i < 60; i++) B.box(rnd() < 0.5 ? 'leafLitter' : 'leafLitter2', -35.8 + rnd() * 7.6, -0.54, 59.2 + rnd() * 5.6, 0.14, 0.005, 0.09, rnd() * 3);
-  for (let i = 0; i < 6; i++) B.mesh(G.lowSphere, 'sapLeaves', -35.7 + rnd() * 7.4, -0.54, 59.3 + rnd() * 5.4, 0.5 + rnd() * 0.6, 0.04, 0.4 + rnd() * 0.5);
-  for (const [x0, x1, z0, z1] of [[-36.2, -27.8, 58.82, 58.84], [-36.2, -27.8, 65.16, 65.18], [-36.18, -36.16, 59, 65], [-27.84, -27.82, 59, 65]]) B.boxE('moss', x0, x1, -0.75, -0.55, z0, z1);
-  for (const dx of [-0.25, 0.25]) { stem('chrome', [-28.6 + dx, -0.4, 65.1], [-28.6 + dx, 0.5, 65.1], 0.02); stem('chrome', [-28.6 + dx, 0.5, 65.1], [-28.6 + dx, 0.55, 65.4], 0.02); }
-  for (let k = 0; k < 3; k++) B.box('chrome', -28.6, -0.25 + k * 0.25, 65.05, 0.5, 0.02, 0.05);
-  { const c = new THREE.Group(); c.position.set(-33.2, -0.6, 62.6); c.rotation.set(0.4, 0.7, 1.2); B.root.add(c); B.box('rust', 0, 0, 0, 0.5, 0.04, 0.5, 0, c); B.box('rust', 0, 0.25, -0.24, 0.5, 0.5, 0.04, 0, c); for (const [dx, dz] of [[-0.22, -0.22], [0.22, -0.22], [-0.22, 0.22], [0.22, 0.22]]) B.mesh(G.post, 'rust', dx, -0.22, dz, 0.025, 0.45, 0.025, 0, c); }
-  // cracked and missing coping, and two dark cypresses at the far end
-  for (let i = 0; i < 6; i++) B.box('stone', -39.6 + rnd() * 15, 0.03, rnd() < 0.5 ? 55.9 : 68.1, 0.5, 0.06, 0.3, rnd() * 0.5);
-  for (const x of [-41.5, -22.5]) { B.mesh(G.cyl, 'bark', x, 0.6, 69.2, 0.2, 1.2, 0.2); B.mesh(G.cone, 'pineDark', x, 2.6, 69.2, 1.3, 4.4, 1.3); B.mesh(G.cone, 'pine', x + 0.1, 3.9, 69.2, 0.9, 2.6, 0.9); P.addWall(x - 0.3, x + 0.3, 68.9, 69.5, 0, 4, { kind: 'tree' }); }
-  // the light under the water: a soft green-blue glow in the scum when the pool lights are on
-  const glowMat = BM.Own(0x000000); glowMat.transparent = true; glowMat.blending = THREE.AdditiveBlending; glowMat.depthWrite = false;
-  const poolGlow = B.boxE(glowMat, -35.8, -28.2, -0.544, -0.54, 59.2, 64.8); poolGlow.userData.dynamic = true;
-  game.poolGlow = glowMat;
-
   /* ---- the fountain: it still runs on the garden circuit ---- */
   B.room = 'grounds';
   B.mesh(G.cyl, 'scum', 0, 0.452, 24, 5.7, 0.01, 5.7);
@@ -195,10 +178,6 @@ BM.buildOvergrown = function (B, game) {
 BM.updateOvergrown = function (game, dt, t) {
   const grid = game.grid;
   BM.updateFountain(game, dt, t);
-  if (game.poolGlow && game.estateLights) {
-    let k = 0;
-    for (const id of game.estateLights.pool) { const l = grid.light(id); if (l && /pool-under/.test(id) && l.target > 0) k = Math.max(k, Math.min(1.2, l.intensity / l.target)); }
-    game.poolGlow.color.setRGB(0.003 * k, 0.016 * k, 0.01 * k);
-  }
+  BM.updatePoolGarden(game, dt, t);
 };
 })();

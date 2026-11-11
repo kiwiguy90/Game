@@ -14,7 +14,7 @@ BM.buildGrounds = function (B, game) {
   B.zone = 'exterior'; B.levelName = 'ground'; B.room = 'grounds';
 
   /* ---- ground ---- */
-  B.floor('grass', -64, 64, -54, 100, 0, 0.5, [[-18, 18, -12, 12], [-40, -24, 56, 68], [-13.4, -10.6, -16.8, -12]]);
+  B.floor('grass', -64, 64, -54, 100, 0, 0.5, [[-18, 18, -12, 12], [-46, -24, 53, 71], [-13.4, -10.6, -16.8, -12]]);
   // the lane's verges (the road itself, out into the forest, is laid in 49-road)
   B.boxE('soil', -64, 64, 0, 0.02, 89.5, 100.6, null);
   // limestone carriage drive, turning circle ring and paths (visual overlays)
@@ -158,7 +158,6 @@ BM.buildGrounds = function (B, game) {
   for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; bollard('garden', 'fountain-light' + i, 'Fountain light', Math.sin(a) * 4.0, 24 + Math.cos(a) * 4.0, 0xbfe0ff); }
   bollard('garden', 'maze-light-n', 'Maze lantern', -38.2, 36.6); bollard('garden', 'maze-light-s', 'Maze lantern', -38.2, 40.4);
   bollard('pool', 'pool-light-n', 'Pool light', -23.2, 59.5, 0xbfe0ff); bollard('pool', 'pool-light-s', 'Pool light', -23.2, 64.5, 0xbfe0ff);
-  for (const x of [-34, -30]) estateLight('pool', { id: 'pool-under' + x, name: 'Underwater light', kind: 'incandescent', style: 'none', pos: [x, -0.7, 62], colour: 0x5fd0ff, target: 1.2, range: 7, lightType: 'subtlePulse' });
   bollard('pond', 'pond-light-n', 'Pond light', 26.6, 59.5); bollard('pond', 'pond-light-s', 'Pond light', 26.6, 64.5);
   bollard('cemetery', 'cemetery-light-n', 'Cemetery gate lantern', 29.4, 35.3); bollard('cemetery', 'cemetery-light-s', 'Cemetery gate lantern', 29.4, 38.7);
   bollard('cemetery', 'eleanor-light', 'Lamp by the small stone', 49.4, 38.6, 0xffe0b0);
@@ -287,19 +286,7 @@ BM.buildGrounds = function (B, game) {
   BM.figure(B, hx, 1.0, hz, Math.atan2(hn[0], hn[1]), { pose: 'reach', scale: 1.05 }); // Mercy, holding out her hand to whoever finds the way in
   B.readable('plaque-statue', 'Plaque on the statue', 'MERCY, WHO WAITS\n\nGiven to the house by E.B., 1971.\n\nSomeone has scratched underneath, small, with a nail: "she is the only one of them who looked at us"', [hx + hn[0] * 0.37, 0.7, hz + hn[1] * 0.37], hn, { plaque: true });
 
-  /* ---- sunken pool ---- */
-  B.room = 'sunken pool';
-  B.floor('stone', -40, -24, 56, 68, -0.8, 0.3);
-  P.ramp(-25.6, -24, 61, 63, 'x', -0.8, 0, -1.1, 'pool steps');
-  for (let i = 0; i < 4; i++) B.boxE('stone', -25.6 + i * 0.4, -24, -0.8, -0.8 + (i + 1) * 0.2, 61, 63);
-  B.boxE('stone', -40, -24, -0.8, 0, 55.8, 56); B.boxE('stone', -40, -24, -0.8, 0, 68, 68.2);
-  B.boxE('stone', -40.2, -40, -0.8, 0, 56, 68);
-  B.boxE('stone', -24, -23.8, -0.8, 0, 56, 61); B.boxE('stone', -24, -23.8, -0.8, 0, 63, 68);
-  B.solid('stone', -36.2, -27.8, -0.8, -0.4, 58.8, 59);
-  B.solid('stone', -36.2, -27.8, -0.8, -0.4, 65, 65.2);
-  B.solid('stone', -36.2, -36, -0.8, -0.4, 59, 65);
-  B.solid('stone', -28, -27.8, -0.8, -0.4, 59, 65);
-  B.boxE('water', -36, -28, -0.8, -0.55, 59, 65).userData.dynamic = true;
+  /* (the pool garden is built in 49g) */
 
   /* ---- the pond, with ducks ---- */
   B.room = 'pond';

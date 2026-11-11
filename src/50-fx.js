@@ -58,10 +58,10 @@ class FX {
     this.hemi = new THREE.HemisphereLight(0x50607a, 0x0a0806, 0.08); scene.add(this.hemi);
     this.moon = new THREE.DirectionalLight(0x7f95b5, 0.05); this.moon.position.set(-40, 80, 30); scene.add(this.moon);
     // the torch: a spot on the camera, with a visible beam
-    this.torch = new THREE.SpotLight(0xffe9c8, 0, 26, 0.42, 0.75, 2);
+    this.torch = new THREE.SpotLight(0xffe9c8, 0, 20, 0.42, 0.75, 2); // (its light is spent by 20 m; the shadow reaches as far as the light)
     this.torch.castShadow = true;
     this.torch.shadow.mapSize.set(512, 512);
-    this.torch.shadow.camera.near = 0.3; this.torch.shadow.camera.far = 30;
+    this.torch.shadow.camera.near = 0.3; this.torch.shadow.camera.far = 20;
     camera.add(this.torch); this.torch.position.set(0.18, -0.12, 0.1);
     camera.add(this.torch.target); this.torch.target.position.set(0.1, -0.35, -5);
     this.lightCount = scene.children.filter(o => o.isLight).length + 1;
@@ -133,7 +133,7 @@ class FX {
       fragmentShader: [
         'uniform float flash; uniform vec4 carBox; varying vec3 vW; varying float vA; varying vec3 vL;',
         'bool inside(vec4 b, float top){ return vW.x > b.x && vW.x < b.y && vW.z > b.z && vW.z < b.w && vW.y < top; }',
-        'void main(){ if (inside(vec4(-18.4,18.4,-12.4,12.4), 12.0) || inside(vec4(-17.6,-5.6,79.6,88.4), 5.2) || inside(vec4(25.7,34.3,-2.3,8.3), 3.3) || inside(vec4(-32.2,-26.8,-4.2,2.2), 2.8) || inside(carBox, 1.6)) discard;',
+        'void main(){ if (inside(vec4(-18.4,18.4,-12.4,12.4), 12.0) || inside(vec4(-17.6,-5.6,79.6,88.4), 5.2) || inside(vec4(25.7,34.3,-2.3,8.3), 3.3) || inside(vec4(-32.2,-26.8,-4.2,2.2), 2.8) || inside(vec4(52.8,61.2,30.8,37.2), 7.2) || inside(carBox, 1.6)) discard;',
         'if (vW.y < 0.0) discard;',
         'gl_FragColor = vec4((vec3(0.42,0.48,0.58) * (0.10 + flash) + vL * 0.7) * vA, 1.0); }',
       ].join('\n'),
@@ -158,6 +158,7 @@ class FX {
         'if (vW.x > -17.6 && vW.x < -5.6 && vW.z > 79.6 && vW.z < 88.4) discard;',
         'if (vW.x > 25.7 && vW.x < 34.3 && vW.z > -2.3 && vW.z < 8.3) discard;',
         'if (vW.x > -32.2 && vW.x < -26.8 && vW.z > -4.2 && vW.z < 2.2) discard;',
+        'if (vW.x > 52.8 && vW.x < 61.2 && vW.z > 30.8 && vW.z < 37.2) discard;',
         'gl_FragColor = vec4(vec3(0.42,0.47,0.55) * (1.0 + flash * 3.0), v * 0.16); }',
       ].join('\n'),
       transparent: true, depthWrite: false,

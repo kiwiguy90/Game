@@ -36,6 +36,7 @@ BM.buildGrounds = function (B, game) {
     { id: 'turning-circle', ring: { cx: 0, cz: 24, r: 6.75 }, w: 4, y: 0 },
     { id: 'maze-walk', pts: [[-9, 24], [-20, 24], [-20, 38.5], [-39.3, 38.5]], w: 2, y: 0 },
     { id: 'cemetery-walk', pts: [[9, 24], [24, 24], [24, 37], [29.6, 37]], w: 2, y: 0 },
+    { id: 'chapel-walk', pts: [[24, 37], [24, 46.2], [50.6, 46.2], [50.6, 34], [52.4, 34]], w: 1.8, y: 0 },
     { id: 'garage-walk', pts: [[24, 24], [30, 24], [30, 8.6]], w: 2, y: 0 },
     { id: 'shed-walk', pts: [[-20, 24], [-29.5, 24], [-29.5, 2.7]], w: 2, y: 0 },
     { id: 'pond-walk', pts: [[3.1, 62], [27, 62]], w: 2, y: 0 },
@@ -127,7 +128,7 @@ BM.buildGrounds = function (B, game) {
   const ESTATE_GROUPS = [
     ['street', 'Street lighting (lane)'], ['gate', 'Gate lights'], ['flood', 'Floodlights (house and yard)'],
     ['drive', 'Drive lamps'], ['garden', 'Garden lights (fountain, maze)'], ['pool', 'Pool lights'],
-    ['pond', 'Pond lights'], ['garage', 'Garage lights'], ['shed', 'Shed lights'], ['cemetery', 'Cemetery lights'],
+    ['pond', 'Pond lights'], ['garage', 'Garage lights'], ['shed', 'Shed lights'], ['cemetery', 'Cemetery and chapel lights'],
   ];
   const estate = {}; for (const [k] of ESTATE_GROUPS) estate[k] = [];
   const estateLight = (group, o) => { const l = B.fixture(Object.assign({ circuit: 'lodge', on: false, chain: 'estate:' + group }, o)); estate[group].push(l.id); return l; };

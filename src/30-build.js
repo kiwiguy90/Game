@@ -576,6 +576,12 @@ class Builder {
         seg(s, e, y0, sill);
         seg(s, e, head, y1);
         this.windowPane(axis, c, s, e, sill, head, o.outSign || 1, t, op);
+      } else if (op.type === 'lancet') {
+        // a lancet: a hole from sill to head, glazed by whoever made it (the glass stops you, not the view)
+        const sill = y0 + (op.sill || 1.2), head = y0 + (op.head || 3.2);
+        seg(s, e, y0, sill); seg(s, e, head, y1);
+        const gx = axis === 'x' ? [s, e, c - 0.03, c + 0.03] : [c - 0.03, c + 0.03, s, e];
+        this.phys.addWall(gx[0], gx[1], gx[2], gx[3], sill, head, { kind: 'glass' });
       } else if (op.type === 'arch') {
         seg(s, e, y0 + (op.head || 3), y1);
         this.doorways.push({ id: op.id || ('arch' + this.doorways.length), x: axis === 'x' ? op.at : c, z: axis === 'x' ? c : op.at, y: y0, axis, width: op.w, thick: t, zone: this.zone, room: this.room });

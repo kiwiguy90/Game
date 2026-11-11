@@ -102,6 +102,7 @@ BM.buildHauntedGarden = function (B, game) {
     [-34, -25, -6, 4],         // shed
     [-61, -38, 27, 50],        // maze
     [29, 47, 29, 45],          // cemetery
+    [47, 63, 28, 48],          // the chapel, and the path round to it
     [-42, -21, 54, 70],        // sunken pool
     [-8, 8, 26, 101],          // the avenue and the gates
     [-64, 64, 85, 101],        // the boundary wall and the lane
@@ -145,8 +146,8 @@ BM.buildHauntedGarden = function (B, game) {
     else BM.deadTree(B, x, z, 0.9 + rnd() * 0.6, game);
   });
   // one by Eleanor's stone, leaning over it
-  BM.deadTree(B, 51.5, 41.5, 1.25, game, 9);
-  placed.push([51.5, 41.5]);
+  BM.deadTree(B, 52.4, 41.8, 1.25, game, 9);
+  placed.push([52.4, 41.8]);
 
   /* ---- the weeping willow by the pond ---- */
   const wx = 42.5, wz = 69.5;

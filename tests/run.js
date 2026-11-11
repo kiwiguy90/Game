@@ -142,7 +142,7 @@ suite('circuits', () => {
   assert(street.length === 3 && street.every(l => !l.powered && !l.on) && street.filter(l => l.flicker > 0).length === 1, 'three street lights, off at the start, one faulty');
   settle(env, 1);
   // dark, except one candle someone has left burning in a gable window
-  assert(g.lights.filter(l => l.circuit !== 'battery' && l.id !== 'gable-candle').every(l => !l.powered), 'the whole estate starts dark');
+  assert(g.lights.filter(l => l.circuit !== 'battery' && l.id !== 'gable-candle' && !/^chapel-candle/.test(l.id)).every(l => !l.powered), 'the whole estate starts dark');
   assert(g.light('gable-candle').powered, 'the candle in the gable window is burning');
   // lodge on: the estate is live, but the whole house, hall included, waits for MAIN
   g.setLodge(true);

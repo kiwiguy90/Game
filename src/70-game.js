@@ -28,7 +28,7 @@ const ESTATE_SAY = {
   pond: 'Lamps come on at the edge of the pond. The ducks complain.',
   garage: 'The garage tube strobes and catches; a lantern lights over its door.',
   shed: 'The shed bulb comes on, and the lantern by its door.',
-  cemetery: 'Two lanterns at the cemetery gate. And one more, further out, by a small stone outside the railings.',
+  cemetery: 'Two lanterns at the cemetery gate, one more by a small stone outside the railings — and beyond it the chapel, its windows coming up red and blue and gold.',
 };
 BM.START = START;
 
@@ -189,6 +189,7 @@ class Game {
     BM.buildInterior(this.B, this);
     BM.buildWindows(this.B, this);
     BM.buildLift(this.B, this);
+    BM.buildChapel(this.B, this);
     BM.buildGlimpses(this.B, this);
     this.interactables = this.B.interactables;
     this.byId = {};
@@ -309,7 +310,7 @@ class Game {
     };
     rows.push({ section: 'MASTER', supply: '', k: 'master:outside', key: 'O', name: 'OUTSIDE supply (lodge)', on: g.lodge, lit: g.lodge, warming: false, live: true });
     rows.push({ section: 'MASTER', supply: '', k: 'master:inside', key: 'I', name: 'INSIDE supply (MAIN)', on: g.live('main'), lit: g.live('main'), warming: false, live: g.lodge });
-    const short = { street: 'Street (lane)', gate: 'Gate', flood: 'Floodlights', drive: 'Drive lamps', garden: 'Garden', pool: 'Pool', pond: 'Pond', garage: 'Garage', shed: 'Shed', cemetery: 'Cemetery' };
+    const short = { street: 'Street (lane)', gate: 'Gate', flood: 'Floodlights', drive: 'Drive lamps', garden: 'Garden', pool: 'Pool', pond: 'Pond', garage: 'Garage', shed: 'Shed', cemetery: 'Cemetery & chapeltery' };
     this.estateGroups.forEach(([k], i) => {
       const st = state(this.estateLights[k]);
       rows.push(Object.assign({ section: 'ESTATE', supply: g.lodge ? 'lodge supply ●' : 'no supply ○', k: 'estate:' + k, key: String((i + 1) % 10), name: short[k] || k }, st, { live: g.lodge && st.live }));
@@ -718,6 +719,7 @@ class Game {
     BM.updateLongcase(this, dt);
     BM.updateSave(this, dt);
     BM.updateGlimpses(this, dt);
+    BM.updateChapel(this, dt, this.time);
     const sd = this.stormDoors;
     if (sd) {
       sd.boltT += ((sd.bolted ? 0 : 1) - sd.boltT) * Math.min(1, dt * 5); sd.bolt.position.x = -12 - 0.3 * sd.boltT;
@@ -898,6 +900,11 @@ class Game {
     r.shadowMap.needsUpdate = this.player.torch && s.shadowEvery > 0 && this.shadowFrame % s.shadowEvery === 0;
     const p = this.player;
     this.fx.renderMirrors(r, this.roomAt(p.x, p.y, p.z) === 'library');
+    // details too far away to matter are not drawn; a jump of more than a few metres updates all of them at once
+    const cp = this.camera.getWorldPosition(this._camP || (this._camP = new THREE.Vector3()));
+    if (!this._lastCam || this._lastCam.distanceToSquared(cp) > 16) { BM.cullDetailsAll(this, cp); this._lastCam = (this._lastCam || new THREE.Vector3()).copy(cp); }
+    else BM.cullDetails(this, cp);
+    if (this._lastCam.distanceToSquared(cp) > 4) this._lastCam.copy(cp);
     r.render(this.scene, this.camera);
     this.lastDrawCalls = r.info.render.calls;
     return this.lastDrawCalls;

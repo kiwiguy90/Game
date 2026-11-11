@@ -88,8 +88,32 @@ BM.optimize = function (game) {
     if (o.userData.wall === undefined && !o.material.transparent && !(o.material.isMeshBasicMaterial)) o.castShadow = true;
   });
   game.scene.traverse(o => { if (o.isMesh) stats.after++; });
+  // small static details: drawn only within a distance that grows with their size
+  const details = [], v = new THREE.Vector3();
+  game.scene.updateMatrixWorld(true);
+  game.scene.traverse(o => {
+    if (!o.isMesh || o.isInstancedMesh || o.userData.dynamic || o.material.isMeshBasicMaterial || o.material.transparent || o.frustumCulled === false) return;
+    if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere();
+    const s = o.matrixWorld.getMaxScaleOnAxis(), r = o.geometry.boundingSphere.radius * s;
+    if (r > 0.9) return;
+    v.copy(o.geometry.boundingSphere.center).applyMatrix4(o.matrixWorld);
+    details.push({ o, x: v.x, y: v.y, z: v.z, d2: Math.pow(16 + r * 70, 2) });
+  });
+  game.details = details; stats.details = details.length;
   return stats;
 };
+/* Hide the small details that are too far away to see. Cheap enough to run on a slice of them each frame. */
+BM.cullDetails = function (game, cam) {
+  const D = game.details; if (!D || !D.length) return;
+  const n = Math.ceil(D.length / 6), start = game.detailCursor || 0;
+  for (let i = 0; i < n; i++) {
+    const d = D[(start + i) % D.length], dx = d.x - cam.x, dy = d.y - cam.y, dz = d.z - cam.z;
+    d.o.visible = dx * dx + dy * dy + dz * dz < d.d2;
+  }
+  game.detailCursor = (start + n) % D.length;
+};
+/* Put every detail right at once (after a teleport). */
+BM.cullDetailsAll = function (game, cam) { const D = game.details; if (!D) return; for (const d of D) { const dx = d.x - cam.x, dy = d.y - cam.y, dz = d.z - cam.z; d.o.visible = dx * dx + dy * dy + dz * dz < d.d2; } };
 
 /* --------------------------------------------------------------------------
    Adaptive quality. Watches the MEDIAN of recent frame times so a single

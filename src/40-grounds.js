@@ -36,6 +36,7 @@ BM.buildGrounds = function (B, game) {
     { id: 'turning-circle', ring: { cx: 0, cz: 24, r: 6.75 }, w: 4, y: 0 },
     { id: 'maze-walk', pts: [[-9, 24], [-20, 24], [-20, 38.5], [-39.3, 38.5]], w: 2, y: 0 },
     { id: 'cemetery-walk', pts: [[9, 24], [24, 24], [24, 37], [29.6, 37]], w: 2, y: 0 },
+    { id: 'mausoleum-walk', pts: [[30, 19.5], [31.6, 19.5]], w: 1.8, y: 0 },
     { id: 'chapel-walk', pts: [[24, 37], [24, 46.2], [50.6, 46.2], [50.6, 34], [52.4, 34]], w: 1.8, y: 0 },
     { id: 'garage-walk', pts: [[24, 24], [30, 24], [30, 8.6]], w: 2, y: 0 },
     { id: 'shed-walk', pts: [[-20, 24], [-29.5, 24], [-29.5, 2.7]], w: 2, y: 0 },

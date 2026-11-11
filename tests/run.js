@@ -142,7 +142,7 @@ suite('circuits', () => {
   assert(street.length === 3 && street.every(l => !l.powered && !l.on) && street.filter(l => l.flicker > 0).length === 1, 'three street lights, off at the start, one faulty');
   settle(env, 1);
   // dark, except one candle someone has left burning in a gable window
-  assert(g.lights.filter(l => l.circuit !== 'battery' && l.id !== 'gable-candle' && !/^chapel-candle/.test(l.id)).every(l => !l.powered), 'the whole estate starts dark');
+  assert(g.lights.filter(l => l.circuit !== 'battery' && l.id !== 'gable-candle' && !/^(chapel-candle|crypt-votives)/.test(l.id)).every(l => !l.powered), 'the whole estate starts dark');
   assert(g.light('gable-candle').powered, 'the candle in the gable window is burning');
   // lodge on: the estate is live, but the whole house, hall included, waits for MAIN
   g.setLodge(true);
@@ -219,7 +219,7 @@ suite('circuits', () => {
   assert(g.appliances.filter(a => a.kind === 'radio').length >= 2 && g.appliances.filter(a => a.kind === 'tv').length >= 1 && g.appliances.filter(a => a.kind === 'fan').length >= 2, 'at least two radios, a television, two fans');
   // the storm trips MAIN once, while the player is in the attic; everything dies
   game.teleport(-3.5, 8.2, -3.4, 0);
-  const startsBefore = game.events.log.filter(e => e === 'appliance:start').length;
+  let restarts = 0; game.events.on('appliance:start', () => { restarts++; }); // (counted live: the event log only keeps its last few hundred)
   settle(env, 0.5);
   assert(g.tripped && !g.live('main') && !g.live('hall'), 'storm trip kills everything, hall included');
   assert(house.every(l => !l.powered), 'every house fitting dark after the trip');
@@ -232,8 +232,7 @@ suite('circuits', () => {
   assert(!g.tripped && g.live('main'), 'reset at the board');
   settle(env, 3);
   assert(!g.tripped, 'storm only trips once');
-  const startsAfter = game.events.log.filter(e => e === 'appliance:start').length;
-  assert(startsAfter > startsBefore, 'appliances came back by themselves (with a clunk)');
+  assert(restarts > 0, 'appliances came back by themselves (with a clunk)');
   assert(fan.running, 'fan back on');
   // the fire needs no power at all
   for (const c of BM.HOUSE_CIRCUITS) g.setBreaker(c, false);

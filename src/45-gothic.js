@@ -361,18 +361,7 @@ BM.buildGothic = function (B, game) {
     BM.plinth(B, 2.2, 20.6, 0.55, 0.7);
     P.addWall(2.2, 3.2, 20.6, 21.8, 0, 0.7, { kind: 'furniture', tag: 'urn' }); }
 
-  /* ---- the family mausoleum ---- */
-  B.room = 'mausoleum';
-  const MZ = { x0: 35, x1: 41, z0: 23.5, z1: 27.5 };
-  B.solid('gothicStone', MZ.x0, MZ.x1, 0, 3.6, MZ.z0, MZ.z1, { kind: 'wall', structural: false });
-  B.mesh(G.wedge, 'slate', (MZ.x0 + MZ.x1) / 2, 3.6, (MZ.z0 + MZ.z1) / 2, 6.6, 2.2, 4.8);
-  B.mesh(G.wedge, 'gothicStone', (MZ.x0 + MZ.x1) / 2, 3.6, MZ.z0 - 0.35, 0.3, 2.0, 6.2, Math.PI / 2);
-  for (const dx of [-2.2, 2.2]) B.mesh(G.cyl, 'gothicTrim', 38 + dx, 1.8, MZ.z0 - 0.3, 0.45, 3.6, 0.45);
-  B.boxE('darkGlass', 37.0, 39.0, 0.0, 2.4, MZ.z0 - 0.02, MZ.z0);
-  B.mesh(G.wedge, 'darkGlass', 38, 2.4, MZ.z0 - 0.01, 0.04, 0.8, 2.0, Math.PI / 2);
-  for (let i = 0; i < 7; i++) B.mesh(G.post, 'iron', 37.15 + i * 0.28, 1.3, MZ.z0 - 0.08, 0.04, 2.6, 0.04);
-  B.box('brass', 38, 3.2, MZ.z0 - 0.05, 2.4, 0.3, 0.04);
-  B.readable('plaque-mausoleum', 'The mausoleum door', 'BLACKTHORN\n\nCharles · Margaret · Edmund\n\nThe iron gate is chained shut. Inside, in the dark, there are six shelves. One has never been used and never will be.', [36.3, 1.4, 23.4], [0, -1], { plaque: true });
+  /* (the family mausoleum is built in 49d) */
 
   /* ---- an old stone well ---- */
   B.room = 'well';

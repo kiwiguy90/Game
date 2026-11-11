@@ -190,6 +190,7 @@ class Game {
     BM.buildWindows(this.B, this);
     BM.buildLift(this.B, this);
     BM.buildChapel(this.B, this);
+    BM.buildMausoleum(this.B, this);
     BM.buildGlimpses(this.B, this);
     this.interactables = this.B.interactables;
     this.byId = {};
@@ -720,6 +721,7 @@ class Game {
     BM.updateSave(this, dt);
     BM.updateGlimpses(this, dt);
     BM.updateChapel(this, dt, this.time);
+    BM.updateMausoleum(this, dt, this.time);
     const sd = this.stormDoors;
     if (sd) {
       sd.boltT += ((sd.bolted ? 0 : 1) - sd.boltT) * Math.min(1, dt * 5); sd.bolt.position.x = -12 - 0.3 * sd.boltT;

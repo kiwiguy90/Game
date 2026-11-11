@@ -21,7 +21,7 @@ BM.GATE = GATE;
 const ESTATE_SAY = {
   street: 'Along the lane, the street lamps come up orange — all but the one that never works properly.',
   gate: 'The lanterns on the gate piers glow on.',
-  flood: 'Floodlights thump on, one after another. The front of the house and the garage yard leap out of the rain.',
+  flood: 'Floodlights thump on, one after another. The front of the house and the garage yard leap out of the rain, and up on the four towers the searchlights stutter alight and begin to sweep the sky.',
   drive: 'Lamps come up along the drive, two by two, all the way to the turning circle.',
   garden: 'Small lights wake round the fountain and at the mouth of the maze.',
   pool: 'The sunken pool lights from underneath, a cold blue.',
@@ -191,6 +191,7 @@ class Game {
     BM.buildLift(this.B, this);
     BM.buildChapel(this.B, this);
     BM.buildMausoleum(this.B, this);
+    BM.buildSearchlights(this.B, this);
     BM.buildGlimpses(this.B, this);
     this.interactables = this.B.interactables;
     this.byId = {};
@@ -311,7 +312,7 @@ class Game {
     };
     rows.push({ section: 'MASTER', supply: '', k: 'master:outside', key: 'O', name: 'OUTSIDE supply (lodge)', on: g.lodge, lit: g.lodge, warming: false, live: true });
     rows.push({ section: 'MASTER', supply: '', k: 'master:inside', key: 'I', name: 'INSIDE supply (MAIN)', on: g.live('main'), lit: g.live('main'), warming: false, live: g.lodge });
-    const short = { street: 'Street (lane)', gate: 'Gate', flood: 'Floodlights', drive: 'Drive lamps', garden: 'Garden', pool: 'Pool', pond: 'Pond', garage: 'Garage', shed: 'Shed', cemetery: 'Cemetery & chapeltery' };
+    const short = { street: 'Street (lane)', gate: 'Gate', flood: 'Floodlights & searchlights', drive: 'Drive lamps', garden: 'Garden', pool: 'Pool', pond: 'Pond', garage: 'Garage', shed: 'Shed', cemetery: 'Cemetery & chapeltery' };
     this.estateGroups.forEach(([k], i) => {
       const st = state(this.estateLights[k]);
       rows.push(Object.assign({ section: 'ESTATE', supply: g.lodge ? 'lodge supply ●' : 'no supply ○', k: 'estate:' + k, key: String((i + 1) % 10), name: short[k] || k }, st, { live: g.lodge && st.live }));
@@ -722,6 +723,7 @@ class Game {
     BM.updateGlimpses(this, dt);
     BM.updateChapel(this, dt, this.time);
     BM.updateMausoleum(this, dt, this.time);
+    BM.updateSearchlights(this, dt, this.time);
     const sd = this.stormDoors;
     if (sd) {
       sd.boltT += ((sd.bolted ? 0 : 1) - sd.boltT) * Math.min(1, dt * 5); sd.bolt.position.x = -12 - 0.3 * sd.boltT;

@@ -88,21 +88,7 @@ BM.buildLongcase = function (B, game) {
   game.longcase.quarter = Math.floor(game.longcase.time / QUARTER);
   B.readable('longcase', 'The grandfather clock', 'A longcase clock in a mahogany case, its brass dial signed "Jno. Blackthorn, Lichfield". A moon rides in the arch over the dial.\n\nInside the trunk door a card is pinned:\n\n"Converted to electric winding, Pardoe & Son, November 1961. DO NOT WIND BY HAND."\n\nThe hands stand at thirteen minutes to twelve. It was always kept a few minutes fast, so that nobody in this house was ever late for anything.', [x + 0.33, 1.3, z], [1, 0], { visual: false }); // the card is on the trunk door itself
 
-  /* ---------------- the garage door ---------------- */
-  B.zone = 'exterior'; B.room = 'garage';
-  const D = { x: 30, z: 8, w: 4.9, h: 2.58 };
-  const pivot = new THREE.Group(); pivot.position.set(D.x, D.h, D.z + 0.02); B.root.add(pivot);
-  B.box('garageGreen', 0, -D.h / 2, 0, D.w, D.h, 0.05, 0, pivot);
-  for (let k = 1; k < 12; k++) B.box('garageGreen', -D.w / 2 + k * D.w / 12, -D.h / 2, 0.035, 0.05, D.h - 0.1, 0.02, 0, pivot); // the pressed ribs
-  B.box('chrome', 0, -D.h + 0.35, 0.06, 0.24, 0.05, 0.04, 0, pivot);                                                            // the handle
-  B.box('black', 0, -D.h + 0.32, 0.05, 0.05, 0.05, 0.02, 0, pivot);
-  pivot.traverse(o => { o.userData.dynamic = true; }); pivot.matrixAutoUpdate = true;
-  for (const sx of [-1, 1]) B.box('metalDark', D.x + sx * (D.w / 2 + 0.03), D.h - 0.05, D.z - 1.2, 0.04, 0.05, 2.4);           // the runners inside
-  const wall = P.addWall(D.x - D.w / 2, D.x + D.w / 2, D.z - 0.15, D.z + 0.15, 0, D.h, { kind: 'door', tag: 'garage-door', enabled: false });
-  const gd = game.garageDoor = { pivot, wall, open: true, t: 1, moving: false };
-  const act = g2 => g2.toggleGarageDoor();
-  B.interactable({ id: 'garage-door-out', label: () => gd.open ? 'Pull the garage door down' : 'Lift the garage door', pos: [D.x + 1.6, 1.0, D.z + 0.1], n: [0, 1], act });
-  B.interactable({ id: 'garage-door-in', label: () => gd.open ? 'Pull the garage door down' : 'Lift the garage door', pos: [D.x - 1.6, 1.0, D.z - 0.1], n: [0, -1], act });
+  /* the garage doors are in the coach house (49h) */
 };
 
 BM.updateLongcase = function (game, dt) {
@@ -133,12 +119,5 @@ BM.updateLongcase = function (game, dt) {
     c.hands[0].rotation.z = -(t / 43200) * Math.PI * 2;
     c.hands[1].rotation.z = -((t % 3600) / 3600) * Math.PI * 2;
   }
-  const gd = game.garageDoor;
-  if (gd && gd.moving) {
-    gd.t += (gd.open ? 1 : -1) * dt / (gd.open ? 1.6 : 1.1);
-    if (gd.t >= 1 || gd.t <= 0) { gd.t = Math.max(0, Math.min(1, gd.t)); gd.moving = false; if (!gd.open && A.gateBang) A.gateBang(0.35); }
-    gd.wall.enabled = gd.t < 0.85;
-  }
-  if (gd) { const e = gd.t * gd.t * (3 - 2 * gd.t); gd.pivot.rotation.x = e * Math.PI / 2; gd.pivot.position.z = 8.02 - e * 0.9; }
 };
 })();

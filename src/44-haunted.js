@@ -96,9 +96,9 @@ BM.buildHauntedGarden = function (B, game) {
   const P = B.phys, rnd = BM.mulberry32(666);
   /* ---- where planting must not go ---- */
   const rects = [
-    [-25, 25, -33, 19],        // the house and its walled garden
+    [-28, 28, -36, 21],        // the house, its walled garden and the walk round them
     [-16, -4, 78, 101],        // lodge
-    [24, 36, -4, 10.5],        // garage and its yard
+    [24, 52, -8, 10.5],        // the coach house and its yard
     [-34, -25, -6, 4],         // shed
     [-61, -38, 27, 50],        // maze
     [29, 47, 29, 45],          // cemetery

@@ -12,7 +12,7 @@ const BM = window.BM;
 const G = BM.G;
 
 const DRAWN_ROOMS = new Set(['dining', 'drawing', 'bedroom1', "eleanor's sitting room", "eleanor's bedroom", 'nursery', 'library', 'back sitting']);
-const NO_CURTAINS = new Set(['kitchen', 'pantry', 'bathroom', 'service', 'attic', 'linen', 'garage', 'shed', 'clock room', 'belfry', 'clock tower']);
+const NO_CURTAINS = new Set(['kitchen', 'pantry', 'bathroom', 'service', 'attic', 'linen', 'garage', 'annexe bath', 'shed', 'clock room', 'belfry', 'clock tower']);
 
 BM.buildWindows = function (B, game) {
   const P = B.phys;

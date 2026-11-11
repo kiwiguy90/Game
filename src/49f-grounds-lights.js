@@ -138,8 +138,20 @@ BM.buildGroundsLights = function (B, game) {
     const l = estate('flood', { id: 'tennis-flood-' + masts.length, name: 'Tennis floodlight', kind: 'incandescent', style: 'none', pos: [mx + ux * 0.4, MH + 0.6, mz + uz * 0.4], spot: true, dir: [dir.x, dir.y, dir.z], colour: 0xf2f6ff, target: 2.2, range: 30, corona: 1.6 });
     masts.push({ l, lenses, beam });
   }
-  // the way in: a gravel walk from the garden's back arch to the court gate
-  game.groundsLights = { washes, masts };
+  /* ---- the walk round the house: low bollards, every eight metres or so, on the garden lights ---- */
+  B.room = 'grounds';
+  const bollards = [], bollardLens = new THREE.MeshBasicMaterial({ color: 0x1a1a18 });
+  const bollard = (x, z) => {
+    B.mesh(G.post, 'metalDark', x, 0.36, z, 0.16, 0.72, 0.16);
+    B.box('metalDark', x, 0.74, z, 0.22, 0.05, 0.22);
+    const lens = B.box(bollardLens, x, 0.66, z, 0.17, 0.1, 0.17);
+    P.addWall(x - 0.11, x + 0.11, z - 0.11, z + 0.11, 0, 0.76, { kind: 'furniture', tag: 'bollard' });
+    const l = estate('garden', { id: 'walk-bollard-' + bollards.length, name: 'Path bollard', kind: 'incandescent', style: 'none', pos: [x, 0.66, z], colour: 0xffd9a0, target: 0.45, range: 4.5, corona: 0.35 });
+    bollards.push({ l, lens });
+  };
+  for (const z of [20, 12, 4, -4, -12, -20, -28]) { bollard(-24.85, z); bollard(24.85, z); }
+  for (const x of [-22, -14, -8, 2, 10, 18]) bollard(x, -30.3);
+  game.groundsLights = { washes, masts, bollards };
   B.room = 'grounds';
 };
 
@@ -147,6 +159,7 @@ BM.updateGroundsLights = function (game, dt, t) {
   const S = game.groundsLights; if (!S) return;
   const c = new THREE.Color();
   for (const w of S.washes) { const l = w.l, k = l.target > 0 ? Math.min(1.2, l.intensity / l.target) : 0; c.setHex(w.hex).multiplyScalar(0.55 * k); w.m.color.copy(c); }
+  if (S.bollards && S.bollards.length) { let k = 0; for (const b of S.bollards) { const l = b.l; k = Math.max(k, l.target > 0 ? Math.min(1.2, l.intensity / l.target) : 0); } S.bollards[0].lens.material.color.setRGB(0.1 + 0.9 * k, 0.1 + 0.75 * k, 0.09 + 0.5 * k); }
   for (const m of S.masts) {
     const l = m.l, k = l.target > 0 ? Math.min(1.2, l.intensity / l.target) : 0;
     for (const s of m.lenses) s.material.color.setRGB(0.1 + 0.9 * k, 0.11 + 0.89 * k, 0.12 + 0.88 * k);

@@ -26,7 +26,7 @@ const ESTATE_SAY = {
   garden: 'Small lights wake round the fountain, and all round the maze the uplights come on one by one, washing the yew walls a pale, cold green.',
   pool: 'Down in the pool garden the pumps knock and start, the upper pool begins to spill over its weir, and both pools light from underneath, blue and green, the light swimming on the water.',
   pond: 'Lamps come on at the edge of the pond. The ducks complain.',
-  garage: 'The garage tube strobes and catches; a lantern lights over its door.',
+  garage: 'In the coach house the garage tubes strobe and catch, and lanterns light over the doors.',
   shed: 'The shed bulb comes on, and the lantern by its door.',
   cemetery: 'Two lanterns at the cemetery gate, one more by a small stone outside the railings — and beyond it the chapel, its windows coming up red and blue and gold.',
 };
@@ -219,6 +219,7 @@ class Game {
     BM.buildSearchlights(this.B, this);
     BM.buildGroundsLights(this.B, this);
     BM.buildPoolGarden(this.B, this);
+    BM.buildCoachHouse(this.B, this);
     BM.buildGlimpses(this.B, this);
     this.interactables = this.B.interactables;
     this.byId = {};
@@ -339,7 +340,7 @@ class Game {
     };
     rows.push({ section: 'MASTER', supply: '', k: 'master:outside', key: 'O', name: 'OUTSIDE supply (lodge)', on: g.lodge, lit: g.lodge, warming: false, live: true });
     rows.push({ section: 'MASTER', supply: '', k: 'master:inside', key: 'I', name: 'INSIDE supply (MAIN)', on: g.live('main'), lit: g.live('main'), warming: false, live: g.lodge });
-    const short = { street: 'Street (lane)', gate: 'Gate', flood: 'Floodlights', drive: 'Drive lamps', garden: 'Garden', pool: 'Pool', pond: 'Pond', garage: 'Garage', shed: 'Shed', cemetery: 'Cemetery & chapel' };
+    const short = { street: 'Street (lane)', gate: 'Gate', flood: 'Floodlights', drive: 'Drive lamps', garden: 'Garden', pool: 'Pool', pond: 'Pond', garage: 'Coach house', shed: 'Shed', cemetery: 'Cemetery & chapel' };
     this.estateGroups.forEach(([k], i) => {
       const st = state(this.estateLights[k]);
       rows.push(Object.assign({ section: 'ESTATE', supply: g.lodge ? 'lodge supply ●' : 'no supply ○', k: 'estate:' + k, key: String((i + 1) % 10), name: short[k] || k }, st, { live: g.lodge && st.live }));
@@ -757,6 +758,7 @@ class Game {
     BM.updateShutters(this, dt, this.time);
     BM.updateLift(this, dt);
     BM.updateLongcase(this, dt);
+    BM.updateCoachHouse(this, dt);
     BM.updateSave(this, dt);
     BM.updateGlimpses(this, dt);
     BM.updateChapel(this, dt, this.time);
@@ -850,8 +852,8 @@ class Game {
     L.to = k; L.rideWith = BM.inLift(this, i); L.phase = 'closing'; L.t = 0;
     this.ui.say(k === 3 ? 'The gate rattles shut. The car lurches, and climbs into the roof.' : k === 0 ? 'The gate rattles shut, and the car sinks, slow, into the cold.' : 'The gate rattles shut and the car shudders into motion.', 4);
   }
-  toggleGarageDoor() {
-    const gd = this.garageDoor; if (gd.moving) return;
+  toggleGarageDoor(which) {
+    const gd = which || this.garageDoor; if (gd.moving) return;
     gd.open = !gd.open; gd.moving = true;
     this.audio.stormDoors ? this.audio.rattle() : this.audio.click();
     this.ui.say(gd.open ? 'You heave the handle. The springs take it, and the door swings up into the roof with a shriek of runners.' : 'You reach up for the handle and pull. The door comes down on its springs and shuts with a bang.', 4);

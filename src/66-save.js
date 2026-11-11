@@ -53,6 +53,7 @@ const Save = BM.Save = {
       storm: { bolted: g.stormDoors.bolted, open: g.stormDoors.open },
       lift: g.lift ? g.lift.at : 1,
       garage: g.garageDoor ? g.garageDoor.open : true,
+      garage2: g.garageDoors && g.garageDoors[1] ? g.garageDoors[1].open : true,
       clocks: { tower: g.towerClock ? g.towerClock.time : 0, longcase: g.longcase ? g.longcase.time : 0 },
     };
   },
@@ -107,6 +108,7 @@ const Save = BM.Save = {
     if (s.storm.open !== sd.open) { sd.target = s.storm.open ? 1 : 0; sd.t = s.storm.open ? 0.99 : 0.01; sd.moving = true; }
     if (g.lift) { const L = g.lift; L.at = L.pos = L.from = L.to = s.lift; L.phase = 'idle'; for (let i = 0; i < 4; i++) L.gate[i] = L.gateTarget[i] = i === s.lift ? 1 : 0; }
     if (g.garageDoor && s.garage !== g.garageDoor.open) { g.garageDoor.open = s.garage; g.garageDoor.moving = true; }
+    { const d2 = g.garageDoors && g.garageDoors[1]; if (d2 && s.garage2 !== undefined && s.garage2 !== d2.open) { d2.open = s.garage2; d2.moving = true; } }
     if (g.towerClock && s.clocks.tower) { g.towerClock.time = s.clocks.tower; if (g.clock_) g.clock_.quarter = Math.floor(s.clocks.tower / 900); }
     if (g.longcase && s.clocks.longcase) { g.longcase.time = s.clocks.longcase; g.longcase.quarter = Math.floor(s.clocks.longcase / 900); }
     // and you, where you stood

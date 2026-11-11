@@ -39,8 +39,10 @@ BM.buildGrounds = function (B, game) {
     { id: 'tennis-walk', pts: [[-4.5, -30.3], [-4.5, -34.4]], w: 1.6, y: 0 },
     { id: 'mausoleum-walk', pts: [[30, 19.5], [31.6, 19.5]], w: 1.8, y: 0 },
     { id: 'chapel-walk', pts: [[24, 37], [24, 46.2], [50.6, 46.2], [50.6, 34], [52.4, 34]], w: 1.8, y: 0 },
-    { id: 'garage-walk', pts: [[24, 24], [30, 24], [30, 8.6]], w: 2, y: 0 },
+    { id: 'garage-walk', pts: [[24, 24], [30, 24], [30, 7.0], [34.4, 7.0]], w: 2, y: 0 },
     { id: 'shed-walk', pts: [[-20, 24], [-29.5, 24], [-29.5, 2.7]], w: 2, y: 0 },
+    { id: 'house-walk', pts: [[-26, 24], [-26, -31.45], [26, -31.45], [26, 24]], w: 1.8, y: 0 },   // right round the house and its walled garden
+    { id: 'garage-side-walk', pts: [[26, -3], [32.7, -3]], w: 1.6, y: 0 },
     { id: 'pond-walk', pts: [[3.1, 62], [27, 62]], w: 2, y: 0 },
     { id: 'pool-walk', pts: [[-3.1, 62], [-23.6, 62]], w: 2, y: 0 },
     { id: 'lane', pts: [[-60, 94], [60, 94]], w: 4.2, y: 0 }, // your car is parked on the far verge
@@ -130,7 +132,7 @@ BM.buildGrounds = function (B, game) {
   const ESTATE_GROUPS = [
     ['street', 'Street lighting (lane)'], ['gate', 'Gate lights'], ['flood', 'Floodlights (house and yard)'],
     ['drive', 'Drive lamps'], ['garden', 'Garden lights (fountain, maze)'], ['pool', 'Pool lights'],
-    ['pond', 'Pond lights'], ['garage', 'Garage lights'], ['shed', 'Shed lights'], ['cemetery', 'Cemetery and chapel lights'],
+    ['pond', 'Pond lights'], ['garage', 'Coach house lights'], ['shed', 'Shed lights'], ['cemetery', 'Cemetery and chapel lights'],
   ];
   const estate = {}; for (const [k] of ESTATE_GROUPS) estate[k] = [];
   const estateLight = (group, o) => { const l = B.fixture(Object.assign({ circuit: 'lodge', on: false, chain: 'estate:' + group }, o)); estate[group].push(l.id); return l; };
@@ -141,7 +143,7 @@ BM.buildGrounds = function (B, game) {
   for (const x of [-14, -7.5, 7.5, 14]) {
     estateLight('flood', { id: 'flood' + x, name: 'Floodlight', kind: 'incandescent', style: 'flood', pos: [x, 0.35, 14.2], colour: 0xe8eeff, target: 2.6, range: 18, spot: true, dir: [0, 0.75, -0.66] });
   }
-  for (const x of [27, 33]) estateLight('flood', { id: 'yard-flood' + x, name: 'Yard floodlight', kind: 'incandescent', style: 'bulkhead', pos: [x, 2.8, 8.25], nz: 1, colour: 0xe8eeff, target: 2.2, range: 16, spot: true, dir: [0, -0.6, 0.8] });
+  for (const [x, px] of [[27, 34.9], [33, 43.1]]) estateLight('flood', { id: 'yard-flood' + x, name: 'Yard floodlight', kind: 'incandescent', style: 'bulkhead', pos: [px, 2.9, 4.25], nz: 1, colour: 0xe8eeff, target: 2.2, range: 16, spot: true, dir: [0, -0.6, 0.8] });
   for (const z of [39, 56, 68, 87]) for (const sx of [-1, 1]) {
     estateLight('drive', { id: 'drive-lamp' + sx * z, name: 'Drive lamp', kind: 'incandescent', style: 'street', pos: [sx * 4.6, 3.2, z], colour: 0xffc070, target: 1.3, range: 10 });
     P.addWall(sx * 4.6 - 0.1, sx * 4.6 + 0.1, z - 0.1, z + 0.1, 0, 3, { kind: 'tree', occludes: false });
@@ -335,62 +337,7 @@ BM.buildGrounds = function (B, game) {
   B.solid('statue', 48.6, 48.8, 0, 0.7, 36.6, 37.4, { kind: 'furniture', tag: 'eleanor marker' });
   B.readable('eleanor-marker', "A marker outside the fence", 'E.B.\n1949 – 1975\n\nShe would not sign.\n\nThe stone is small and has been set outside the railings, facing away from the family. Somebody keeps the grass round it cut short.', [48.9, 0.55, 37.0], [1, 0], { plaque: true });
 
-  /* ---- garage (walk-in, lit) ---- */
-  B.room = 'garage';
-  const GA = { x0: 26, x1: 34, z0: -2, z1: 8, h: 3.0 };
-  B.wall('z', GA.x0, GA.z0, GA.z1, { t: 0.3, mat: 'brick', y1: GA.h });
-  B.wall('z', GA.x1, GA.z0, GA.z1, { t: 0.3, mat: 'brick', y1: GA.h });
-  B.wall('x', GA.z0, GA.x0, GA.x1, { t: 0.3, mat: 'brick', y1: GA.h });
-  B.wall('x', GA.z1, GA.x0, GA.x1, { t: 0.3, mat: 'brick', y1: GA.h }, [{ at: 30, w: 5, type: 'door', head: 2.6, id: 'garage-door', casing: 'iron' }]);
-  B.boxE('concrete', GA.x0, GA.x1, 0, 0.04, GA.z0, GA.z1);
-  P.rect(GA.x0 - 0.3, GA.x1 + 0.3, GA.z0 - 0.3, GA.z1 + 0.3, GA.h + 0.2, GA.h, 'garage-roof');
-  B.boxE('roof', GA.x0 - 0.3, GA.x1 + 0.3, GA.h, GA.h + 0.2, GA.z0 - 0.3, GA.z1 + 0.3);
-  // the car, a 1972 saloon under dust
-  // ...laid up under a fitted cover: the sheet takes the car's shape, bonnet, screen, roof and boot, and hangs to the hubs
-  P.addWall(29.05, 30.95, 0.4, 4.8, 0, 1.45, { kind: 'furniture', tag: 'car under a sheet' });
-  { const geo = BM.statuaryGeo('sheetedCar', () => {
-      const pts = [[-2.2, 0.32], [-2.24, 0.62], [-2.15, 0.86], [-1.2, 0.98], [-0.55, 1.02], [0.05, 1.42], [1.0, 1.45], [1.45, 1.08], [2.1, 1.0], [2.24, 0.78], [2.2, 0.32]];
-      const sh = new THREE.Shape(pts.map(q => new THREE.Vector2(q[0], q[1])));
-      const g = new THREE.ExtrudeGeometry(sh, { depth: 1.6, bevelEnabled: true, bevelThickness: 0.12, bevelSize: 0.1, bevelSegments: 4, curveSegments: 8 });
-      g.translate(0, 0, -0.8); g.rotateY(Math.PI / 2);
-      // the cloth: let it sag between the high points, and ripple at the hem
-      const pos = g.attributes.position;
-      for (let i = 0; i < pos.count; i++) { const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
-        pos.setY(i, y - 0.03 * Math.sin(z * 3.1) * Math.sin(x * 2.3) - (y < 0.5 ? 0.02 * Math.sin(z * 11 + x * 7) : 0)); }
-      g.computeVertexNormals();
-      return g; });
-    B.mesh(geo, 'dustSheet', 30, 0, 2.6, 1, 1, 1); }
-  for (const [dx, dz] of [[-0.85, 1.2], [0.85, 1.2], [-0.85, 4.0], [0.85, 4.0]]) { const w = B.mesh(G.cyl, 'rubber', 30 + dx, 0.35, dz, 0.7, 0.25, 0.7); w.rotation.z = Math.PI / 2; w.updateMatrix(); }
-  B.furniture('wood', 33.35, 5.5, 0, 0.7, 0.9, 2.4, 'workbench');
-  // a spare wheel leaning on the wall by the door, the tyre still good
-  { const sw = new THREE.Group(); sw.position.set(26.55, 0.36, 1.2); sw.rotation.set(0, 0, 0.18); B.root.add(sw);
-    const tyre = B.mesh(G.cyl, 'rubber', 0, 0, 0, 0.7, 0.22, 0.7, 0, sw); tyre.rotation.z = Math.PI / 2; tyre.updateMatrix();
-    const rim = B.mesh(G.cyl, 'chrome', 0, 0, 0, 0.42, 0.24, 0.42, 0, sw); rim.rotation.z = Math.PI / 2; rim.updateMatrix();
-    sw.traverse(o => { o.userData.dynamic = true; });
-    game.spare = { mesh: sw, taken: false, fitted: false };
-    B.interactable({
-      id: 'spare-wheel', label: 'Take the spare wheel', pos: [26.6, 0.5, 1.2], n: [1, 0], approachDist: 0.9, enabled: () => !game.spare.taken,
-      act: g => { if (g.carry) { g.ui.say('Your hands are full with the ' + g.carry + '.'); return; } g.spare.taken = true; g.carry = 'spare wheel'; g.spare.mesh.visible = false; g.audio.clunk(0.5); g.ui.say('The tyre is hard and the tread is good. A Rover wheel, but a wheel. You roll it out into the rain.', 5); },
-    });
-  }
-  // on the bench, a car battery on charge: the gatekeeper kept the Rover's spare topped up
-  { const bat = new THREE.Group(); bat.position.set(33.3, 0.9, 6.1); B.root.add(bat);
-    B.box('black', 0, 0.1, 0, 0.26, 0.2, 0.17, 0, bat); B.box('black', 0, 0.2, 0, 0.26, 0.015, 0.17, 0, bat);
-    for (const dz of [-0.06, 0.06]) B.mesh(G.cyl, 'metalDark', 0.08, 0.225, dz, 0.03, 0.03, 0.03, 0, bat);
-    B.box(BM.Basic(0xd8c040), 0, 0.14, 0.086, 0.18, 0.06, 0.003, 0, bat);
-    bat.traverse(o => { o.userData.dynamic = true; });
-    game.battery = { mesh: bat, carried: false, fitted: false };
-    B.box('metalDark', 33.76, 1.45, 6.1, 0.14, 0.3, 0.26); B.box('iron', 33.55, 1.2, 6.14, 0.012, 0.5, 0.012); B.box('iron', 33.55, 1.2, 6.02, 0.012, 0.5, 0.012); // the charger on the wall and its leads
-    B.interactable({
-      id: 'car-battery', label: 'Take the car battery', pos: [33.3, 1.0, 6.1], n: [-1, 0], approachDist: 0.85, enabled: () => !game.battery.carried && !game.battery.fitted,
-      act: g => { if (g.carry) { g.ui.say('Your hands are full with the ' + g.carry + '.'); return; } g.battery.carried = true; g.carry = 'battery'; g.battery.mesh.visible = false; g.audio.clunk(0.7); g.ui.say('Heavy, and the terminals are clean. The charger\'s needle was still over on the right: it has been trickle-charging for fifty years. Get it to the car.', 6); },
-    });
-  }
-  B.fixture({ id: 'garage-tube', name: 'Garage tube', circuit: 'lodge', on: false, kind: 'fluorescent', style: 'tube', pos: [30, 2.85, 3], colour: 0xe6f2ff, target: 1.6, range: 10, ry: Math.PI / 2, len: 1.6 });
-  B.fixture({ id: 'garage-lantern', name: 'Garage lantern', circuit: 'lodge', on: false, kind: 'incandescent', style: 'lantern', pos: [26.8, 2.3, 8.3], nz: 1, colour: 0xffb866, target: 0.9, range: 7 });
-  game.estateLights.garage.push('garage-tube', 'garage-lantern');
-  B.lightSwitch('garage-switch', 'Garage light', [26.2, 1.4, 6.6], [1, 0], ['garage-tube']);
-  B.readable('note-garage', 'Logbook in the glovebox', 'Rover 3500. Last entry, 18 October 1974, in a careful round hand:\n\n"Drove E. to the station. She would not get on the train. Drove her back. Father furious. Car stays here."\n\nThe keys are still in it.', [33.3, 0.92, 4.8], [-1, 0], { book: true });
+  /* the garage is in the coach house (49h) */
 
   /* ---- garden shed (walk-in, lit) ---- */
   B.room = 'shed';

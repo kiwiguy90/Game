@@ -813,7 +813,7 @@ class Builder {
     return it;
   }
   levelFloor() {
-    return { ground: 0, upper: 4.2, attic: 8.2, cellar: -3.2, tower: 10.8, clock: 15.2, belfry: 21.0 }[this.levelName] || 0;
+    return { ground: 0, upper: 4.2, attic: 8.2, cellar: -3.2, tower: 10.8, clock: 15.2, belfry: 21.0, annexe: 3.2 }[this.levelName] || 0;
   }
   /* A wall switch you can see: a brass plate flush on the wall with a toggle
      that flips up (on) and down (off). `ids` are the fittings it controls. */

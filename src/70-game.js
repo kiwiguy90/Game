@@ -21,9 +21,9 @@ BM.GATE = GATE;
 const ESTATE_SAY = {
   street: 'Along the lane, the street lamps come up orange — all but the one that never works properly.',
   gate: 'The lanterns on the gate piers glow on.',
-  flood: 'Floodlights thump on, one after another. The front of the house and the garage yard leap out of the rain, and up on the four towers the searchlights stutter alight and begin to sweep the sky.',
+  flood: 'Floodlights thump on, one after another. The front of the house and the garage yard leap out of the rain, and up on the four towers the searchlights stutter alight and begin to sweep the sky. Behind the house, the floodlights over the old tennis court bang on.',
   drive: 'Lamps come up along the drive, two by two, all the way to the turning circle.',
-  garden: 'Small lights wake round the fountain and at the mouth of the maze.',
+  garden: 'Small lights wake round the fountain, and all round the maze the uplights come on one by one, washing the yew walls a pale, cold green.',
   pool: 'The sunken pool lights from underneath, a cold blue.',
   pond: 'Lamps come on at the edge of the pond. The ducks complain.',
   garage: 'The garage tube strobes and catches; a lantern lights over its door.',
@@ -192,6 +192,7 @@ class Game {
     BM.buildChapel(this.B, this);
     BM.buildMausoleum(this.B, this);
     BM.buildSearchlights(this.B, this);
+    BM.buildGroundsLights(this.B, this);
     BM.buildGlimpses(this.B, this);
     this.interactables = this.B.interactables;
     this.byId = {};
@@ -724,6 +725,7 @@ class Game {
     BM.updateChapel(this, dt, this.time);
     BM.updateMausoleum(this, dt, this.time);
     BM.updateSearchlights(this, dt, this.time);
+    BM.updateGroundsLights(this, dt, this.time);
     const sd = this.stormDoors;
     if (sd) {
       sd.boltT += ((sd.bolted ? 0 : 1) - sd.boltT) * Math.min(1, dt * 5); sd.bolt.position.x = -12 - 0.3 * sd.boltT;

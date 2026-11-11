@@ -36,6 +36,7 @@ BM.buildGrounds = function (B, game) {
     { id: 'turning-circle', ring: { cx: 0, cz: 24, r: 6.75 }, w: 4, y: 0 },
     { id: 'maze-walk', pts: [[-9, 24], [-20, 24], [-20, 38.5], [-39.3, 38.5]], w: 2, y: 0 },
     { id: 'cemetery-walk', pts: [[9, 24], [24, 24], [24, 37], [29.6, 37]], w: 2, y: 0 },
+    { id: 'tennis-walk', pts: [[-4.5, -30.3], [-4.5, -34.4]], w: 1.6, y: 0 },
     { id: 'mausoleum-walk', pts: [[30, 19.5], [31.6, 19.5]], w: 1.8, y: 0 },
     { id: 'chapel-walk', pts: [[24, 37], [24, 46.2], [50.6, 46.2], [50.6, 34], [52.4, 34]], w: 1.8, y: 0 },
     { id: 'garage-walk', pts: [[24, 24], [30, 24], [30, 8.6]], w: 2, y: 0 },
@@ -218,7 +219,7 @@ BM.buildGrounds = function (B, game) {
   // haunted planting: gnarled dead trees (see 44-haunted); a few black yews
   const tree = (x, z, s) => BM.deadTree(B, x, z, s || 1, game);
   for (let z = 40; z <= 84; z += 8) { tree(-6.5, z); tree(6.5, z); }
-  for (const [x, z, s] of [[-24, 12, 1.2], [-40, 0, 1.3], [44, 6, 1.2], [-50, 70, 1.1], [52, 52, 1.3], [-52, -20, 1.4], [40, -30, 1.2], [-12, -37, 1.3], [16, 78, 0.9], [-18, 80, 1.0]]) tree(x, z, s);
+  for (const [x, z, s] of [[-24, 12, 1.2], [-40, 0, 1.3], [44, 6, 1.2], [-50, 70, 1.1], [52, 52, 1.3], [-52, -20, 1.4], [40, -30, 1.2], [-26, -42, 1.3], [16, 78, 0.9], [-18, 80, 1.0]]) tree(x, z, s);
   // clipped box along the drive (gaps where the walks cross at z=62)
   for (let z = 34; z <= 86; z += 2) {
     if (z >= 60 && z <= 64) continue;

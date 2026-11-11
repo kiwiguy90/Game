@@ -496,6 +496,17 @@ suite('hud', () => {
   assert(game.toggleEstate('drive') === false && game.toggleEstate('drive') === true, 'a group with a blown lamp still switches off and on');
   const r = game.lightPanelRows().find(x => x.k === 'room:sw-attic');
   assert(!r.on && !r.lit && game.byId['sw-attic'].leverOn === false, 'the panel row and the wall toggle agree');
+  // Tab lets go of the mouse for the panel: arrow keys pick a row, Enter switches it, Tab goes back to walking
+  game.ui.mode = null; game.keyDown('Tab');
+  assert(game.ui.mode === 'lights', 'Tab opens the panel for the mouse');
+  const rowsNow = game.lightPanelRows(), at = rowsNow.findIndex(x => x.k === 'room:sw-attic');
+  game.ui.lightsSel = 0; for (let i = 0; i < at; i++) game.keyDown('ArrowDown');
+  const was = game.lightPanelRows()[at].on; game.keyDown('Enter');
+  assert(game.lightPanelRows()[at].on !== was, 'Enter switches the picked row');
+  const px = game.player.x; game.keys.KeyW = true; for (let i = 0; i < 10; i++) game.update(1 / 30); game.keys.KeyW = false;
+  assert(game.player.x === px, 'standing still while working the panel');
+  game.keyDown('Tab'); assert(game.ui.mode === null, 'Tab goes back to walking');
+  game.lightPanelToggle('room:sw-attic');
   // number keys work the estate groups while walking about
   const before = game.estateGroupOn('pool'); game.keyDown('Digit6'); assert(game.estateGroupOn('pool') !== before, 'key 6 switches the pool lights');
   // the master switches: outside is the lodge supply, inside is MAIN

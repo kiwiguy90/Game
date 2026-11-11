@@ -77,7 +77,7 @@ class Menu {
     $('m-restart').addEventListener('click', e => { e.stopPropagation(); if (window.confirm('Start again from the beginning? Your progress tonight will be lost.')) window.location.reload(); });
     // the pointer: capture on a click in the view, pause when it is let go mid-game
     const canvas = game.renderer && game.renderer.domElement;
-    if (canvas) canvas.addEventListener('click', () => { if (this.playing()) this.lock(); });
+    if (canvas) canvas.addEventListener('click', () => { if (game.ui.mode === 'lights') { game.ui.close(); return; } if (this.playing()) this.lock(); });
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === canvas;
       if (!this.locked && this.playing() && !game.ui.mode) this.pause();

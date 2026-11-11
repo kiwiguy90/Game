@@ -21,7 +21,7 @@ BM.GATE = GATE;
 const ESTATE_SAY = {
   street: 'Along the lane, the street lamps come up orange — all but the one that never works properly.',
   gate: 'The lanterns on the gate piers glow on.',
-  flood: 'Floodlights thump on, one after another. The front of the house and the garage yard leap out of the rain, and up on the four towers the searchlights stutter alight and begin to sweep the sky. Behind the house, the floodlights over the old tennis court bang on.',
+  flood: 'Floodlights thump on, one after another. The front of the house and the garage yard leap out of the rain, and one by one the four towers are lit from their feet, standing up pale against the dark. Behind the house, the floodlights over the old tennis court bang on.',
   drive: 'Lamps come up along the drive, two by two, all the way to the turning circle.',
   garden: 'Small lights wake round the fountain, and all round the maze the uplights come on one by one, washing the yew walls a pale, cold green.',
   pool: 'Down in the pool garden the pumps knock and start, the upper pool begins to spill over its weir, and both pools light from underneath, blue and green, the light swimming on the water.',
@@ -51,7 +51,8 @@ class UI {
       while (t && t !== this.el.lights && !(t.dataset && t.dataset.k)) t = t.parentNode;
       if (t && t.dataset && t.dataset.k) { this.game.lightPanelToggle(t.dataset.k); this.lightsT = 0; }
     });
-    this.mode = null;    // null | 'read' | 'fuse' | 'estate' | 'phone' | 'title' | 'ending'
+    this.mode = null;    // null | 'read' | 'fuse' | 'estate' | 'lights' | 'phone' | 'title' | 'ending'
+    this.lightsSel = 0;
     this.msgT = 0;
     this.fadeV = 0;
   }
@@ -69,6 +70,7 @@ class UI {
   close() {
     this.el.reader.style.display = 'none'; this.el.panel.style.display = 'none'; this.el.phone.style.display = 'none';
     const was = this.mode; this.mode = null;
+    if (was === 'lights') { this.lightsT = 0; this.lightsHtml = ''; this.renderLights(); if (this.game.menu) this.game.menu.lock(); }
     if (was === 'read' && this.game.onReadClosed) this.game.onReadClosed();
   }
   openFuseBoard() {
@@ -109,23 +111,46 @@ class UI {
   fade(v) { this.fadeV = v; if (this.el.fade) this.el.fade.style.opacity = String(v); }
   setPrompt(t) { if (t !== this.promptText) { this.promptText = t; if (this.el.prompt) this.el.prompt.textContent = t; } }
   setObjective(t) { if (t !== this.objectiveText) { this.objectiveText = t; if (this.el.objective) this.el.objective.textContent = t; } }
+  /* Tab: let go of the mouse so the lighting panel can be clicked (or worked with the arrow keys). */
+  openLights() {
+    if (this.mode) return;
+    this.mode = 'lights'; this.lightsVisible = true; this.lightsT = 0; this.lightsHtml = '';
+    const rows = this.game.lightPanelRows();
+    if (!(this.lightsSel >= 0 && this.lightsSel < rows.length)) this.lightsSel = 0;
+    if (this.game.menu) this.game.menu.unlock();
+  }
+  moveLightsSel(d) {
+    const n = this.game.lightPanelRows().length; if (!n) return;
+    this.lightsSel = ((this.lightsSel || 0) + d + n) % n;
+    const el = this.el.lights, row = el && el.querySelector && el.querySelectorAll('.r')[this.lightsSel];
+    this.renderLights();
+    if (row && row.scrollIntoView) row.scrollIntoView({ block: 'nearest' });
+  }
+  toggleLightsSel() {
+    const r = this.game.lightPanelRows()[this.lightsSel || 0];
+    if (r) { this.game.lightPanelToggle(r.k); this.lightsT = 0; }
+  }
   /* The lighting panel on the side of the screen: every light group, always to hand. */
   renderLights() {
     const el = this.el.lights; if (!el) return;
-    const show = this.lightsVisible && this.mode !== 'title' && this.mode !== 'ending' && !this.game.intro;
+    const active = this.mode === 'lights';
+    const show = (this.lightsVisible || active) && this.mode !== 'title' && this.mode !== 'ending' && !this.game.intro;
     el.style.display = show ? 'block' : 'none';
     if (!show) return;
+    if (el.classList) el.classList.toggle('active', active);
     const rows = this.game.lightPanelRows();
-    let html = '', section = '';
+    let html = '', section = '', i = -1;
     for (const r of rows) {
+      i++;
       if (r.section !== section) {
         section = r.section;
         html += `<div class="hd"><span>${section}</span><span class="sup">${r.supply}</span></div>`;
       }
       const dot = r.lit ? 'lit' : r.warming ? 'warm' : '';
-      html += `<div class="r${r.live ? '' : ' dead'}" data-k="${r.k}"><span class="dot ${dot}"></span><span class="k">${r.key || ''}</span><span>${r.name}</span><span class="st ${r.on ? 'on' : 'off'}">${r.on ? 'ON' : 'OFF'}</span></div>`;
+      html += `<div class="r${r.live ? '' : ' dead'}${active && i === this.lightsSel ? ' sel' : ''}" data-k="${r.k}"><span class="dot ${dot}"></span><span class="k">${r.key || ''}</span><span>${r.name}</span><span class="st ${r.on ? 'on' : 'off'}">${r.on ? 'ON' : 'OFF'}</span></div>`;
     }
-    html += '<div class="hint">Click to switch · O / I masters · 1–0 estate · L hide</div>';
+    html += active ? '<div class="hint">Click a row to switch it · ↑ ↓ and Enter · Tab or Esc to look around again</div>'
+      : '<div class="hint">Tab to use the mouse here · O / I masters · 1–0 estate · L hide</div>';
     if (html !== this.lightsHtml) { el.innerHTML = html; this.lightsHtml = html; }
   }
   update(dt) {
@@ -314,7 +339,7 @@ class Game {
     };
     rows.push({ section: 'MASTER', supply: '', k: 'master:outside', key: 'O', name: 'OUTSIDE supply (lodge)', on: g.lodge, lit: g.lodge, warming: false, live: true });
     rows.push({ section: 'MASTER', supply: '', k: 'master:inside', key: 'I', name: 'INSIDE supply (MAIN)', on: g.live('main'), lit: g.live('main'), warming: false, live: g.lodge });
-    const short = { street: 'Street (lane)', gate: 'Gate', flood: 'Floodlights & searchlights', drive: 'Drive lamps', garden: 'Garden', pool: 'Pool', pond: 'Pond', garage: 'Garage', shed: 'Shed', cemetery: 'Cemetery & chapeltery' };
+    const short = { street: 'Street (lane)', gate: 'Gate', flood: 'Floodlights', drive: 'Drive lamps', garden: 'Garden', pool: 'Pool', pond: 'Pond', garage: 'Garage', shed: 'Shed', cemetery: 'Cemetery & chapel' };
     this.estateGroups.forEach(([k], i) => {
       const st = state(this.estateLights[k]);
       rows.push(Object.assign({ section: 'ESTATE', supply: g.lodge ? 'lodge supply ●' : 'no supply ○', k: 'estate:' + k, key: String((i + 1) % 10), name: short[k] || k }, st, { live: g.lodge && st.live }));
@@ -561,6 +586,17 @@ class Game {
       else { const i = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0'].indexOf(code); if (i >= 0 && i < this.estateGroups.length) this.toggleEstate(this.estateGroups[i][0]); }
       return;
     }
+    if (ui.mode === 'lights') {
+      if (code === 'Tab' || code === 'Escape' || code === 'KeyL') ui.close();
+      else if (code === 'ArrowUp' || code === 'KeyW') ui.moveLightsSel(-1);
+      else if (code === 'ArrowDown' || code === 'KeyS') ui.moveLightsSel(1);
+      else if (code === 'Enter' || code === 'Space' || code === 'KeyE') ui.toggleLightsSel();
+      else if (code === 'KeyO') { this.masterOutside(); ui.lightsT = 0; }
+      else if (code === 'KeyI') { this.masterInside(); ui.lightsT = 0; }
+      else { const i = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0'].indexOf(code); if (i >= 0 && this.estateGroups[i]) this.toggleEstate(this.estateGroups[i][0]); }
+      return;
+    }
+    if (code === 'Tab' && !ui.mode) { ui.openLights(); return; }
     if (code === 'Escape' && !ui.mode && this.menu) { this.menu.pause(); return; }
     if (code === 'KeyP') { ui.phone(); return; }
     if (code === 'KeyL') { ui.lightsVisible = !ui.lightsVisible; ui.lightsT = 0; return; }
@@ -599,7 +635,7 @@ class Game {
   update(dt) {
     this.time += dt; this.clock += dt;
     const p = this.player;
-    const frozen = this.ui.mode === 'read' || this.ui.mode === 'fuse' || this.ui.mode === 'estate' || this.ui.mode === 'title' || this.ui.mode === 'ending';
+    const frozen = this.ui.mode === 'read' || this.ui.mode === 'fuse' || this.ui.mode === 'estate' || this.ui.mode === 'lights' || this.ui.mode === 'title' || this.ui.mode === 'ending';
     if (this.intro) this.intro.update(dt);
     else if (this.outro) this.updateOutro(dt);
     else if (this.climbing) this.updateClimb(dt);
@@ -964,7 +1000,7 @@ BM.boot = function (opts) {
   game.renderer.domElement.addEventListener('webglcontextlost', e => { e.preventDefault(); BM.showFatal('The graphics driver reset.', 'Your progress is saved every few seconds. Reload the page and choose Continue.'); });
   BM.game = game;
   game.ui.mode = 'title';
-  window.addEventListener('keydown', e => { if (['Space', 'ArrowUp', 'ArrowDown'].indexOf(e.code) >= 0) e.preventDefault(); if (!e.repeat) game.keyDown(e.code); if (game.ui.mode !== 'title') game.audio.start(); });
+  window.addEventListener('keydown', e => { if (['Space', 'ArrowUp', 'ArrowDown', 'Tab'].indexOf(e.code) >= 0) e.preventDefault(); if (!e.repeat) game.keyDown(e.code); if (game.ui.mode !== 'title') game.audio.start(); });
   window.addEventListener('pointerdown', () => { if (game.ui.mode !== 'title') game.audio.start(); });
   window.addEventListener('keyup', e => game.keyUp(e.code));
   window.addEventListener('blur', () => { game.keys = {}; });

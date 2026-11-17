@@ -846,6 +846,29 @@ suite('save', () => {
   return 'saved at rest, Enter continues, power, gates, doors, windows, fires, items, lift and position restored';
 });
 
+suite('eleanor', () => {
+  // the trail: seven places she went, read in turn; the panel lit end to end brings her to the window
+  const env = H.load({ quiet: true });
+  const { game, BM } = env, g = game.grid;
+  game.ui.mode = null;
+  BM.ELEANOR_TRAIL.forEach(([id], i) => {
+    const it = game.byId[id]; assert(it && it.kind === 'readable', 'trail item ' + id);
+    game.standAt(it); assert(game.pick() === it, 'trail item selectable: ' + id);
+    game.interact(); assert(game.ui.mode === 'read', 'reads ' + id); game.ui.close();
+    assert(game.story.trailDone === (i === BM.ELEANOR_TRAIL.length - 1) || (i < BM.ELEANOR_TRAIL.length - 1 && !game.story.trailDone), 'trail completes on the last');
+  });
+  assert(game.story.trailDone, 'all seven found');
+  game.ui.phone(); assert(/Eleanor's trail \(7 \/ 7\)/.test(game.ui.el.phoneBody.innerHTML), 'the phone keeps the list'); game.ui.close();
+  g.setLodge(true); game.setEstateAll(true); settleLights(env);
+  for (let i = 0; i < 150; i++) game.update(1 / 30);
+  assert(game.story.allLit && game.life.fig.visible, 'every light on: she comes to the window');
+  for (let i = 0; i < 30 * 30; i++) game.update(1 / 30);
+  assert(!game.life.fig.visible && !g.light('gable-candle').on && game.life.out, 'and the lights up there go out');
+  game.endGame();
+  assert(/all seven of her places/.test(game.ui.el.endingText.textContent) && /Somebody saw/.test(game.ui.el.endingText.textContent), 'the ending remembers');
+  return 'seven clues on the trail, the girl at the window, and an ending that remembers both';
+});
+
 suite('glimpses', () => {
   const env = H.load({ quiet: true });
   const { game } = env, G = game.glimpses, g = game.grid;

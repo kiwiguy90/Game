@@ -8412,6 +8412,98 @@ BM.updateIslandFolly = function (game) {
 };
 })();
 </script>
+<script id="bm-49k-life">
+/* ==========================================================================
+   BLACKTHORN MANOR — 6s. THINGS THAT MOVE IN THE DARK
+   - Bats: a colony in the towers, out hunting round the battlements, black
+     against the floodlit stone.
+   - Every light on: Eleanor's letter asks whoever finds it to put the lights
+     on, all of them. Do that — every group on the estate panel burning at
+     once — and somebody comes to the gable window to look: a girl's shape
+     against the candle, quite still, for as long as it takes to be sure you
+     saw her. Then the candle goes out.
+   ========================================================================== */
+(function () {
+'use strict';
+const BM = window.BM;
+const G = BM.G;
+
+function silhouetteTexture() {
+  const c = document.createElement('canvas'); c.width = 128; c.height = 192; const g = c.getContext('2d');
+  g.fillStyle = '#000';
+  g.beginPath(); g.ellipse(64, 52, 22, 27, 0, 0, Math.PI * 2); g.fill();                             // the head
+  g.beginPath(); g.moveTo(40, 40); g.quadraticCurveTo(30, 110, 34, 150); g.lineTo(94, 150); g.quadraticCurveTo(98, 110, 88, 40); g.fill(); // long hair down her back
+  g.fillRect(56, 74, 16, 22);                                                                         // the neck
+  g.beginPath(); g.moveTo(18, 192); g.quadraticCurveTo(22, 104, 64, 96); g.quadraticCurveTo(106, 104, 110, 192); g.fill(); // shoulders and dress
+  const t = new THREE.CanvasTexture(c); return t;
+}
+
+BM.buildLife = function (B, game) {
+  B.zone = 'exterior'; B.room = 'grounds';
+  /* ---- bats ---- */
+  const bats = [];
+  const wingGeo = BM.statuaryGeo('batWing', () => {
+    const s = new THREE.Shape(); s.moveTo(0, 0); s.lineTo(0.22, 0.06); s.lineTo(0.3, -0.02); s.lineTo(0.2, -0.05); s.lineTo(0.14, -0.1); s.lineTo(0.08, -0.06); s.lineTo(0, -0.08);
+    const g = new THREE.ShapeGeometry(s); g.rotateX(-Math.PI / 2); return g; });
+  const batMat = new THREE.MeshBasicMaterial({ color: 0x07070a, side: THREE.DoubleSide });
+  const homes = (game.towers || [[-21, 15], [21, 15], [-21, -15], [21, -15]]).concat([[0, 10]]);
+  // the whole colony in two draws: one instanced mesh for the bodies, one for the wings
+  const N = 11;
+  const bodies = new THREE.InstancedMesh(G.lowSphere, batMat, N), wings = new THREE.InstancedMesh(wingGeo, batMat, N * 2);
+  for (const m of [bodies, wings]) { m.frustumCulled = false; m.userData.dynamic = true; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); B.root.add(m); }
+  for (let i = 0; i < N; i++) {
+    const [hx, hz] = homes[i % homes.length];
+    bats.push({ hx, hz, r: 4 + (i * 1.7) % 5, h: 13 + (i * 2.3) % 8, w: (0.6 + (i % 4) * 0.18) * (i % 2 ? 1 : -1), ph: i * 2.1, flap: 14 + (i % 3) * 3 });
+  }
+  game.batMeshes = { bodies, wings, o: new THREE.Object3D(), w: new THREE.Object3D() };
+  /* ---- the girl at the gable window ---- */
+  const mat = new THREE.MeshBasicMaterial({ map: silhouetteTexture(), color: 0xffffff, transparent: true, alphaTest: 0.4, depthWrite: false, opacity: 0 });
+  // the lit lancet high in the west front tower, the one window that always has a light in it
+  const [tx, tz] = (game.towers || [[-21, 15]])[0], out = Math.atan2(tx, tz), ap = 3.2 * Math.cos(Math.PI / 8) + 0.065;
+  const fig = B.mesh(G.plane, mat, tx + Math.sin(out) * ap, 17.85, tz + Math.cos(out) * ap, 0.7, 1.25, 1, out);
+  fig.userData.dynamic = true; fig.visible = false; fig.renderOrder = 6;
+  const glow = BM.M('candleGlow');
+  game.life = { bats, fig, mat, glow, glowE: glow.emissive.clone(), glowC: glow.color.clone(), allOnT: 0, seen: 0 };
+};
+
+BM.updateLife = function (game, dt, t) {
+  const L = game.life; if (!L) return;
+  for (const b of L.bats) {
+    const a = t * b.w + b.ph, wob = Math.sin(t * 1.3 + b.ph) * 1.6;
+    const x = b.hx + Math.cos(a) * (b.r + wob), z = b.hz + Math.sin(a) * (b.r + wob), y = b.h + Math.sin(t * 2.1 + b.ph) * 1.4 + Math.sin(t * 0.37 + b.ph) * 2;
+    const M = game.batMeshes, o = M.o, i = L.bats.indexOf(b);
+    o.position.set(x, y, z); o.rotation.set(0, -a + (b.w > 0 ? 0 : Math.PI), 0); o.scale.set(0.11, 0.09, 0.2); o.updateMatrix(); M.bodies.setMatrixAt(i, o.matrix);
+    const f = Math.sin(t * b.flap + b.ph) * 0.9;
+    for (const sd of [-1, 1]) { o.scale.set(sd * 1.7, 1.7, 1.7); o.rotation.set(0, -a + (b.w > 0 ? 0 : Math.PI), 0); o.updateMatrix();
+      M.w.rotation.set(0, 0, f); M.w.position.set(0, 0, 0); M.w.scale.set(1, 1, 1); M.w.updateMatrix(); o.matrix.multiply(M.w.matrix); M.wings.setMatrixAt(i * 2 + (sd > 0 ? 1 : 0), o.matrix); }
+  }
+  if (game.batMeshes) { game.batMeshes.bodies.instanceMatrix.needsUpdate = true; game.batMeshes.wings.instanceMatrix.needsUpdate = true; }
+  // every group on the estate panel burning at once: she comes to look
+  const s = game.story, grid = game.grid;
+  if (!s.allLit && !s.ended && grid.lodge && game.estateGroups.every(([k]) => game.estateGroupOn(k))) {
+    const lights = game.estateGroups.flatMap(([k]) => game.estateLights[k]).map(id => grid.light(id)).filter(l => l && !l.dead);
+    if (lights.length && lights.every(l => l.powered && l.fraction > 0.9)) L.allOnT += dt; else L.allOnT = 0;
+    if (L.allOnT > 2.5) {
+      s.allLit = true; L.seen = 0.001;
+      game.ui.say('Every light on the estate is burning — the lanes, the gardens, the water, the towers, the stables, the far tower out past the pond. The whole of Blackthorn is lit up in the rain, as if for a party nobody came to. High in the west tower, in the one window that always has a light in it, somebody is standing. A girl. Quite still. Looking out at all of it.', 12);
+      game.audio.bell && game.audio.bell(392, 0.12, 0.4, 4);
+    }
+  }
+  if (L.seen > 0) {
+    L.seen += dt;
+    const k = L.seen < 3 ? L.seen / 3 : L.seen < 26 ? 1 : Math.max(0, 1 - (L.seen - 26) / 2);
+    L.fig.visible = k > 0.01; L.mat.opacity = 0.95 * k;
+    if (!L.out) L.glow.emissive.copy(L.glowE).multiplyScalar(1 + 1.2 * k);                      // the window brightens behind her
+    if (L.seen > 26 && !L.out) {
+      L.out = true; const c = grid.light('gable-candle'); if (c) c.on = false;
+      L.glow.emissive.setRGB(0, 0, 0); L.glow.color.setRGB(0.03, 0.025, 0.02);
+      game.ui.say('The light in the tower window goes out, and the candle in the gable with it. For the first time tonight, every window up there is dark.', 6);
+    }
+    if (L.seen > 28.5) L.seen = -1;
+  }
+};
+})();
+</script>
 <script id="bm-50-fx">
 /* ==========================================================================
    BLACKTHORN MANOR — 7. ATMOSPHERE
@@ -9518,6 +9610,8 @@ class Synth {
     this.loops.recordBass = this.toneLoop('sine', 131, 'lowpass', 400);
     this.loops.fire = this.noiseLoop(this.brown, 'lowpass', 900, 0.8);
     this.loops.fountain = this.noiseLoop(this.white, 'bandpass', 1400, 0.6);
+    this.loops.lap = this.noiseLoop(this.brown, 'lowpass', 520, 1.2);          // the lake against its stones
+    this.loops.glassRain = this.noiseLoop(this.white, 'highpass', 3800, 0.8);  // rain drumming on glass
     this.loops.lift = this.toneLoop('sawtooth', 46, 'lowpass', 180); // the lift motor, felt more than heard
     this.loops.engine = this.toneLoop('sawtooth', 38, 'lowpass', 240);
     // the car radio: a song sequenced live through a small, tinny speaker
@@ -9947,6 +10041,22 @@ class Synth {
     const pf = game.poolFx && game.poolFx.on ? game.poolFx.pos : null;
     const fv = game.fountainFx && game.fountainFx.on ? near(fp, 22) * 0.22 : 0, pv = pf ? near(pf, 24) * 0.26 : 0;
     this.set('fountain', Math.max(fv, pv), pan(pv > fv ? pf : fp));
+    // the lake: water slapping at the shore, the jetty and the boathouse, rising and falling
+    const LK = BM.ESTATE_PLACES && BM.ESTATE_PLACES.LK;
+    if (LK) {
+      const dx = (p.x - LK.cx) / LK.rx, dz = (p.z - LK.cz) / LK.rz, e = Math.abs(Math.sqrt(dx * dx + dz * dz) - 1) * Math.min(LK.rx, LK.rz);
+      const swell = 0.6 + 0.4 * Math.sin(game.time * 1.7) * Math.sin(game.time * 0.63 + 1.2);
+      this.set('lap', zone === 'exterior' ? Math.max(0, 1 - e / 10) * 0.16 * swell : 0, pan({ x: LK.cx, z: LK.cz }));
+      this.loops.lap.f.frequency.setTargetAtTime(380 + swell * 260, this.ctx.currentTime, 0.2);
+    }
+    // the glass house: inside, the rain drums on the panes overhead; outside, a hiss off the glass
+    const GH = BM.ESTATE_PLACES && BM.ESTATE_PLACES.GH;
+    if (GH) {
+      const inGlass = p.x > GH.x0 && p.x < GH.x1 && p.z > GH.z0 && p.z < GH.z1 && p.y < GH.ridge;
+      const gv = inGlass ? 0.2 : near({ x: (GH.x0 + GH.x1) / 2, y: p.y, z: (GH.z0 + GH.z1) / 2 }, 16) * 0.05;
+      this.set('glassRain', storm ? gv : gv * 0.3, pan({ x: (GH.x0 + GH.x1) / 2, z: (GH.z0 + GH.z1) / 2 }));
+      if (inGlass && storm && Math.random() < dt * 30) this.burst(this.white, 'bandpass', 2500 + Math.random() * 3000, 6, 0.05, 0.001, 0.03);
+    }
     // the arrival: your engine and your car radio, on low
     const intro = game.intro;
     this.set('engine', intro ? intro.engine : 0);
@@ -10268,6 +10378,16 @@ BM.GATE = GATE;
 /* the panel's keys: 1–0 for the first ten groups, then - = [ */
 BM.ESTATE_KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0', 'Minus', 'Equal', 'BracketLeft', 'BracketRight'];
 BM.ESTATE_KEY_LABELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', '[', ']'];
+/* Eleanor's trail: seven things she left round the estate, and where to look for the ones not found yet */
+BM.ELEANOR_TRAIL = [
+  ['note-brake', 'Something left on a car in the coach house'],
+  ['annexe-guestbook', 'A book in the rooms above the garage'],
+  ['stud-book', 'A ledger where the horses were kept'],
+  ['glasshouse-label', 'Something growing under glass'],
+  ['boathouse-log', 'A board where the boats were signed out'],
+  ['island-letter', 'Somewhere nobody could follow without a boat'],
+  ['folly-view', 'The highest place on the estate'],
+];
 const ESTATE_SAY = {
   street: 'Along the lane, the street lamps come up orange — all but the one that never works properly.',
   gate: 'The lanterns on the gate piers glow on.',
@@ -10360,6 +10480,8 @@ class UI {
     this.el.phoneBody.innerHTML = `<div class="ph-top"><span>${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}</span><span>No service</span><span>${Math.max(5, 64 - Math.floor(g.clock / 90))}%</span></div>` +
       `<div class="ph-h">Notes</div><div class="ph-obj">${g.objective()}</div>` +
       `<div class="ph-h">Photos of documents (${read.size})</div>${docs}` +
+      `<div class="ph-h">Eleanor's trail (${BM.ELEANOR_TRAIL.filter(([id]) => read.has(id)).length} / ${BM.ELEANOR_TRAIL.length})</div>` +
+      BM.ELEANOR_TRAIL.map(([id, hint]) => read.has(id) ? `<div class="doc">✓ ${(g.byId[id] && g.byId[id].title) || id}</div>` : `<div class="doc" style="opacity:.6">· ${hint}</div>`).join('') +
       `<div class="ph-h">Torch</div><div>${g.player.torch ? 'On' : 'Off'} — press T</div>`;
   }
   fade(v) { this.fadeV = v; if (this.el.fade) this.el.fade.style.opacity = String(v); }
@@ -10476,6 +10598,7 @@ class Game {
     BM.buildCoachHouse(this.B, this);
     BM.buildEstatePlaces(this.B, this);
     BM.buildIslandFolly(this.B, this);
+    BM.buildLife(this.B, this);
     BM.buildGlimpses(this.B, this);
     this.interactables = this.B.interactables;
     this.byId = {};
@@ -10762,12 +10885,15 @@ class Game {
       'Eleanor never got this far. Her father\'s gates shut on her the year she turned thirteen, and in her lifetime they did not open again. "Abroad" was the attic. "Cursed" was the easiest word they had.',
       'They are still up there, in a way: every switch you threw tonight was a switch she was never allowed to touch.',
       'You put the lights on. You looked. And you got out.',
-      'BLACKTHORN MANOR',
-    ].join('\n\n');
+    ];
+    if (this.story.trailDone) text.splice(4, 0, 'You found all seven of her places — the orange tree, the pony\'s stall, the island, the top of the folly where she could see the road. Nobody else ever went looking. In the morning you will tell somebody her name.');
+    if (this.story.allLit) text.splice(text.length - 1, 0, 'And for one night every light at Blackthorn was burning, the way she asked. Somebody saw.');
+    text.push('BLACKTHORN MANOR');
+    const textStr = text.join('\n\n');
     if (this.ui.el.ending) {
       // clear the screen of everything else, and leave a way back to the start
       this.ui.msgT = 0; for (const k of ['msg', 'prompt', 'objective', 'lights']) if (this.ui.el[k]) this.ui.el[k].style.display = 'none';
-      this.ui.el.endingText.textContent = text; this.ui.el.ending.style.display = 'flex';
+      this.ui.el.endingText.textContent = textStr; this.ui.el.ending.style.display = 'flex';
       if (typeof document !== 'undefined' && !document.getElementById('play-again')) {
         const b = document.createElement('button'); b.id = 'play-again'; b.textContent = 'Play again';
         b.style.cssText = 'position:fixed;left:50%;bottom:7vh;transform:translateX(-50%);background:#2a2016;color:#ecdcbc;border:1px solid #6a5434;padding:10px 26px;font:16px Georgia,serif;letter-spacing:.08em;cursor:pointer';
@@ -10777,7 +10903,16 @@ class Game {
     }
     this.endingText = text;
   }
-  onReadClosed() {}
+  onReadClosed() {
+    const s = this.story; if (!s.trailNew) return;
+    s.trailNew = false;
+    const n = BM.ELEANOR_TRAIL.filter(([id]) => s.read.has(id)).length, all = BM.ELEANOR_TRAIL.length;
+    if (n >= all && !s.trailDone) {
+      s.trailDone = true;
+      this.ui.say('That is all of them: every place she went to be on her own. You know her now better than anybody in this house ever bothered to.', 7);
+      this.audio.bell && this.audio.bell(523, 0.1, 0.2, 3);
+    } else this.ui.say('Eleanor\'s trail: ' + n + ' of ' + all + ' found. (Your phone keeps the list.)', 4);
+  }
 
   /* ------------------------------------------------- interaction ---- */
   forward() { return { x: -Math.sin(this.player.yaw), z: -Math.cos(this.player.yaw) }; }
@@ -10804,6 +10939,7 @@ class Game {
     const it = this.pick();
     if (!it) return null;
     if (it.kind === 'readable') {
+      if (!this.story.read.has(it.id) && BM.ELEANOR_TRAIL.some(([id]) => id === it.id)) this.story.trailNew = true;
       this.story.read.add(it.id);
       if (it.id === 'journal') this.story.journalRead = true;
       this.ui.read(it);
@@ -11017,6 +11153,7 @@ class Game {
     BM.updateCoachHouse(this, dt);
     BM.updateEstatePlaces(this, dt, this.time);
     BM.updateIslandFolly(this, dt);
+    BM.updateLife(this, dt, this.time);
     BM.updateSave(this, dt);
     BM.updateGlimpses(this, dt);
     BM.updateChapel(this, dt, this.time);

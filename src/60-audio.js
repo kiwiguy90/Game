@@ -66,6 +66,8 @@ class Synth {
     this.loops.recordBass = this.toneLoop('sine', 131, 'lowpass', 400);
     this.loops.fire = this.noiseLoop(this.brown, 'lowpass', 900, 0.8);
     this.loops.fountain = this.noiseLoop(this.white, 'bandpass', 1400, 0.6);
+    this.loops.lap = this.noiseLoop(this.brown, 'lowpass', 520, 1.2);          // the lake against its stones
+    this.loops.glassRain = this.noiseLoop(this.white, 'highpass', 3800, 0.8);  // rain drumming on glass
     this.loops.lift = this.toneLoop('sawtooth', 46, 'lowpass', 180); // the lift motor, felt more than heard
     this.loops.engine = this.toneLoop('sawtooth', 38, 'lowpass', 240);
     // the car radio: a song sequenced live through a small, tinny speaker
@@ -495,6 +497,22 @@ class Synth {
     const pf = game.poolFx && game.poolFx.on ? game.poolFx.pos : null;
     const fv = game.fountainFx && game.fountainFx.on ? near(fp, 22) * 0.22 : 0, pv = pf ? near(pf, 24) * 0.26 : 0;
     this.set('fountain', Math.max(fv, pv), pan(pv > fv ? pf : fp));
+    // the lake: water slapping at the shore, the jetty and the boathouse, rising and falling
+    const LK = BM.ESTATE_PLACES && BM.ESTATE_PLACES.LK;
+    if (LK) {
+      const dx = (p.x - LK.cx) / LK.rx, dz = (p.z - LK.cz) / LK.rz, e = Math.abs(Math.sqrt(dx * dx + dz * dz) - 1) * Math.min(LK.rx, LK.rz);
+      const swell = 0.6 + 0.4 * Math.sin(game.time * 1.7) * Math.sin(game.time * 0.63 + 1.2);
+      this.set('lap', zone === 'exterior' ? Math.max(0, 1 - e / 10) * 0.16 * swell : 0, pan({ x: LK.cx, z: LK.cz }));
+      this.loops.lap.f.frequency.setTargetAtTime(380 + swell * 260, this.ctx.currentTime, 0.2);
+    }
+    // the glass house: inside, the rain drums on the panes overhead; outside, a hiss off the glass
+    const GH = BM.ESTATE_PLACES && BM.ESTATE_PLACES.GH;
+    if (GH) {
+      const inGlass = p.x > GH.x0 && p.x < GH.x1 && p.z > GH.z0 && p.z < GH.z1 && p.y < GH.ridge;
+      const gv = inGlass ? 0.2 : near({ x: (GH.x0 + GH.x1) / 2, y: p.y, z: (GH.z0 + GH.z1) / 2 }, 16) * 0.05;
+      this.set('glassRain', storm ? gv : gv * 0.3, pan({ x: (GH.x0 + GH.x1) / 2, z: (GH.z0 + GH.z1) / 2 }));
+      if (inGlass && storm && Math.random() < dt * 30) this.burst(this.white, 'bandpass', 2500 + Math.random() * 3000, 6, 0.05, 0.001, 0.03);
+    }
     // the arrival: your engine and your car radio, on low
     const intro = game.intro;
     this.set('engine', intro ? intro.engine : 0);

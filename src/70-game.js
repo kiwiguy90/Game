@@ -21,6 +21,16 @@ BM.GATE = GATE;
 /* the panel's keys: 1–0 for the first ten groups, then - = [ */
 BM.ESTATE_KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0', 'Minus', 'Equal', 'BracketLeft', 'BracketRight'];
 BM.ESTATE_KEY_LABELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', '[', ']'];
+/* Eleanor's trail: seven things she left round the estate, and where to look for the ones not found yet */
+BM.ELEANOR_TRAIL = [
+  ['note-brake', 'Something left on a car in the coach house'],
+  ['annexe-guestbook', 'A book in the rooms above the garage'],
+  ['stud-book', 'A ledger where the horses were kept'],
+  ['glasshouse-label', 'Something growing under glass'],
+  ['boathouse-log', 'A board where the boats were signed out'],
+  ['island-letter', 'Somewhere nobody could follow without a boat'],
+  ['folly-view', 'The highest place on the estate'],
+];
 const ESTATE_SAY = {
   street: 'Along the lane, the street lamps come up orange — all but the one that never works properly.',
   gate: 'The lanterns on the gate piers glow on.',
@@ -113,6 +123,8 @@ class UI {
     this.el.phoneBody.innerHTML = `<div class="ph-top"><span>${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}</span><span>No service</span><span>${Math.max(5, 64 - Math.floor(g.clock / 90))}%</span></div>` +
       `<div class="ph-h">Notes</div><div class="ph-obj">${g.objective()}</div>` +
       `<div class="ph-h">Photos of documents (${read.size})</div>${docs}` +
+      `<div class="ph-h">Eleanor's trail (${BM.ELEANOR_TRAIL.filter(([id]) => read.has(id)).length} / ${BM.ELEANOR_TRAIL.length})</div>` +
+      BM.ELEANOR_TRAIL.map(([id, hint]) => read.has(id) ? `<div class="doc">✓ ${(g.byId[id] && g.byId[id].title) || id}</div>` : `<div class="doc" style="opacity:.6">· ${hint}</div>`).join('') +
       `<div class="ph-h">Torch</div><div>${g.player.torch ? 'On' : 'Off'} — press T</div>`;
   }
   fade(v) { this.fadeV = v; if (this.el.fade) this.el.fade.style.opacity = String(v); }
@@ -229,6 +241,7 @@ class Game {
     BM.buildCoachHouse(this.B, this);
     BM.buildEstatePlaces(this.B, this);
     BM.buildIslandFolly(this.B, this);
+    BM.buildLife(this.B, this);
     BM.buildGlimpses(this.B, this);
     this.interactables = this.B.interactables;
     this.byId = {};
@@ -515,12 +528,15 @@ class Game {
       'Eleanor never got this far. Her father\'s gates shut on her the year she turned thirteen, and in her lifetime they did not open again. "Abroad" was the attic. "Cursed" was the easiest word they had.',
       'They are still up there, in a way: every switch you threw tonight was a switch she was never allowed to touch.',
       'You put the lights on. You looked. And you got out.',
-      'BLACKTHORN MANOR',
-    ].join('\n\n');
+    ];
+    if (this.story.trailDone) text.splice(4, 0, 'You found all seven of her places — the orange tree, the pony\'s stall, the island, the top of the folly where she could see the road. Nobody else ever went looking. In the morning you will tell somebody her name.');
+    if (this.story.allLit) text.splice(text.length - 1, 0, 'And for one night every light at Blackthorn was burning, the way she asked. Somebody saw.');
+    text.push('BLACKTHORN MANOR');
+    const textStr = text.join('\n\n');
     if (this.ui.el.ending) {
       // clear the screen of everything else, and leave a way back to the start
       this.ui.msgT = 0; for (const k of ['msg', 'prompt', 'objective', 'lights']) if (this.ui.el[k]) this.ui.el[k].style.display = 'none';
-      this.ui.el.endingText.textContent = text; this.ui.el.ending.style.display = 'flex';
+      this.ui.el.endingText.textContent = textStr; this.ui.el.ending.style.display = 'flex';
       if (typeof document !== 'undefined' && !document.getElementById('play-again')) {
         const b = document.createElement('button'); b.id = 'play-again'; b.textContent = 'Play again';
         b.style.cssText = 'position:fixed;left:50%;bottom:7vh;transform:translateX(-50%);background:#2a2016;color:#ecdcbc;border:1px solid #6a5434;padding:10px 26px;font:16px Georgia,serif;letter-spacing:.08em;cursor:pointer';
@@ -530,7 +546,16 @@ class Game {
     }
     this.endingText = text;
   }
-  onReadClosed() {}
+  onReadClosed() {
+    const s = this.story; if (!s.trailNew) return;
+    s.trailNew = false;
+    const n = BM.ELEANOR_TRAIL.filter(([id]) => s.read.has(id)).length, all = BM.ELEANOR_TRAIL.length;
+    if (n >= all && !s.trailDone) {
+      s.trailDone = true;
+      this.ui.say('That is all of them: every place she went to be on her own. You know her now better than anybody in this house ever bothered to.', 7);
+      this.audio.bell && this.audio.bell(523, 0.1, 0.2, 3);
+    } else this.ui.say('Eleanor\'s trail: ' + n + ' of ' + all + ' found. (Your phone keeps the list.)', 4);
+  }
 
   /* ------------------------------------------------- interaction ---- */
   forward() { return { x: -Math.sin(this.player.yaw), z: -Math.cos(this.player.yaw) }; }
@@ -557,6 +582,7 @@ class Game {
     const it = this.pick();
     if (!it) return null;
     if (it.kind === 'readable') {
+      if (!this.story.read.has(it.id) && BM.ELEANOR_TRAIL.some(([id]) => id === it.id)) this.story.trailNew = true;
       this.story.read.add(it.id);
       if (it.id === 'journal') this.story.journalRead = true;
       this.ui.read(it);
@@ -770,6 +796,7 @@ class Game {
     BM.updateCoachHouse(this, dt);
     BM.updateEstatePlaces(this, dt, this.time);
     BM.updateIslandFolly(this, dt);
+    BM.updateLife(this, dt, this.time);
     BM.updateSave(this, dt);
     BM.updateGlimpses(this, dt);
     BM.updateChapel(this, dt, this.time);

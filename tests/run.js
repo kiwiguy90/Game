@@ -106,7 +106,7 @@ suite('builds', () => {
   // levels exist where the spec puts them
   for (const [name, y] of Object.entries(LEVELS)) assert(game.phys.surfaces.some(s => s.type === 'rect' && near(s.y, y, 0.01)), 'no floor at level ' + name + ' ' + y);
   // two curved staircases rising to the balcony
-  const arcs = game.phys.surfaces.filter(s => s.type === 'arc');
+  const arcs = game.phys.surfaces.filter(s => s.type === 'arc' && s.y0 !== s.y1);   // curved flights (the rotunda's round floor is flat)
   assert(arcs.length === 2 && arcs.every(a => Math.max(a.y0, a.y1) === 4.2 && Math.min(a.y0, a.y1) === 0), 'two curved staircases 0 -> 4.2');
   // the haunted garden: dead trees, yews, willow, grass, crows; swaying parts are instanced
   const hg = game.haunted;
@@ -151,7 +151,7 @@ suite('circuits', () => {
   // the estate lighting panel in the lodge: every outdoor group
   const est = game.estateLights;
   g.setLodge(true);
-  const groups = ['street', 'gate', 'flood', 'drive', 'garden', 'pool', 'pond', 'garage', 'shed', 'cemetery', 'glasshouse', 'lake', 'stables'];
+  const groups = ['street', 'gate', 'flood', 'drive', 'garden', 'pool', 'pond', 'garage', 'shed', 'cemetery', 'glasshouse', 'lake', 'stables', 'folly'];
   assert(groups.every(k => est[k] && est[k].length >= 2), 'every estate group has lamps');
   const all = groups.flatMap(k => est[k]).map(id => g.light(id));
   assert(all.every(l => !l.on), 'every estate light starts off');
@@ -474,7 +474,7 @@ suite('hud', () => {
   const { game } = env, g = game.grid;
   g.failureRate = 0; g.stormHasTripped = true;
   const rows = game.lightPanelRows();
-  assert(rows.filter(r => r.section === 'ESTATE').length === 14 && rows.filter(r => r.section === 'ROOMS').length >= 20, 'panel lists every estate group and every room: ' + rows.length);
+  assert(rows.filter(r => r.section === 'ESTATE').length === 15 && rows.filter(r => r.section === 'ROOMS').length >= 20, 'panel lists every estate group and every room: ' + rows.length);
   game.ui.renderLights();
   const el = env.window.document.getElementById('lights');
   assert(el.style.display === 'block' && /Drive lamps/.test(el.innerHTML) && /Dining room/.test(el.innerHTML), 'panel is shown with its rows');

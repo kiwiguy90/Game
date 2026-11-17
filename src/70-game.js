@@ -19,8 +19,8 @@ const APPLIANCE_SAY = {
 };
 BM.GATE = GATE;
 /* the panel's keys: 1–0 for the first ten groups, then - = [ */
-BM.ESTATE_KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0', 'Minus', 'Equal', 'BracketLeft'];
-BM.ESTATE_KEY_LABELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', '['];
+BM.ESTATE_KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0', 'Minus', 'Equal', 'BracketLeft', 'BracketRight'];
+BM.ESTATE_KEY_LABELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', '[', ']'];
 const ESTATE_SAY = {
   street: 'Along the lane, the street lamps come up orange — all but the one that never works properly.',
   gate: 'The lanterns on the gate piers glow on.',
@@ -33,6 +33,7 @@ const ESTATE_SAY = {
   shed: 'The shed bulb comes on, and the lantern by its door.',
   glasshouse: 'Out past the house the glass house lights up from inside like a lantern, the palms and the orange trees standing black against the misted panes.',
   lake: 'Lanterns come on along the jetty and round the water, one by one, and the boathouse windows glow. Their reflections shiver on the lake in the rain.',
+  folly: 'Out past the pond the old folly tower lights up from its foot to its battlements, and a beacon flares on the top of it.',
   stables: 'Lanterns light over the stable doors, one after another, down the length of the yard.',
   cemetery: 'Two lanterns at the cemetery gate, one more by a small stone outside the railings — and beyond it the chapel, its windows coming up red and blue and gold.',
 };
@@ -101,7 +102,7 @@ class UI {
       return `<div class="row"><span class="key">${BM.ESTATE_KEY_LABELS[i] || ''}</span><span>${name.toUpperCase()}</span><span class="${on ? 'on' : 'off'}">${on ? 'ON' : 'OFF'}</span><span class="${on && grid.lodge ? 'live' : 'dead'}">${g.estateLights[k].length} lamps</span></div>`;
     }).join('');
     this.el.panelBody.innerHTML = rows + `<div class="row"><span class="key">A</span><span>ALL ON / ALL OFF</span><span></span><span></span></div>` +
-      `<div class="hint">${grid.lodge ? 'Lodge supply: ON.' : 'Lodge supply: OFF. Throw the main switch first.'}<br>1–0, - = [ to switch a group · A for everything · E to close</div>`;
+      `<div class="hint">${grid.lodge ? 'Lodge supply: ON.' : 'Lodge supply: OFF. Throw the main switch first.'}<br>1–0, - = [ ] to switch a group · A for everything · E to close</div>`;
   }
   phone() {
     if (this.mode === 'phone') { this.close(); return; }
@@ -156,7 +157,7 @@ class UI {
       html += `<div class="r${r.live ? '' : ' dead'}${active && i === this.lightsSel ? ' sel' : ''}" data-k="${r.k}"><span class="dot ${dot}"></span><span class="k">${r.key || ''}</span><span>${r.name}</span><span class="st ${r.on ? 'on' : 'off'}">${r.on ? 'ON' : 'OFF'}</span></div>`;
     }
     html += active ? '<div class="hint">Click a row to switch it · ↑ ↓ and Enter · Tab or Esc to look around again</div>'
-      : '<div class="hint">Tab to use the mouse here · O / I masters · 1–0 - = [ estate · L hide</div>';
+      : '<div class="hint">Tab to use the mouse here · O / I masters · 1–0 - = [ ] estate · L hide</div>';
     if (html !== this.lightsHtml) { el.innerHTML = html; this.lightsHtml = html; }
   }
   update(dt) {
@@ -227,6 +228,7 @@ class Game {
     BM.buildPoolGarden(this.B, this);
     BM.buildCoachHouse(this.B, this);
     BM.buildEstatePlaces(this.B, this);
+    BM.buildIslandFolly(this.B, this);
     BM.buildGlimpses(this.B, this);
     this.interactables = this.B.interactables;
     this.byId = {};
@@ -299,9 +301,9 @@ class Game {
     if (x > -18.2 && x < 18.2 && z > -12.2 && z < 12.2) return 'house';
     return 'exterior';
   }
-  visibleZones(y) {
-    if (y < -1) return { exterior: false, mansion: true };
-    return { exterior: true, mansion: true };
+  visibleZones(y, zone) {
+    if (y < -1) return { exterior: false, mansion: true, estate: false };
+    return { exterior: true, mansion: true, estate: zone !== 'house' };
   }
   roomAt(x, y, z) {
     if (y > -1 && y < 3.5 && x > 6 && x < 18 && z > -4 && z < 4) return 'library';
@@ -347,7 +349,7 @@ class Game {
     };
     rows.push({ section: 'MASTER', supply: '', k: 'master:outside', key: 'O', name: 'OUTSIDE supply (lodge)', on: g.lodge, lit: g.lodge, warming: false, live: true });
     rows.push({ section: 'MASTER', supply: '', k: 'master:inside', key: 'I', name: 'INSIDE supply (MAIN)', on: g.live('main'), lit: g.live('main'), warming: false, live: g.lodge });
-    const short = { street: 'Street (lane)', gate: 'Gate', flood: 'Floodlights', drive: 'Drive lamps', garden: 'Garden', pool: 'Pool', pond: 'Pond', garage: 'Coach house', shed: 'Shed', cemetery: 'Cemetery & chapel', glasshouse: 'Glass house', lake: 'Lake & boathouse', stables: 'Stables' };
+    const short = { street: 'Street (lane)', gate: 'Gate', flood: 'Floodlights', drive: 'Drive lamps', garden: 'Garden', pool: 'Pool', pond: 'Pond', garage: 'Coach house', shed: 'Shed', cemetery: 'Cemetery & chapel', glasshouse: 'Glass house', lake: 'Lake & boathouse', stables: 'Stables', folly: 'Folly tower' };
     this.estateGroups.forEach(([k], i) => {
       const st = state(this.estateLights[k]);
       rows.push(Object.assign({ section: 'ESTATE', supply: g.lodge ? 'lodge supply ●' : 'no supply ○', k: 'estate:' + k, key: BM.ESTATE_KEY_LABELS[i] || '', name: short[k] || k }, st, { live: g.lodge && st.live }));
@@ -498,9 +500,9 @@ class Game {
     this.audio.lever();
     this.ui.say('A deep grinding starts up in the wall and travels away through the ground. Far off at the lane, the bolt draws, and the gates begin to open.', 7);
   }
-  climb(dest, yaw) {
+  climb(dest, yaw, opts) {
     if (this.climbing) return;
-    this.climbing = { dest, yaw, t: 0 };
+    this.climbing = { dest, yaw, t: 0, dur: opts && opts.dur };
     this.audio.step('wood');
   }
   endGame() {
@@ -656,7 +658,7 @@ class Game {
     this.grid.update(dt);
     this.updateDucks(dt);
     const camPos = { x: p.x, y: p.y + BM.PLAYER.eye, z: p.z };
-    const ctx = { camPos, zone: this.zoneAt(p.x, p.y, p.z), visibleZones: this.visibleZones(p.y) };
+    const ctx = { camPos, zone: this.zoneAt(p.x, p.y, p.z), visibleZones: null }; ctx.visibleZones = this.visibleZones(p.y, ctx.zone);
     this.ctx = ctx;
     for (const z in this.B.zones) this.B.zones[z].visible = ctx.visibleZones[z];
     this.fx.update(dt, ctx);
@@ -721,7 +723,7 @@ class Game {
   updateClimb(dt) {
     const c = this.climbing, p = this.player;
     c.t += dt;
-    const dur = this.headless ? 0.01 : 1.2;
+    const dur = this.headless ? 0.01 : (c.dur || 1.2);
     this.ui.fade(Math.min(0.85, Math.sin(Math.min(1, c.t / dur) * Math.PI)));
     if (!c.moved && c.t >= dur / 2) { c.moved = true; p.x = c.dest.x; p.y = c.dest.y; p.z = c.dest.z; p.yaw = c.yaw; p.vy = 0; p.grounded = true; p.safe = { x: p.x, y: p.y, z: p.z }; }
     if (c.t >= dur) { this.climbing = null; this.ui.fade(0); }
@@ -767,6 +769,7 @@ class Game {
     BM.updateLongcase(this, dt);
     BM.updateCoachHouse(this, dt);
     BM.updateEstatePlaces(this, dt, this.time);
+    BM.updateIslandFolly(this, dt);
     BM.updateSave(this, dt);
     BM.updateGlimpses(this, dt);
     BM.updateChapel(this, dt, this.time);
@@ -1010,7 +1013,7 @@ BM.boot = function (opts) {
   game.renderer.domElement.addEventListener('webglcontextlost', e => { e.preventDefault(); BM.showFatal('The graphics driver reset.', 'Your progress is saved every few seconds. Reload the page and choose Continue.'); });
   BM.game = game;
   game.ui.mode = 'title';
-  window.addEventListener('keydown', e => { if (['Space', 'ArrowUp', 'ArrowDown', 'Tab', 'Minus', 'Equal', 'BracketLeft'].indexOf(e.code) >= 0) e.preventDefault(); if (!e.repeat) game.keyDown(e.code); if (game.ui.mode !== 'title') game.audio.start(); });
+  window.addEventListener('keydown', e => { if (['Space', 'ArrowUp', 'ArrowDown', 'Tab', 'Minus', 'Equal', 'BracketLeft', 'BracketRight'].indexOf(e.code) >= 0) e.preventDefault(); if (!e.repeat) game.keyDown(e.code); if (game.ui.mode !== 'title') game.audio.start(); });
   window.addEventListener('pointerdown', () => { if (game.ui.mode !== 'title') game.audio.start(); });
   window.addEventListener('keyup', e => game.keyUp(e.code));
   window.addEventListener('blur', () => { game.keys = {}; });

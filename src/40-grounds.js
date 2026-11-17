@@ -48,6 +48,7 @@ BM.buildGrounds = function (B, game) {
     { id: 'lake-walk', pts: [[26, -33], [38.4, -33]], w: 1.8, y: 0 },
     { id: 'jetty', pts: [[38.7, -33], [47.0, -33]], w: 1.6, y: 0.35 },
     { id: 'boathouse-walk', pts: [[26, -11], [49, -11], [49, -13.5]], w: 1.8, y: 0 },
+    { id: 'folly-walk', pts: [[16, 62], [16, 53.6], [53.2, 53.6], [53.2, 70.2]], w: 1.6, y: 0 },
     { id: 'pond-walk', pts: [[3.1, 62], [27, 62]], w: 2, y: 0 },
     { id: 'pool-walk', pts: [[-3.1, 62], [-23.6, 62]], w: 2, y: 0 },
     { id: 'lane', pts: [[-60, 94], [60, 94]], w: 4.2, y: 0 }, // your car is parked on the far verge
@@ -138,7 +139,7 @@ BM.buildGrounds = function (B, game) {
     ['street', 'Street lighting (lane)'], ['gate', 'Gate lights'], ['flood', 'Floodlights (house and yard)'],
     ['drive', 'Drive lamps'], ['garden', 'Garden lights (fountain, maze)'], ['pool', 'Pool lights'],
     ['pond', 'Pond lights'], ['garage', 'Coach house lights'], ['shed', 'Shed lights'], ['cemetery', 'Cemetery and chapel lights'],
-    ['glasshouse', 'Glass house lights'], ['lake', 'Lake and boathouse lights'], ['stables', 'Stable lights'],
+    ['glasshouse', 'Glass house lights'], ['lake', 'Lake and boathouse lights'], ['stables', 'Stable lights'], ['folly', 'Folly tower lights'],
   ];
   const estate = {}; for (const [k] of ESTATE_GROUPS) estate[k] = [];
   const estateLight = (group, o) => { const l = B.fixture(Object.assign({ circuit: 'lodge', on: false, chain: 'estate:' + group }, o)); estate[group].push(l.id); return l; };

@@ -470,7 +470,7 @@ class Builder {
   constructor(scene, phys, grid) {
     this.scene = scene; this.phys = phys; this.grid = grid;
     this.zones = {};
-    for (const z of ['exterior', 'mansion']) {
+    for (const z of ['exterior', 'mansion', 'estate']) {   // estate: the outlying buildings, not drawn from inside the house
       const g = new THREE.Group(); g.name = 'zone:' + z; g.userData.zone = z;
       scene.add(g); this.zones[z] = g;
     }
@@ -613,7 +613,7 @@ class Builder {
     const g = axis === 'x' ? [s, e, c - 0.03, c + 0.03] : [c - 0.03, c + 0.03, s, e];
     this.phys.addWall(g[0], g[1], g[2], g[3], sill, head, { kind: 'glass' });
     // a sash window: stiles, a stout meeting rail, one glazing bar in each sash, a sill
-    const bar = 0.04, fm = op.frame || 'white', sash = this.zone === 'mansion' || this.zone === 'exterior';
+    const bar = 0.04, fm = op.frame || 'white', sash = this.zone === 'mansion' || this.zone === 'exterior' || this.zone === 'estate';
     if (axis === 'x') {
       this.box(fm, mid, cy + h / 4, c, bar, h / 2, 0.07);
       this.box(fm, mid, cy + 0.03, c, w, 0.06, 0.09);

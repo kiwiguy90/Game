@@ -44,7 +44,7 @@ function glowTex() {
 
 BM.buildEstatePlaces = function (B, game) {
   const P = B.phys;
-  B.zone = 'exterior'; B.levelName = 'ground';
+  B.zone = 'estate'; B.levelName = 'ground';
   const glows = [];
   const estate = (group, o) => { const l = B.fixture(Object.assign({ circuit: 'lodge', on: false, chain: 'estate:' + group }, o)); game.estateLights[group].push(l.id); return l; };
   const glow = (l, x, y, z, r, tint) => {
@@ -300,6 +300,7 @@ BM.buildEstatePlaces = function (B, game) {
     game.lake = { boats, water };
   }
   game.estateGlows = glows;
+  B.zone = 'exterior'; B.room = 'grounds';
 };
 
 BM.updateEstatePlaces = function (game, dt, t) {
@@ -308,6 +309,6 @@ BM.updateEstatePlaces = function (game, dt, t) {
   const G1 = game.glasshouse;
   if (G1) { let k = 0; for (const l of G1.lit) k = Math.max(k, l.target > 0 ? Math.min(1.2, l.intensity / l.target) : 0); c.setRGB(0.075, 0.056, 0.028).multiplyScalar(k); G1.haze.color.copy(c); }
   const L = game.lake;
-  if (L) for (const b of L.boats) { b.g.position.y = LK.y + 0.3 + Math.sin(t * 1.3 + b.ph) * 0.025; b.g.rotation.z = Math.sin(t * 0.9 + b.ph) * 0.035; b.g.rotation.y = b.ry + Math.sin(t * 0.4 + b.ph) * 0.03; }
+  if (L) for (const b of L.boats) { b.g.position.y = (b.base !== undefined ? b.base : LK.y + 0.3) + Math.sin(t * 1.3 + b.ph) * 0.025; b.g.rotation.z = Math.sin(t * 0.9 + b.ph) * 0.035; b.g.rotation.y = b.ry + Math.sin(t * 0.4 + b.ph) * 0.03; }
 };
 })();

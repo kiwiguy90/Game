@@ -99,7 +99,7 @@ BM.buildSwitchboards = function (B, game) {
       game.estateGroups.forEach(([k], i) => {
         const col = i % 7, row = Math.floor(i / 7);
         const lx = -0.63 + col * 0.21, ly = 1.62 - row * 0.34;
-        const name = { street: 'STREET', gate: 'GATE', flood: 'FLOOD', drive: 'DRIVE', garden: 'GARDEN', pool: 'POOL', pond: 'POND', garage: 'COACH H.', shed: 'SHED', cemetery: 'CHAPEL', glasshouse: 'GLASS H.', lake: 'LAKE', stables: 'STABLES' }[k] || k.toUpperCase();
+        const name = { street: 'STREET', gate: 'GATE', flood: 'FLOOD', drive: 'DRIVE', garden: 'GARDEN', pool: 'POOL', pond: 'POND', garage: 'COACH H.', shed: 'SHED', cemetery: 'CHAPEL', glasshouse: 'GLASS H.', lake: 'LAKE', stables: 'STABLES', folly: 'FOLLY' }[k] || k.toUpperCase();
         lever(lx, ly, () => game.estateGroupOn(k));
         label(lx, ly - 0.1, (BM.ESTATE_KEY_LABELS[i] || '') + ' ' + name, 0.19, 0.05, { w: 256, h: 64, size: 26 });
         lamp(lx + 0.075, ly + 0.03, () => grid.lodge && game.estateGroupOn(k), 0xffc040);

@@ -59,7 +59,7 @@ class LightLook {
     /* ---- pools of light under every outdoor lamp ---- */
     this.pools = [];
     for (const l of grid.lights) {
-      if (l.zone !== 'exterior' || l.circuit === 'car' || l.kind === 'fire' || l.pos.y < 0.4 || l.corona === 0) continue;
+      if ((l.zone !== 'exterior' && l.zone !== 'estate') || l.circuit === 'car' || l.kind === 'fire' || l.pos.y < 0.4 || l.corona === 0) continue;
       const h = l.pos.y, d = l.dir || [0, -1, 0];
       const r = Math.max(1.4, Math.min(7.5, h * (l.spot ? 1.1 : 0.95)));
       const cx = l.pos.x + (l.spot ? d[0] * h * 0.9 : 0), cz = l.pos.z + (l.spot ? d[2] * h * 0.9 : 0);
@@ -75,7 +75,7 @@ class LightLook {
       const litBy = [];
       for (const l of grid.lights) {
         if (l.zone !== w.zone || l.kind === 'fire' && l.corona === 0) continue;
-        if (w.zone === 'exterior' && l.room !== w.room) continue;
+        if ((w.zone === 'exterior' || w.zone === 'estate') && l.room !== w.room) continue;
         if (!inside(w, l) || Math.abs(l.pos.y - w.y) > 2.8) continue;
         const dx = l.pos.x - w.x, dz = l.pos.z - w.z, dist = Math.sqrt(dx * dx + dz * dz);
         if (dist > 11) continue;
@@ -159,7 +159,7 @@ class LightLook {
       const lp = u.lp.value, lc = u.lc.value, lr = u.lr.value;
       for (let i = 0; i < fx.assigned.length; i++) {
         const l = fx.assigned[i];
-        if (!l || l.zone !== 'exterior') { lr[i] = 0; continue; }
+        if (!l || (l.zone !== 'exterior' && l.zone !== 'estate')) { lr[i] = 0; continue; }
         lp[i].set(l.pos.x, l.pos.y, l.pos.z);
         this._c.setHex(l.colour); const k = Math.min(1.5, l.intensity / Math.max(0.01, l.target)) * 0.9;
         lc[i].set(this._c.r * k, this._c.g * k, this._c.b * k);

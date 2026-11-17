@@ -35,8 +35,8 @@ function washMaterial(n) {
       '  float open = min(1.0, 0.16 + v * (vS < 0.5 ? 5.0 : 2.6));',                                   // how far the pool of light has spread
       '  float across = 1.0 - smoothstep(open * 0.5, open, u);',
       '  float foot = smoothstep(0.0, 0.02, v) * (1.0 + 1.3 * exp(-v * 16.0));',
-      '  float fade = vS < 0.5 ? 0.5 * (1.0 - 0.6 * v) * (1.0 - smoothstep(0.9, 1.0, v)) : pow(1.0 - v, 0.85);', // towers: softer, but carried to the top
-      '  vec3 tint = vS < 0.5 ? vec3(0.52, 0.5, 0.46) : vec3(0.5, 0.53, 0.58);',               // the towers a warmer, older light
+      '  float fade = vS < 0.5 ? 0.5 * (1.0 - 0.6 * v) * (1.0 - smoothstep(0.9, 1.0, v)) : 0.5 * pow(1.0 - v, 0.85);', // soft, the towers carried to the top
+      '  vec3 tint = vec3(0.52, 0.5, 0.46);',                                                   // a warm, old-stone light
       '  gl_FragColor = vec4(tint * across * foot * fade * level, 1.0);',
       '}',
     ].join('\n'),
@@ -58,7 +58,7 @@ function beamMaterial(n) {
       '  float edge = pow(abs(dot(vN, vV)), 1.4);',
       '  float fall = pow(clamp(1.0 - vZ, 0.0, 1.0), 1.4) * smoothstep(0.0, 0.03, vZ);',
       '  float rain = 0.85 + 0.15 * sin(vZ * 60.0 - time * 7.0);',
-      '  gl_FragColor = vec4(vec3(0.92, 0.95, 1.0) * edge * fall * rain * level * (vS < 0.5 ? 0.07 : 0.14), 1.0);',
+      '  gl_FragColor = vec4(vec3(0.92, 0.95, 1.0) * edge * fall * rain * level * 0.07, 1.0);',
       '}',
     ].join('\n'),
     transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
@@ -135,7 +135,7 @@ BM.buildSearchlights = function (B, game) {
   /* ---- the front: the buttresses and the piers between the windows ---- */
   const FZ = 12.2;
   for (const sx of [-1, 1]) {
-    const gid = estate({ id: 'front-flood-' + (sx < 0 ? 'w' : 'e'), name: 'Front floodlight', spot: true, target: 1.2, range: 14, pos: [sx * 11, 0.6, 14.2], dir: [0, 1, -0.45] });
+    const gid = estate({ id: 'front-flood-' + (sx < 0 ? 'w' : 'e'), name: 'Front floodlight', spot: true, target: 0.7, range: 12, colour: 0xf2e6d0, pos: [sx * 11, 0.6, 14.2], dir: [0, 1, -0.45] });
     for (const x of [6.25, 12]) {
       uplight(gid, sx * x, 13.75, 0, sx * x, FZ, 0, 2.6, WALL_H, 0.04, 1);
       uplight(gid, sx * x, 13.75, 0, sx * x, 13.1, 0, 0.9, 3.2, 0.04, 1);                      // the buttress's own face
@@ -143,7 +143,7 @@ BM.buildSearchlights = function (B, game) {
     uplight(gid, sx * 17.0, 13.0, 0, sx * 17.0, FZ, 0, 2.2, WALL_H, 0.04, 1);
   }
   // the clock tower, from a ledge at its foot over the porch
-  { const gid = estate({ id: 'clock-flood', name: 'Clock tower floodlight', spot: true, target: 1.1, range: 16, pos: [0, 9.0, 13.6], dir: [0, 1, -0.3] });
+  { const gid = estate({ id: 'clock-flood', name: 'Clock tower floodlight', spot: true, target: 0.65, range: 14, colour: 0xf2e6d0, pos: [0, 9.0, 13.6], dir: [0, 1, -0.3] });
     B.boxE('gothicTrim', -4.05, 4.05, 8.05, 8.3, 12.45, 13.25);
     for (const x of [-2.1, 2.1]) {
       B.mesh(G.cyl, 'metalDark', x, 8.42, 13.0, 0.42, 0.24, 0.42);
@@ -153,7 +153,7 @@ BM.buildSearchlights = function (B, game) {
   /* ---- the back: a lamp at every buttress ---- */
   const BZ = -12.2;
   for (const sx of [-1, 1]) {
-    const gid = estate({ id: 'rear-flood-' + (sx < 0 ? 'w' : 'e'), name: 'Rear floodlight', spot: true, target: 1.1, range: 14, pos: [sx * 9, 0.6, -14.0], dir: [0, 1, 0.45] });
+    const gid = estate({ id: 'rear-flood-' + (sx < 0 ? 'w' : 'e'), name: 'Rear floodlight', spot: true, target: 0.65, range: 12, colour: 0xf2e6d0, pos: [sx * 9, 0.6, -14.0], dir: [0, 1, 0.45] });
     for (const x of (sx < 0 ? [-14.4, -9.2, -2.3] : [4.5, 10.6, 16.5])) {
       uplight(gid, x, -13.65, 0, x, BZ, Math.PI, 1.9, WALL_H, 0.04, 1);
       uplight(gid, x, -13.65, 0, x, -13.1, Math.PI, 0.9, 3.2, 0.04, 1);
@@ -163,7 +163,7 @@ BM.buildSearchlights = function (B, game) {
   /* ---- the sides ---- */
   for (const sx of [-1, 1]) {
     const SXF = sx * 18.2, a = sx * Math.PI / 2;
-    const gid = estate({ id: 'side-flood-' + (sx < 0 ? 'w' : 'e'), name: 'Side floodlight', spot: true, target: 1.1, range: 14, pos: [sx * 20.2, 0.6, 0], dir: [-sx * 0.45, 1, 0] });
+    const gid = estate({ id: 'side-flood-' + (sx < 0 ? 'w' : 'e'), name: 'Side floodlight', spot: true, target: 0.65, range: 12, colour: 0xf2e6d0, pos: [sx * 20.2, 0.6, 0], dir: [-sx * 0.45, 1, 0] });
     const buttresses = sx < 0 ? [2.5, -4.2] : [4.2, -2.6];
     for (const z of buttresses) {
       uplight(gid, sx * 19.65, z, 0, SXF, z, a, 1.9, WALL_H, 0.04, 1);

@@ -99,6 +99,9 @@ BM.buildHauntedGarden = function (B, game) {
     [-28, 28, -36, 21],        // the house, its walled garden and the walk round them
     [-16, -4, 78, 101],        // lodge
     [24, 52, -8, 10.5],        // the coach house and its yard
+    [-55, -24, -30, -18],      // the glass house and its walk
+    [-61, -24, -7, 14],        // the stables, the yard and the walk to them
+    [24, 64, -52, -9],         // the lake, the boathouse, the jetty and the walks to them
     [-34, -25, -6, 4],         // shed
     [-61, -38, 27, 50],        // maze
     [29, 47, 29, 45],          // cemetery

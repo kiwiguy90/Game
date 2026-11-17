@@ -151,7 +151,7 @@ suite('circuits', () => {
   // the estate lighting panel in the lodge: every outdoor group
   const est = game.estateLights;
   g.setLodge(true);
-  const groups = ['street', 'gate', 'flood', 'drive', 'garden', 'pool', 'pond', 'garage', 'shed', 'cemetery'];
+  const groups = ['street', 'gate', 'flood', 'drive', 'garden', 'pool', 'pond', 'garage', 'shed', 'cemetery', 'glasshouse', 'lake', 'stables'];
   assert(groups.every(k => est[k] && est[k].length >= 2), 'every estate group has lamps');
   const all = groups.flatMap(k => est[k]).map(id => g.light(id));
   assert(all.every(l => !l.on), 'every estate light starts off');
@@ -342,7 +342,7 @@ suite('switches', () => {
   }
   // 4. the estate lighting panel: every group independently
   game.standAt(game.byId['lodge-lighting']); game.interact();
-  const keys = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0'];
+  const keys = BM.ESTATE_KEYS;
   game.estateGroups.forEach(([k], i) => {
     const mine = game.estateLights[k].map(id => g.light(id));
     const before = game.estateGroupOn(k);
@@ -474,7 +474,7 @@ suite('hud', () => {
   const { game } = env, g = game.grid;
   g.failureRate = 0; g.stormHasTripped = true;
   const rows = game.lightPanelRows();
-  assert(rows.filter(r => r.section === 'ESTATE').length === 11 && rows.filter(r => r.section === 'ROOMS').length >= 20, 'panel lists every estate group and every room: ' + rows.length);
+  assert(rows.filter(r => r.section === 'ESTATE').length === 14 && rows.filter(r => r.section === 'ROOMS').length >= 20, 'panel lists every estate group and every room: ' + rows.length);
   game.ui.renderLights();
   const el = env.window.document.getElementById('lights');
   assert(el.style.display === 'block' && /Drive lamps/.test(el.innerHTML) && /Dining room/.test(el.innerHTML), 'panel is shown with its rows');

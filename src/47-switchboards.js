@@ -97,12 +97,12 @@ BM.buildSwitchboards = function (B, game) {
     n: [0, 1], px: -12.2, pz: 80.2, y: 1.45, w: 1.5, h: 0.9, ceiling: 3.2, title: 'ESTATE LIGHTING', conduits: 4,
     build: ({ lever, lamp, label }) => {
       game.estateGroups.forEach(([k], i) => {
-        const col = i % 5, row = Math.floor(i / 5);
-        const lx = -0.56 + col * 0.28, ly = 1.62 - row * 0.34;
-        const name = { street: 'STREET', gate: 'GATE', flood: 'FLOOD', drive: 'DRIVE', garden: 'GARDEN', pool: 'POOL', pond: 'POND', garage: 'GARAGE', shed: 'SHED', cemetery: 'CEMETERY' }[k];
+        const col = i % 7, row = Math.floor(i / 7);
+        const lx = -0.63 + col * 0.21, ly = 1.62 - row * 0.34;
+        const name = { street: 'STREET', gate: 'GATE', flood: 'FLOOD', drive: 'DRIVE', garden: 'GARDEN', pool: 'POOL', pond: 'POND', garage: 'COACH H.', shed: 'SHED', cemetery: 'CHAPEL', glasshouse: 'GLASS H.', lake: 'LAKE', stables: 'STABLES' }[k] || k.toUpperCase();
         lever(lx, ly, () => game.estateGroupOn(k));
-        label(lx, ly - 0.1, ((i + 1) % 10) + ' ' + name, 0.24, 0.05, { w: 256, h: 56, size: 26 });
-        lamp(lx + 0.09, ly + 0.03, () => grid.lodge && game.estateGroupOn(k), 0xffc040);
+        label(lx, ly - 0.1, (BM.ESTATE_KEY_LABELS[i] || '') + ' ' + name, 0.19, 0.05, { w: 256, h: 64, size: 26 });
+        lamp(lx + 0.075, ly + 0.03, () => grid.lodge && game.estateGroupOn(k), 0xffc040);
       });
     },
   });

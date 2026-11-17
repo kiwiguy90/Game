@@ -18,6 +18,9 @@ const APPLIANCE_SAY = {
   record: 'The platter turns. The needle finds the groove: crackle, then a waltz.',
 };
 BM.GATE = GATE;
+/* the panel's keys: 1–0 for the first ten groups, then - = [ */
+BM.ESTATE_KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0', 'Minus', 'Equal', 'BracketLeft'];
+BM.ESTATE_KEY_LABELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', '['];
 const ESTATE_SAY = {
   street: 'Along the lane, the street lamps come up orange — all but the one that never works properly.',
   gate: 'The lanterns on the gate piers glow on.',
@@ -28,6 +31,9 @@ const ESTATE_SAY = {
   pond: 'Lamps come on at the edge of the pond. The ducks complain.',
   garage: 'In the coach house the garage tubes strobe and catch, and lanterns light over the doors.',
   shed: 'The shed bulb comes on, and the lantern by its door.',
+  glasshouse: 'Out past the house the glass house lights up from inside like a lantern, the palms and the orange trees standing black against the misted panes.',
+  lake: 'Lanterns come on along the jetty and round the water, one by one, and the boathouse windows glow. Their reflections shiver on the lake in the rain.',
+  stables: 'Lanterns light over the stable doors, one after another, down the length of the yard.',
   cemetery: 'Two lanterns at the cemetery gate, one more by a small stone outside the railings — and beyond it the chapel, its windows coming up red and blue and gold.',
 };
 BM.START = START;
@@ -92,10 +98,10 @@ class UI {
     const g = this.game, grid = g.grid;
     const rows = g.estateGroups.map(([k, name], i) => {
       const on = g.estateGroupOn(k);
-      return `<div class="row"><span class="key">${(i + 1) % 10}</span><span>${name.toUpperCase()}</span><span class="${on ? 'on' : 'off'}">${on ? 'ON' : 'OFF'}</span><span class="${on && grid.lodge ? 'live' : 'dead'}">${g.estateLights[k].length} lamps</span></div>`;
+      return `<div class="row"><span class="key">${BM.ESTATE_KEY_LABELS[i] || ''}</span><span>${name.toUpperCase()}</span><span class="${on ? 'on' : 'off'}">${on ? 'ON' : 'OFF'}</span><span class="${on && grid.lodge ? 'live' : 'dead'}">${g.estateLights[k].length} lamps</span></div>`;
     }).join('');
     this.el.panelBody.innerHTML = rows + `<div class="row"><span class="key">A</span><span>ALL ON / ALL OFF</span><span></span><span></span></div>` +
-      `<div class="hint">${grid.lodge ? 'Lodge supply: ON.' : 'Lodge supply: OFF. Throw the main switch first.'}<br>1–9, 0 to switch a group · A for everything · E to close</div>`;
+      `<div class="hint">${grid.lodge ? 'Lodge supply: ON.' : 'Lodge supply: OFF. Throw the main switch first.'}<br>1–0, - = [ to switch a group · A for everything · E to close</div>`;
   }
   phone() {
     if (this.mode === 'phone') { this.close(); return; }
@@ -150,7 +156,7 @@ class UI {
       html += `<div class="r${r.live ? '' : ' dead'}${active && i === this.lightsSel ? ' sel' : ''}" data-k="${r.k}"><span class="dot ${dot}"></span><span class="k">${r.key || ''}</span><span>${r.name}</span><span class="st ${r.on ? 'on' : 'off'}">${r.on ? 'ON' : 'OFF'}</span></div>`;
     }
     html += active ? '<div class="hint">Click a row to switch it · ↑ ↓ and Enter · Tab or Esc to look around again</div>'
-      : '<div class="hint">Tab to use the mouse here · O / I masters · 1–0 estate · L hide</div>';
+      : '<div class="hint">Tab to use the mouse here · O / I masters · 1–0 - = [ estate · L hide</div>';
     if (html !== this.lightsHtml) { el.innerHTML = html; this.lightsHtml = html; }
   }
   update(dt) {
@@ -220,6 +226,7 @@ class Game {
     BM.buildGroundsLights(this.B, this);
     BM.buildPoolGarden(this.B, this);
     BM.buildCoachHouse(this.B, this);
+    BM.buildEstatePlaces(this.B, this);
     BM.buildGlimpses(this.B, this);
     this.interactables = this.B.interactables;
     this.byId = {};
@@ -340,10 +347,10 @@ class Game {
     };
     rows.push({ section: 'MASTER', supply: '', k: 'master:outside', key: 'O', name: 'OUTSIDE supply (lodge)', on: g.lodge, lit: g.lodge, warming: false, live: true });
     rows.push({ section: 'MASTER', supply: '', k: 'master:inside', key: 'I', name: 'INSIDE supply (MAIN)', on: g.live('main'), lit: g.live('main'), warming: false, live: g.lodge });
-    const short = { street: 'Street (lane)', gate: 'Gate', flood: 'Floodlights', drive: 'Drive lamps', garden: 'Garden', pool: 'Pool', pond: 'Pond', garage: 'Coach house', shed: 'Shed', cemetery: 'Cemetery & chapel' };
+    const short = { street: 'Street (lane)', gate: 'Gate', flood: 'Floodlights', drive: 'Drive lamps', garden: 'Garden', pool: 'Pool', pond: 'Pond', garage: 'Coach house', shed: 'Shed', cemetery: 'Cemetery & chapel', glasshouse: 'Glass house', lake: 'Lake & boathouse', stables: 'Stables' };
     this.estateGroups.forEach(([k], i) => {
       const st = state(this.estateLights[k]);
-      rows.push(Object.assign({ section: 'ESTATE', supply: g.lodge ? 'lodge supply ●' : 'no supply ○', k: 'estate:' + k, key: String((i + 1) % 10), name: short[k] || k }, st, { live: g.lodge && st.live }));
+      rows.push(Object.assign({ section: 'ESTATE', supply: g.lodge ? 'lodge supply ●' : 'no supply ○', k: 'estate:' + k, key: BM.ESTATE_KEY_LABELS[i] || '', name: short[k] || k }, st, { live: g.lodge && st.live }));
     });
     const allOn = this.estateGroups.every(([k]) => this.estateGroupOn(k));
     rows.push({ section: 'ESTATE', supply: g.lodge ? 'lodge supply ●' : 'no supply ○', k: 'estate-all', key: '', name: allOn ? 'All estate lights off' : 'All estate lights on', on: allOn, lit: false, live: g.lodge });
@@ -584,7 +591,7 @@ class Game {
     if (ui.mode === 'estate') {
       if (code === 'KeyE' || code === 'Escape') ui.close();
       else if (code === 'KeyA') this.setEstateAll(!this.estateGroups.every(([k]) => this.estateGroupOn(k)));
-      else { const i = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0'].indexOf(code); if (i >= 0 && i < this.estateGroups.length) this.toggleEstate(this.estateGroups[i][0]); }
+      else { const i = BM.ESTATE_KEYS.indexOf(code); if (i >= 0 && i < this.estateGroups.length) this.toggleEstate(this.estateGroups[i][0]); }
       return;
     }
     if (ui.mode === 'lights') {
@@ -594,7 +601,7 @@ class Game {
       else if (code === 'Enter' || code === 'Space' || code === 'KeyE') ui.toggleLightsSel();
       else if (code === 'KeyO') { this.masterOutside(); ui.lightsT = 0; }
       else if (code === 'KeyI') { this.masterInside(); ui.lightsT = 0; }
-      else { const i = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0'].indexOf(code); if (i >= 0 && this.estateGroups[i]) this.toggleEstate(this.estateGroups[i][0]); }
+      else { const i = BM.ESTATE_KEYS.indexOf(code); if (i >= 0 && this.estateGroups[i]) this.toggleEstate(this.estateGroups[i][0]); }
       return;
     }
     if (code === 'Tab' && !ui.mode) { ui.openLights(); return; }
@@ -603,7 +610,7 @@ class Game {
     if (code === 'KeyL') { ui.lightsVisible = !ui.lightsVisible; ui.lightsT = 0; return; }
     if (code === 'KeyO' && !ui.mode) { this.masterOutside(); ui.lightsT = 0; return; }
     if (code === 'KeyI' && !ui.mode) { this.masterInside(); ui.lightsT = 0; return; }
-    { const i = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0'].indexOf(code);
+    { const i = BM.ESTATE_KEYS.indexOf(code);
       if (i >= 0 && !ui.mode && this.estateGroups[i]) { this.toggleEstate(this.estateGroups[i][0]); ui.lightsT = 0; return; } }
     if (ui.mode === 'phone' && (code === 'Escape' || code === 'KeyE')) { ui.close(); return; }
     if (code === 'KeyT') { this.player.torch = !this.player.torch; this.audio.click(); }
@@ -759,6 +766,7 @@ class Game {
     BM.updateLift(this, dt);
     BM.updateLongcase(this, dt);
     BM.updateCoachHouse(this, dt);
+    BM.updateEstatePlaces(this, dt, this.time);
     BM.updateSave(this, dt);
     BM.updateGlimpses(this, dt);
     BM.updateChapel(this, dt, this.time);
@@ -1002,7 +1010,7 @@ BM.boot = function (opts) {
   game.renderer.domElement.addEventListener('webglcontextlost', e => { e.preventDefault(); BM.showFatal('The graphics driver reset.', 'Your progress is saved every few seconds. Reload the page and choose Continue.'); });
   BM.game = game;
   game.ui.mode = 'title';
-  window.addEventListener('keydown', e => { if (['Space', 'ArrowUp', 'ArrowDown', 'Tab'].indexOf(e.code) >= 0) e.preventDefault(); if (!e.repeat) game.keyDown(e.code); if (game.ui.mode !== 'title') game.audio.start(); });
+  window.addEventListener('keydown', e => { if (['Space', 'ArrowUp', 'ArrowDown', 'Tab', 'Minus', 'Equal', 'BracketLeft'].indexOf(e.code) >= 0) e.preventDefault(); if (!e.repeat) game.keyDown(e.code); if (game.ui.mode !== 'title') game.audio.start(); });
   window.addEventListener('pointerdown', () => { if (game.ui.mode !== 'title') game.audio.start(); });
   window.addEventListener('keyup', e => game.keyUp(e.code));
   window.addEventListener('blur', () => { game.keys = {}; });

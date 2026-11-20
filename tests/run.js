@@ -864,7 +864,11 @@ suite('eleanor', () => {
   assert(game.story.allLit && game.life.fig.visible, 'every light on: she comes to the window');
   for (let i = 0; i < 30 * 30; i++) game.update(1 / 30);
   assert(!game.life.fig.visible && !g.light('gable-candle').on && game.life.out, 'and the lights up there go out');
+  // the ice house: down in the dark, the trunk her mother packed
+  { const it = game.byId['icehouse-case']; game.standAt(it); assert(game.pick() === it, 'the trunk in the ice house can be read'); game.interact(); game.ui.close(); game.update(1 / 30);
+    assert(game.story.iceSecret, 'the ice house secret is found'); }
   game.endGame();
+  assert(/ice house/.test(game.ui.el.endingText.textContent), 'the ending remembers the trunk');
   assert(/all seven of her places/.test(game.ui.el.endingText.textContent) && /Somebody saw/.test(game.ui.el.endingText.textContent), 'the ending remembers');
   return 'seven clues on the trail, the girl at the window, and an ending that remembers both';
 });

@@ -243,6 +243,7 @@ class Game {
     BM.buildIslandFolly(this.B, this);
     BM.buildLife(this.B, this);
     BM.buildBilliards(this.B, this);
+    BM.buildIcehouse(this.B, this);
     BM.buildGlimpses(this.B, this);
     this.interactables = this.B.interactables;
     this.byId = {};
@@ -531,6 +532,7 @@ class Game {
       'You put the lights on. You looked. And you got out.',
     ];
     if (this.story.trailDone) text.splice(4, 0, 'You found all seven of her places — the orange tree, the pony\'s stall, the island, the top of the folly where she could see the road. Nobody else ever went looking. In the morning you will tell somebody her name.');
+    if (this.story.iceSecret) text.splice(text.length - 1, 0, 'In the ice house, at the bottom of a trunk, is the way out her mother packed for her in 1974: a passport, a ticket, forty pounds that were never spent. She never knew it was there. You will take it with you, and you will find out where she is buried, and you will take it to her.');
     if (this.story.allLit) text.splice(text.length - 1, 0, 'And for one night every light at Blackthorn was burning, the way she asked. Somebody saw.');
     text.push('BLACKTHORN MANOR');
     const textStr = text.join('\n\n');
@@ -799,6 +801,7 @@ class Game {
     BM.updateIslandFolly(this, dt);
     BM.updateLife(this, dt, this.time);
     BM.updateBilliards(this);
+    BM.updateIcehouse(this, dt);
     BM.updateSave(this, dt);
     BM.updateGlimpses(this, dt);
     BM.updateChapel(this, dt, this.time);

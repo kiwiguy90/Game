@@ -133,7 +133,7 @@ class FX {
       fragmentShader: [
         'uniform float flash; uniform vec4 carBox; varying vec3 vW; varying float vA; varying vec3 vL;',
         'bool inside(vec4 b, float top){ return vW.x > b.x && vW.x < b.y && vW.z > b.z && vW.z < b.w && vW.y < top; }',
-        'void main(){ if (inside(vec4(-18.4,18.4,-12.4,12.4), 12.0) || inside(vec4(-17.6,-5.6,79.6,88.4), 5.2) || inside(vec4(33.8,50.2,-6.2,4.2), 8.4) || inside(vec4(-52.2,-37.8,-28.2,-19.8), 5.3) || inside(vec4(-58.2,-39.8,-4.2,2.2), 5.4) || inside(vec4(45.8,52.2,-22.2,-13.8), 4.8) || inside(vec4(50.9,54.3,71.2,77.6), 8.8) || inside(vec4(-32.2,-26.8,-4.2,2.2), 2.8) || inside(vec4(52.8,61.2,30.8,37.2), 7.2) || inside(vec4(31.6,47.2,13.8,25.2), 7.8) || inside(carBox, 1.6)) discard;',
+        'void main(){ if (inside(vec4(-18.4,18.4,-12.4,12.4), 12.0) || inside(vec4(-17.6,-5.6,79.6,88.4), 5.2) || inside(vec4(33.8,50.2,-6.2,4.2), 8.4) || inside(vec4(-52.2,-37.8,-28.2,-19.8), 5.3) || inside(vec4(-58.2,-39.8,-4.2,2.2), 5.4) || inside(vec4(45.8,52.2,-22.2,-13.8), 4.8) || inside(vec4(50.9,54.3,71.2,77.6), 8.8) || inside(vec4(-50.6,-45.4,-46.6,-38.3), 3.6) || inside(vec4(-32.2,-26.8,-4.2,2.2), 2.8) || inside(vec4(52.8,61.2,30.8,37.2), 7.2) || inside(vec4(31.6,47.2,13.8,25.2), 7.8) || inside(carBox, 1.6)) discard;',
         'if (vW.y < 0.0) discard;',
         'gl_FragColor = vec4((vec3(0.42,0.48,0.58) * (0.10 + flash) + vL * 0.7) * vA, 1.0); }',
       ].join('\n'),
@@ -160,6 +160,7 @@ class FX {
         'if (vW.x > -52.2 && vW.x < -37.8 && vW.z > -28.2 && vW.z < -19.8) discard;',
         'if (vW.x > -58.2 && vW.x < -39.8 && vW.z > -4.2 && vW.z < 2.2) discard;',
         'if (vW.x > 45.8 && vW.x < 52.2 && vW.z > -22.2 && vW.z < -13.8) discard;',
+        'if (vW.x > -50.6 && vW.x < -45.4 && vW.z > -46.6 && vW.z < -38.3 && vW.y < 0.5) discard;',
         'if (vW.x > -32.2 && vW.x < -26.8 && vW.z > -4.2 && vW.z < 2.2) discard;',
         'if (vW.x > 52.8 && vW.x < 61.2 && vW.z > 30.8 && vW.z < 37.2) discard;',
         'if (vW.x > 31.6 && vW.x < 47.2 && vW.z > 13.8 && vW.z < 25.2) discard;',

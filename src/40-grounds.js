@@ -14,7 +14,7 @@ BM.buildGrounds = function (B, game) {
   B.zone = 'exterior'; B.levelName = 'ground'; B.room = 'grounds';
 
   /* ---- ground ---- */
-  B.floor('grass', -64, 64, -54, 100, 0, 0.5, [[-18, 18, -12, 12], [-46, -24, 53, 71], [-13.4, -10.6, -16.8, -12]]);
+  B.floor('grass', -64, 64, -54, 100, 0, 0.5, [[-18, 18, -12, 12], [-46, -24, 53, 71], [-13.4, -10.6, -16.8, -12], [-50.5, -45.5, -46.5, -38.8]]);
   // the lane's verges (the road itself, out into the forest, is laid in 49-road)
   B.boxE('soil', -64, 64, 0, 0.02, 89.5, 100.6, null);
   // limestone carriage drive, turning circle ring and paths (visual overlays)
@@ -49,6 +49,7 @@ BM.buildGrounds = function (B, game) {
     { id: 'jetty', pts: [[38.7, -33], [47.0, -33]], w: 1.6, y: 0.35 },
     { id: 'boathouse-walk', pts: [[26, -11], [49, -11], [49, -13.5]], w: 1.8, y: 0 },
     { id: 'folly-walk', pts: [[16, 62], [16, 53.6], [53.2, 53.6], [53.2, 70.2]], w: 1.6, y: 0 },
+    { id: 'icehouse-walk', pts: [[-26, -31.45], [-48, -31.45], [-48, -37.4]], w: 1.8, y: 0 },
     { id: 'pond-walk', pts: [[3.1, 62], [27, 62]], w: 2, y: 0 },
     { id: 'pool-walk', pts: [[-3.1, 62], [-23.6, 62]], w: 2, y: 0 },
     { id: 'lane', pts: [[-60, 94], [60, 94]], w: 4.2, y: 0 }, // your car is parked on the far verge

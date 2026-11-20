@@ -361,7 +361,19 @@ BM.buildMansion = function (B, game) {
   B.fixture({ id: 'gallery-2', name: 'Picture light', circuit: 'east', style: 'sconce', pos: [11.5, 7.3, 3.8], nz: -1, colour: 0xffd29a, target: 0.7, range: 5, dead: true });
   B.fixture({ id: 'gallery-3', name: 'Picture light', circuit: 'east', style: 'sconce', pos: [14.5, 7.3, 3.8], nz: -1, colour: 0xffd29a, target: 0.7, range: 5 });
   B.fixture({ id: 'gallery-4', name: 'Picture light', circuit: 'east', style: 'sconce', pos: [15.5, 7.3, -3.8], nz: 1, colour: 0xffd29a, target: 0.7, range: 5, lightType: 'subtlePulse' });
-  roomSwitch('sw-gallery', 'Gallery lights', [6.25, 5.6, 1.5], [1, 0], ['gallery-1', 'gallery-2', 'gallery-3', 'gallery-4']);
+  // the long north wall: the line of Blackthorn men back to the founder, each with his plate and his own light
+  // (either side of the door through to the corridor, which is at x 11.4–12.6)
+  const ancestors = [['JOSIAH BLACKTHORN', '1702 – 1771', 7.9, 1.2, 1.75], ['JOSIAH THE SECOND', '1758 – 1822', 9.3, 0.85, 1.2], ['THOMAS', '1785 – 1849', 10.5, 0.85, 1.2],
+    ['EDWARD', '1839 – 1901', 13.3, 0.85, 1.2], ['ARTHUR', 'THE SOMME, 1916', 14.35, 0.85, 1.2]];
+  const ancestorLights = [];
+  ancestors.forEach(([name, dates, x, w, h], i) => {
+    B.picture(x, 6.15, -3.88, 0, w, h, 'portrait', 61 + i);
+    B.mesh(G.plane, BM.labelMat(name + '\n' + dates, { w: 256, h: 80, size: 22, bg: '#8a7034', fg: '#2a1e0a', border: '#5a4620' }), x, 6.15 - h / 2 - 0.16, -3.855, 0.42, 0.13, 1);
+    const id = 'gallery-a' + i; ancestorLights.push(id);
+    B.fixture({ id, name: 'Picture light', circuit: 'east', style: 'sconce', pos: [x, 6.15 + h / 2 + 0.22, -3.8], nz: 1, colour: 0xffd29a, target: 0.45, range: 3.5, dead: i === 3 });
+  });
+  B.readable('gallery-founder', 'Josiah Blackthorn', 'JOSIAH BLACKTHORN, 1702 – 1771\nWho built this house and kept it\n\nA hard, handsome face, painted in his sixties. One hand rests on a plan of the house; the other is closed on the lodge key.\n\nEvery portrait along this wall has the same pale eyes, and the same closed hand. The painters must have been told.\n\nUnder the frame, on the plate, someone has scratched with a pin, very small:\n\nWHAT IS OURS WE HOLD — AND WE HELD HER', [7.9, 5.0, -3.84], [0, 1], { visual: false });
+  roomSwitch('sw-gallery', 'Gallery lights', [6.25, 5.6, 1.5], [1, 0], ['gallery-1', 'gallery-2', 'gallery-3', 'gallery-4'].concat(ancestorLights));
   B.readable('plaque-eleanor', 'A portrait turned to the wall', 'ELEANOR BLACKTHORN, b. 1949\n\nThe brass plate is on the back now, because the picture has been hung facing the wall. Someone has chalked on the backing board, years ago:\n\n"THE CURSED ONE"\n\nIn a different hand underneath: "the only one who said no."', [15.5, 5.4, -3.8], [0, 1], { plaque: true });
 
   /* ---- Eleanor's bedroom (west, rear) ---- */

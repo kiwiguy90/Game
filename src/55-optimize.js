@@ -72,6 +72,61 @@ BM.instance = function (zoneGroup, min) {
   return { made, absorbed };
 };
 
+/* The moving parts — sashes, door leaves, shutters, curtains, knobs — can't be baked into the static
+   instancing, but most of them stand still nearly all the time and come in many identical copies. Each
+   set of identical moving parts becomes one InstancedMesh whose instance matrices are copied from the
+   real parts every frame. The real parts stay where they are (the game moves and hides them as it
+   always has) but move to a layer no camera draws. */
+const HIDDEN_LAYER = 31;
+BM.instanceDynamic = function (game, min) {
+  min = min || 3;
+  const sets = [];
+  for (const z in game.B.zones) {
+    const zg = game.B.zones[z], groups = new Map();
+    zg.traverse(o => {
+      if (!o.isMesh || o.isInstancedMesh || !o.userData.dynamic || o === zg) return;
+      const m = o.material;
+      if (!m || Array.isArray(m) || m.isShaderMaterial || m.isMeshBasicMaterial || m.transparent) return;   // lamps, glows, glass: left as they are
+      if (!o.geometry.userData || !o.geometry.userData.canonical || o.userData.noInstance || o.userData.mirror) return;
+      const k = o.geometry.uuid + '|' + m.uuid;
+      let l = groups.get(k); if (!l) groups.set(k, l = []);
+      l.push(o);
+    });
+    for (const list of groups.values()) {
+      if (list.length < min) continue;
+      const im = new THREE.InstancedMesh(list[0].geometry, list[0].material, list.length);
+      im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      im.frustumCulled = false; im.castShadow = list.some(o => o.castShadow); im.receiveShadow = true;
+      im.matrixAutoUpdate = false; im.updateMatrix();
+      im.userData.dynamicInstances = true; im.userData.sources = list;
+      for (const o of list) o.layers.set(HIDDEN_LAYER);
+      zg.add(im);
+      sets.push({ im, list, zg });
+    }
+  }
+  game.dynInstances = sets;
+  BM.updateDynamicInstances(game, true);
+  return { sets: sets.length, absorbed: sets.reduce((n, s) => n + s.list.length, 0) };
+};
+const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
+BM.updateDynamicInstances = function (game, force) {
+  const S = game.dynInstances; if (!S || !S.length) return;
+  game.scene.updateMatrixWorld();
+  for (const s of S) {
+    if (!s.zg.visible && !force) continue;
+    const arr = s.im.instanceMatrix.array;
+    let changed = force;
+    for (let i = 0; i < s.list.length; i++) {
+      const o = s.list[i];
+      let shown = true;
+      for (let p = o; p && p !== s.zg; p = p.parent) if (!p.visible) { shown = false; break; }
+      const e = (shown ? o.matrixWorld : ZERO).elements, off = i * 16;
+      for (let j = 0; j < 16; j++) if (arr[off + j] !== e[j]) { arr[off + j] = e[j]; changed = true; }
+    }
+    if (changed) s.im.instanceMatrix.needsUpdate = true;
+  }
+};
+
 BM.optimize = function (game) {
   const stats = { before: 0, after: 0 };
   game.scene.traverse(o => { if (o.isMesh) stats.before++; });
@@ -81,6 +136,7 @@ BM.optimize = function (game) {
     const r = BM.instance(game.B.zones[z], 4);
     stats.instancedMeshes += r.made; stats.instancesAbsorbed += r.absorbed;
   }
+  { const d = BM.instanceDynamic(game); stats.dynamicSets = d.sets; stats.dynamicAbsorbed = d.absorbed; }
   // shadows: everything receives; furniture-scale things cast
   game.scene.traverse(o => {
     if (!o.isMesh) return;

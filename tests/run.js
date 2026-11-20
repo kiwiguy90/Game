@@ -1003,7 +1003,7 @@ suite('windows', () => {
   const boxes = [], m4 = new THREE.Matrix4();
   game.scene.traverse(o => { if (!o.isMesh || o.material.type === 'ShaderMaterial' || o.material.blending === THREE.AdditiveBlending) return;
     if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
-    if (o.isInstancedMesh) { for (let i = 0; i < o.count; i++) { o.getMatrixAt(i, m4); m4.premultiply(o.matrixWorld); boxes.push({ o, b: o.geometry.boundingBox.clone().applyMatrix4(m4) }); } }
+    if (o.isInstancedMesh) { for (let i = 0; i < o.count; i++) { o.getMatrixAt(i, m4); m4.premultiply(o.matrixWorld); boxes.push({ o: o.userData.sources ? o.userData.sources[i] : o, b: o.geometry.boundingBox.clone().applyMatrix4(m4) }); } }
     else boxes.push({ o, b: o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld) }); });
   const inSash = (o, w) => { for (let p = o; p; p = p.parent) if (p === w.sash) return true; return false; };
   const blocked = [];

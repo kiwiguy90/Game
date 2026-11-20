@@ -988,6 +988,7 @@ class Game {
     if (!this._lastCam || this._lastCam.distanceToSquared(cp) > 16) { BM.cullDetailsAll(this, cp); this._lastCam = (this._lastCam || new THREE.Vector3()).copy(cp); }
     else BM.cullDetails(this, cp);
     if (this._lastCam.distanceToSquared(cp) > 4) this._lastCam.copy(cp);
+    BM.updateDynamicInstances(this);
     r.render(this.scene, this.camera);
     this.lastDrawCalls = r.info.render.calls;
     return this.lastDrawCalls;

@@ -46,6 +46,11 @@
   #title .title-btns { display: flex; gap: 14px; margin-top: 22px; }
   #title .title-btns button { background: #2a2016; color: #ecdcbc; border: 1px solid #6a5434; padding: 10px 26px; font: 16px Georgia, serif; letter-spacing: .08em; cursor: pointer; }
   #title .title-btns button:hover { background: #3a2c1c; }
+  #title .night { margin-top: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; font-size: 15px; }
+  #title .night span { opacity: .7; }
+  #title .night button { background: #1c150e; color: #cdbd9c; border: 1px solid #4a3c28; padding: 7px 16px; font: 15px Georgia, serif; cursor: pointer; }
+  #title .night button.on { background: #5a4220; border-color: #c89a48; color: #f4e6c8; }
+  #title #night-blurb { flex-basis: 100%; font-size: 13px; opacity: .55; margin-top: 4px; min-height: 1.2em; }
   #title .title-btns #t-continue { background: #5a4220; border-color: #a07a40; }
   #ending { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.88); align-items: center; justify-content: center; }
   #ending-text { max-width: 640px; padding: 24px; white-space: pre-wrap; line-height: 1.7; font-size: 18px; text-align: center; }
@@ -62,7 +67,7 @@
 <div id="ending"><div id="ending-text"></div></div>
 <div id="title"><h1>BLACKTHORN MANOR</h1>
   <p>You have inherited a house that stopped in 1974. There is no one here to fight. There is only the dark, and the switches, and what the lights will show you.</p>
-  <div class="keys">Mouse look · W A S D move · Shift run · Space jump · E use · T torch · P phone<br>L lighting panel · O / I master switches · 1–0 estate lights · Esc pause and settings<br>Headphones recommended<br><br>Click to begin</div></div>
+  <div class="keys">Mouse look · W A S D move · Shift run · Space jump · E use · T torch · P phone<br>L lighting panel · O / I master switches · 1–0 estate lights · Esc pause and settings · H all the controls<br>Headphones recommended<br><br>Click to begin</div></div>
 <script id="three-r128">/**
  * @license
  * Copyright 2010-2021 Three.js Authors
@@ -4787,12 +4792,12 @@ BM.buildFurnishings = function (B, game) {
 
   /* ================= THE ATTIC ================= */
   at('attic', 'attic');
-  pram(-8.0, 8.2, 4.0, 0.4); pram(8.5, 8.2, -4.0, -2.2);
-  P.addWall(-8.4, -7.6, 3.4, 4.6, 8.2, 9.3, { kind: 'furniture', tag: 'pram' }); P.addWall(8.0, 9.0, -4.6, -3.4, 8.2, 9.3, { kind: 'furniture', tag: 'pram' });
+  pram(-8.0, 8.2, 5.2, 0.4); pram(8.5, 8.2, -4.0, -2.2);
+  P.addWall(-8.4, -7.6, 4.6, 5.8, 8.2, 9.3, { kind: 'furniture', tag: 'pram' }); P.addWall(8.0, 9.0, -4.6, -3.4, 8.2, 9.3, { kind: 'furniture', tag: 'pram' });
   B.furniture('wood', -12.0, -4.6, 8.2, 0.6, 0.9, 0.6, 'hat boxes');
   for (let i = 0; i < 3; i++) B.mesh(G.cyl, ['fabricCream', 'fabricRed', 'leather'][i], -12.0, 8.32 + i * 0.3, -4.6, 0.55 - i * 0.08, 0.26, 0.55 - i * 0.08);
-  for (let i = 0; i < 3; i++) { const c = B.mesh(G.cyl, 'carpet', -15.5, 8.33 + (i === 2 ? 0.26 : 0), -5.0 + i * 0.32 - (i === 2 ? 0.16 : 0), 0.3, 2.4, 0.3); c.rotation.z = Math.PI / 2; c.updateMatrix(); }
-  P.addWall(-16.7, -14.3, -5.2, -4.2, 8.2, 8.8, { kind: 'furniture', tag: 'rolled carpets' });
+  for (let i = 0; i < 3; i++) { const c = B.mesh(G.cyl, 'carpet', -15.5, 8.33 + (i === 2 ? 0.26 : 0), -5.25 + i * 0.32 - (i === 2 ? 0.16 : 0), 0.3, 2.4, 0.3); c.rotation.z = Math.PI / 2; c.updateMatrix(); }
+  P.addWall(-16.7, -14.3, -5.45, -4.45, 8.2, 8.8, { kind: 'furniture', tag: 'rolled carpets' });
   B.furniture('metalDark', 5.0, -5.4, 8.2, 1.4, 0.45, 0.7, 'tin bath');
   B.furniture('wood', 14.5, 4.6, 8.2, 1.2, 0.8, 0.65, 'broken cot');
   B.furniture('iron', 15.5, -5.0, 8.2, 1.9, 0.5, 0.9, 'servant bed');
@@ -5161,7 +5166,7 @@ BM.buildHearths = function (B, game) {
   B.levelName = 'upper'; B.room = 'nursery';
   B.furniture('wood', 12.5, -8.5, 4.2, 0.5, 0.8, 0.5, 'nursery table'); candle({ id: 'candle-nursery', pos: [12.5, 5.0, -8.5], n: [0, 1] });
   C('candle-linen', 'linen', [0.6, 5.4, -11.2], [0, 1], 'upper');
-  C('candle-attic', 'attic', [-13.0, 8.8, 3.2], [0, -1], 'attic');
+  C('candle-attic', 'attic', [-13.0, 8.8, 3.2], [0, 1], 'attic');
   B.levelName = 'cellar'; B.room = 'cellar';
   B.furniture('wood', -10.0, -11.5, -3.2, 0.5, 0.8, 0.5, 'cellar stand'); candle({ id: 'candle-cellar', pos: [-10.0, -2.4, -11.5], n: [0, 1] });
   C('candle-clock', 'clock room', [2.6, 15.7, 11.2], [0, -1], 'clock');
@@ -8733,7 +8738,7 @@ BM.buildWild = function (B, game) {
   const starMat = new THREE.PointsMaterial({ color: 0xc8d4ff, size: 1.6, sizeAttenuation: false, transparent: true, opacity: 0, depthWrite: false, fog: false });
   const stars = new THREE.Points(sg, starMat); stars.scale.setScalar(200); stars.frustumCulled = false; stars.renderOrder = -3; stars.userData.dynamic = true;
   game.scene.add(stars);
-  game.weather = { clear: 0, moon, moonMat, stars, starMat, said: 0, fog0: BM.FOG.exterior.colour.clone(), dens0: BM.FOG.exterior.density };
+  game.weather = { clear: 0, rain: 1, moon, moonMat, stars, starMat, said: 0, fog0: BM.FOG.exterior.colour.clone(), dens0: BM.FOG.exterior.density, base: { colour: BM.FOG.exterior.colour.clone(), density: BM.FOG.exterior.density } };
 
   /* ---- the fox ---- */
   const fur = new THREE.MeshLambertMaterial({ color: 0x9a4a1c }), white = new THREE.MeshLambertMaterial({ color: 0xd8d0c0 }), dark = new THREE.MeshLambertMaterial({ color: 0x1a120c });
@@ -8781,6 +8786,22 @@ BM.buildWild = function (B, game) {
   B.zone = 'exterior';
 };
 
+/* The night you chose on the title screen: the storm, a still night of thick fog, or a clear one under the moon. */
+BM.NIGHTS = {
+  storm: { name: 'Storm', blurb: 'Rain, wind and lightning all night.' },
+  fog: { name: 'Fog', blurb: 'No wind, no rain: a white fog you can barely see the lamps through.' },
+  clear: { name: 'Moonlit', blurb: 'A clear, still night under a full moon.' },
+};
+BM.applyNight = function (game, night) {
+  const W = game.weather; night = BM.NIGHTS[night] ? night : 'storm';
+  game.night = night; game.story.night = night;
+  if (!W) return;
+  W.clear = 0; W.started = false; W.delay = 0; W.said = 0; W.rain = 1; W.noLightning = false;
+  W.fog0.copy(W.base.colour); W.dens0 = W.base.density; game.storm = true;
+  if (night === 'fog') { W.rain = 0; W.noLightning = true; W.fog0.setHex(0x30363e); W.dens0 = 0.05; }
+  if (night === 'clear') { W.rain = 0; W.started = true; W.clear = 1; W.said = 2; }
+};
+
 BM.updateWild = function (game, dt, t) {
   const p = game.player, A = game.audio;
   /* ---- weather ---- */
@@ -8792,11 +8813,11 @@ BM.updateWild = function (game, dt, t) {
     const c = W.clear, cam = game.camera.position;
     if (W.started && W.delay <= 0 && W.said === 0) { W.said = 1; game.ui.say('The rain is easing. Somewhere off down the valley the thunder is going away.', 5); }
     if (c > 0.55 && W.said === 1) { W.said = 2; game.ui.say('The cloud tears open over the lake, and there is the moon — low and enormous, and the whole estate silver under it.', 7); }
-    if (c > 0.25 && game.fx) game.fx.nextStrike = Math.max(game.fx.nextStrike, 6);
+    if ((c > 0.25 || W.noLightning) && game.fx) game.fx.nextStrike = Math.max(game.fx.nextStrike, 6);
     if (c >= 1 && game.storm) game.storm = false;
-    if (game.fx && game.fx.rain) { const u = game.fx.rain.material.uniforms; if (u.density) u.density.value = 1 - c; }
+    if (game.fx && game.fx.rain) { const u = game.fx.rain.material.uniforms; if (u.density) u.density.value = W.rain * (1 - c); }
     BM.FOG.exterior.colour.copy(W.fog0).lerp(new THREE.Color(0x34445c), c);
-    BM.FOG.exterior.density = W.dens0 * (1 - 0.4 * c);
+    BM.FOG.exterior.density = W.dens0 + (0.0102 - W.dens0) * c;
     const outside = game.ctx && game.ctx.zone === 'exterior', show = outside ? Math.max(0, (c - 0.35) / 0.65) : 0;
     W.moon.position.copy(cam).addScaledVector(MOON_DIR, 180); W.moon.quaternion.copy(game.camera.quaternion); W.moon.visible = show > 0.01; W.moonMat.opacity = show;
     W.stars.position.copy(cam); W.stars.visible = show > 0.01; W.starMat.opacity = show * 0.9;
@@ -8843,6 +8864,147 @@ BM.updateWild = function (game, dt, t) {
       O.hoot -= dt;
       if (O.hoot <= 0) { O.hoot = 10 + Math.random() * 14; if (d < 45 && A.owl) { const dx = O.home.x - p.x, dz = O.home.z - p.z, yaw = p.yaw; A.owl(Math.max(-1, Math.min(1, (dx * Math.cos(yaw) - dz * Math.sin(yaw)) / (d + 0.1)))); } }
     }
+  }
+};
+})();
+</script>
+<script id="bm-49o-house">
+/* ==========================================================================
+   BLACKTHORN MANOR — 6w. ELEANOR'S ROOM, AND THE BELLS
+   - Eleanor's room: the west end of the attic, boarded off round the
+     chimney into a room of her own: a narrow bed, a washstand, the desk
+     where her journal is, one bare bulb. Her drawings pinned to the boards.
+     On the chimney breast, the days, counted in fives.
+   - The bell board: high on the kitchen wall, a row of brass bells on
+     springs, one for each room, that rang down here when someone pulled a
+     cord upstairs. Nobody is upstairs. Now and then one rings anyway. One
+     label has been painted over.
+   ========================================================================== */
+(function () {
+'use strict';
+const BM = window.BM;
+const G = BM.G;
+
+/* a child's drawing in crayon: the house with every window lit, the gates shut, a girl outside them */
+function drawing(kind) {
+  const c = document.createElement('canvas'); c.width = 192; c.height = 256; const g = c.getContext('2d');
+  g.fillStyle = '#e8dfc8'; g.fillRect(0, 0, 192, 256);
+  g.globalAlpha = 0.85; g.lineWidth = 4; g.lineCap = 'round';
+  const scrib = (col, pts) => { g.strokeStyle = col; g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.stroke(); };
+  if (kind === 0) {           // the house, every window yellow
+    g.fillStyle = '#6a6a72'; g.fillRect(30, 90, 132, 100);
+    scrib('#3a3a40', [[24, 92], [96, 40], [168, 92]]);
+    g.fillStyle = '#f0c020'; for (let r = 0; r < 3; r++) for (let k = 0; k < 4; k++) g.fillRect(42 + k * 30, 102 + r * 30, 16, 18);
+    g.fillStyle = '#1a1a20'; g.font = '20px serif'; g.fillText('ALL ON', 60, 230);
+  } else if (kind === 1) {    // the gates, shut, and a small figure on the wrong side of them
+    for (let i = 0; i < 9; i++) scrib('#202020', [[30 + i * 16, 80], [30 + i * 16, 200]]);
+    scrib('#202020', [[24, 82], [170, 82]]); scrib('#202020', [[24, 140], [170, 140]]);
+    scrib('#c03020', [[96, 150], [96, 196]]); g.fillStyle = '#c03020'; g.beginPath(); g.arc(96, 140, 9, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#1a1a20'; g.font = '18px serif'; g.fillText('ME', 84, 232);
+  } else {                    // a road going away, and a train
+    scrib('#5a4a30', [[96, 60], [40, 240]]); scrib('#5a4a30', [[96, 60], [152, 240]]);
+    g.fillStyle = '#2a5a2a'; g.fillRect(20, 40, 150, 14);
+    g.fillStyle = '#802020'; g.fillRect(40, 30, 50, 22); g.fillRect(96, 34, 34, 18);
+    g.fillStyle = '#1a1a20'; g.font = '16px serif'; g.fillText('LONDON', 64, 26);
+  }
+  return new THREE.MeshLambertMaterial({ map: new THREE.CanvasTexture(c) });
+}
+function tallies() {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 384; const g = c.getContext('2d');
+  g.fillStyle = 'rgba(0,0,0,0)'; g.fillRect(0, 0, 256, 384);
+  g.strokeStyle = 'rgba(235,225,200,0.75)'; g.lineWidth = 1.6;
+  const rnd = BM.mulberry32(1961);
+  for (let row = 0; row < 30; row++) for (let k = 0; k < 11; k++) {
+    if (row === 29 && k > 4) break;
+    const x = 6 + k * 23 + rnd() * 2, y = 6 + row * 12.6;
+    for (let i = 0; i < 4; i++) { g.beginPath(); g.moveTo(x + i * 3.6, y); g.lineTo(x + i * 3.6 + rnd() - 0.5, y + 9); g.stroke(); }
+    g.beginPath(); g.moveTo(x - 2, y + 7); g.lineTo(x + 14, y + 2); g.stroke();
+  }
+  return new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, color: 0x9a9080 });
+}
+
+BM.buildHouseTouches = function (B, game) {
+  const P = B.phys;
+  /* ======================= ELEANOR'S ROOM ======================= */
+  B.zone = 'mansion'; B.levelName = 'attic'; B.room = "eleanor's attic";
+  const Y = 8.2, X0 = -17.8, XP = -7.5, ZN = -4.2, ZS = 2.7, TOP = 10.4;   // (the front gable's roof comes down into the attic just south of here)
+  const BOARD = { t: 0.08, mat: 'boards', y0: Y, y1: TOP };
+  B.wall('x', ZS, X0, XP, BOARD);
+  B.wall('x', ZN, X0, XP, BOARD);
+  B.wall('z', XP, ZN, ZS, BOARD, [{ at: 1.6, w: 1.0, type: 'door', head: 2.0, id: 'd-eleanor-attic' }]);
+  B.boxE('darkWood', XP - 0.06, XP + 0.06, TOP - 0.02, TOP + 0.05, ZN, ZS);
+  game.eleanorDoor = B.hingedDoor({ id: 'd-eleanor-attic', axis: 'z', at: 1.6, c: XP, w: 1.0, h: 2.0, y0: Y, hinge: 'low', swing: 1, outside: 1, mat: 'boards', panelMat: 'boards', dur: 1.5, sound: 'creak', label: "the door of Eleanor's room", wallT: 0.08 });
+  { const d = game.eleanorDoor; d.t = 1; d.open = d.opened = true; d.target = 1; d.wall.enabled = false; d.angle(d.maxAngle); }   // left open, the way she never could
+  // a bolt on the OUTSIDE of her door
+  B.boxE('iron', XP + 0.05, XP + 0.08, Y + 1.25, Y + 1.31, 0.95, 1.25); B.boxE('iron', XP + 0.05, XP + 0.09, Y + 1.22, Y + 1.34, 0.92, 1.0);
+  B.furniture('fabricCream', -16.9, 1.15, Y, 0.9, 0.55, 2.0, 'narrow bed');
+  B.furniture('wood', -17.4, -1.0, Y, 0.5, 0.8, 0.9, 'washstand');
+  B.mesh(G.sphere, 'porcelain', -17.4, Y + 0.86, -1.0, 0.4, 0.1, 0.4);
+  B.mesh(G.sphere, 'porcelain', -17.45, Y + 1.0, -1.25, 0.14, 0.26, 0.14);
+  B.furniture('wood', -15.2, -1.7, Y, 0.45, 0.9, 0.45, 'chair');
+  B.box('fabricRed', -14.2, Y + 0.012, 0.4, 2.2, 0.01, 1.4);
+  // her drawings, pinned to the boards
+  for (const [i, x] of [[0, -15.2], [1, -13.9], [2, -12.6]]) B.mesh(G.plane, drawing(i), x, Y + 1.55, ZS - 0.05, 0.42, 0.56, 1, Math.PI);
+  B.readable('attic-drawings', 'Drawings pinned to the boards', 'Crayon drawings, pinned up with dressmaker\'s pins, the paper gone soft and brown.\n\nThe house, with every single window coloured in yellow. Across the bottom: ALL ON.\n\nThe gates, black bars, shut, and a small red figure on the inside of them. ME.\n\nA road going away between two lines of trees to a green train. LONDON.\n\nThe last one is much later, in pencil, and better: the same road. There is nobody on it.', [-13.9, Y + 1.2, ZS - 0.06], [0, -1], { visual: false });
+  // the days, on the chimney breast
+  B.mesh(G.plane, tallies(), -10.62, Y + 1.25, 0, 1.15, 1.75, 1, -Math.PI / 2).renderOrder = 3;
+  B.readable('attic-tally', 'Marks on the chimney breast', 'Scratched into the plaster of the chimney breast with something sharp — a hairpin, perhaps — row after row of marks in fives.\n\nYou start to count them and stop. Hundreds. Thousands. At the bottom the rows go ragged, and the last group of five is not finished.\n\nThirteen years of days, more or less. You do the sum in your head and wish you had not.', [-10.65, Y + 1.0, 0], [-1, 0], { visual: false });
+  // one bare bulb, on its own switch inside the door
+  B.fixture({ id: 'eleanor-attic-bulb', name: "Eleanor's bulb", circuit: 'attic', style: 'cage', pos: [-13.0, 10.1, 0.4], colour: 0xffc070, target: 0.9, range: 7 });
+  B.lightSwitch('sw-eleanor-attic', "Eleanor's room light", [XP - 0.06, Y + 1.4, 0.6], [-1, 0], ['eleanor-attic-bulb']);
+
+  /* ======================= THE BELL BOARD ======================= */
+  B.levelName = 'ground'; B.room = 'kitchen';
+  const BX = -6.14, BZ = -9.6, BY = 2.95;
+  B.boxE('darkWood', BX - 0.06, BX, BY - 0.62, BY + 0.62, BZ - 0.85, BZ + 0.85);
+  B.boxE('gilt', BX - 0.08, BX - 0.05, BY + 0.55, BY + 0.6, BZ - 0.8, BZ + 0.8);
+  const names = ['DINING', 'DRAWING', 'LIBRARY', 'NURSERY', 'BEDROOM 1', 'BEDROOM 2', 'GALLERY', 'ATTIC'];
+  const bells = [];
+  names.forEach((n, i) => {
+    const row = Math.floor(i / 4), z = BZ - 0.6 + (i % 4) * 0.4, y = BY + 0.3 - row * 0.62;
+    const pivot = new THREE.Group(); pivot.position.set(BX - 0.12, y + 0.12, z); B.root.add(pivot);
+    B.box('iron', 0, -0.06, 0, 0.012, 0.12, 0.012, 0, pivot);                                  // the spring
+    B.mesh(G.cone, 'brass', 0, -0.16, 0, 0.12, 0.12, 0.12, 0, pivot);                          // the bell
+    B.mesh(G.sphere, 'brass', 0, -0.11, 0, 0.07, 0.05, 0.07, 0, pivot);
+    pivot.traverse(o => { o.userData.dynamic = true; o.matrixAutoUpdate = true; });
+    const painted = n === 'ATTIC';
+    B.mesh(G.plane, BM.labelMat(painted ? '' : n, { w: 192, h: 48, size: 22, bg: painted ? '#3a2a1a' : '#e0d4b0', fg: '#2a1e0a', border: '#5a4620' }), BX - 0.065, y - 0.14, z, 0.34, 0.085, 1, -Math.PI / 2);
+    const flag = B.box(BM.Basic(0xb02018), BX - 0.075, y - 0.25, z, 0.01, 0.06, 0.06); flag.visible = false; flag.userData.dynamic = true;
+    bells.push({ pivot, flag, name: n, t: 0, painted });
+  });
+  B.readable('bell-board', 'The bell board', 'A board of brass bells on curled springs, high on the kitchen wall. A wire runs up from each one into the house; when somebody pulled a cord upstairs, the bell for that room jangled down here, and a little red flag dropped to show which.\n\nDINING · DRAWING · LIBRARY · NURSERY · BEDROOM 1 · BEDROOM 2 · GALLERY\n\nThe eighth label has been painted over, brown, thickly, more than once. Under the paint, raised letters: ATTIC.\n\nThe wire to that bell has not been cut.', [BX - 0.1, 2.7, BZ - 0.9], [-1, 0], { visual: false });
+  game.bellBoard = { bells, next: 50, atticRung: false, pos: { x: BX, y: BY, z: BZ } };
+  B.zone = 'exterior'; B.levelName = 'ground'; B.room = 'grounds';
+};
+
+BM.ringBell = function (game, b) {
+  b.t = 2.6; b.flag.visible = true;
+  const A = game.audio, p = game.player, d = Math.hypot(p.x - game.bellBoard.pos.x, p.z - game.bellBoard.pos.z);
+  const v = Math.max(0.05, 1 - d / 18) * 0.16;
+  if (A.bell) for (let k = 0; k < 9; k++) A.bell(1850 + (k % 3) * 70, v * (1 - k * 0.08), k * 0.11, 0.5);
+};
+
+BM.updateHouseTouches = function (game, dt, t) {
+  const S = game.bellBoard; if (!S) return;
+  const p = game.player, near = Math.hypot(p.x - S.pos.x, p.z - S.pos.z) < 14 && p.y > -1 && p.y < 4;
+  for (const b of S.bells) {
+    if (b.t > 0) { b.t -= dt; b.pivot.rotation.x = Math.sin(t * 34) * 0.45 * Math.min(1, b.t); if (b.t <= 0) b.pivot.rotation.x = 0; }
+  }
+  if (!near || game.headless) return;
+  // once you have read her journal, the one nobody may ring, rings
+  if (game.story.journalRead && !S.atticRung) {
+    S.atticRung = true;
+    BM.ringBell(game, S.bells.find(b => b.painted));
+    game.ui.say('Up on the kitchen wall a bell jangles — on and on — and a little red flag drops. It is the one with the painted-out label. ATTIC.', 7);
+    return;
+  }
+  S.next -= dt;
+  if (S.next <= 0) {
+    S.next = 45 + Math.random() * 60;
+    const free = S.bells.filter(b => !b.painted);
+    const b = free[Math.floor(Math.random() * free.length)];
+    BM.ringBell(game, b);
+    game.ui.say('Somewhere above you a cord is pulled. On the kitchen wall the ' + b.name.toLowerCase() + ' bell jangles on its spring.', 5);
   }
 };
 })();
@@ -10377,7 +10539,7 @@ class Synth {
     // an open window lets the weather in
     let winIn = 0;
     for (const w of game.openWindows || []) winIn = Math.max(winIn, near({ x: w.x, y: w.y, z: w.z }, 9));
-    const wet = 1 - (game.weather ? game.weather.clear : 0);
+    const wet = game.weather ? game.weather.rain * (1 - game.weather.clear) : 1;
     this.set('rain', storm ? wet * 0.2 * out + (zone === 'house' && p.y > 7.5 ? 0.15 : 0) + winIn * 0.22 : 0);
     this.set('rainLow', storm ? wet * 0.25 * out : 0);
     this.set('wind', storm ? 0.12 * out + 0.04 + winIn * 0.1 : 0.02);
@@ -10495,7 +10657,7 @@ BM.Synth = Synth;
 const BM = window.BM;
 
 const KEY = 'blackthorn-manor-settings';
-const DEFAULTS = { sens: 1.0, invert: false, volume: 0.8, quality: 'auto', fov: 70, showObjective: true };
+const DEFAULTS = { sens: 1.0, invert: false, volume: 0.8, quality: 'auto', fov: 70, showObjective: true, brightness: 1.0, night: 'storm' };
 const QUALITY = ['auto', 'low', 'medium', 'high'];
 
 function load() {
@@ -10535,26 +10697,27 @@ class Menu {
       <div class="row"><label>Mouse sensitivity</label><input id="m-sens" type="range" min="0.2" max="3" step="0.05"><span class="v" id="m-sens-v"></span></div>
       <div class="row"><label>Invert mouse</label><input id="m-invert" type="checkbox"><span></span></div>
       <div class="row"><label>Volume</label><input id="m-vol" type="range" min="0" max="1" step="0.05"><span class="v" id="m-vol-v"></span></div>
+      <div class="row"><label>Brightness</label><input id="m-bright" type="range" min="0.6" max="1.8" step="0.05"><span class="v" id="m-bright-v"></span></div>
       <div class="row"><label>Field of view</label><input id="m-fov" type="range" min="55" max="95" step="1"><span class="v" id="m-fov-v"></span></div>
       <div class="row"><label>Graphics</label><select id="m-q">${QUALITY.map(q => `<option value="${q}">${q[0].toUpperCase() + q.slice(1)}</option>`).join('')}</select><span></span></div>
       <div class="row"><label>Show objective</label><input id="m-subs" type="checkbox"><span></span></div>
       <div class="btns"><button class="main" id="m-resume">Resume</button><button id="m-restart">Start again</button></div>
-      <div class="keys"><b>Mouse</b> look · <b>Click</b> capture mouse<br><b>W A S D</b> move · <b>Shift</b> run<br><b>← →</b> turn · <b>R / F</b> look up / down<br><b>Space</b> jump · <b>E</b> use, open, read<br><b>T</b> torch · <b>P</b> phone and notes<br><b>L</b> lighting panel · <b>O / I</b> master switches<br><b>1 – 0</b> estate lights · <b>Esc</b> pause</div>
+      <div class="keys"><b>Mouse</b> look · <b>Click</b> capture mouse<br><b>W A S D</b> move · <b>Shift</b> run<br><b>← →</b> turn · <b>R / F</b> look up / down<br><b>Space</b> jump · <b>E</b> use, open, read<br><b>T</b> torch · <b>P</b> phone and notes<br><b>L</b> lighting panel · <b>Tab</b> click it<br><b>O / I</b> master switches<br><b>1 – 0 - = [ ]</b> estate lights<br><b>H</b> all the controls · <b>Esc</b> pause</div>
     </div>`;
     document.body.appendChild(el);
     const hint = this.hint = document.createElement('div'); hint.id = 'clickhint'; hint.textContent = 'Click to look around with the mouse'; document.body.appendChild(hint);
     const $ = id => document.getElementById(id);
-    this.inputs = { sens: $('m-sens'), invert: $('m-invert'), vol: $('m-vol'), fov: $('m-fov'), q: $('m-q'), subs: $('m-subs') };
+    this.inputs = { sens: $('m-sens'), invert: $('m-invert'), vol: $('m-vol'), fov: $('m-fov'), q: $('m-q'), subs: $('m-subs'), bright: $('m-bright') };
     const I = this.inputs;
     const sync = () => {
       const s = this.settings;
-      I.sens.value = s.sens; I.invert.checked = s.invert; I.vol.value = s.volume; I.fov.value = s.fov; I.q.value = s.quality; I.subs.checked = s.showObjective;
+      I.bright.value = s.brightness; $('m-bright-v').textContent = Math.round(s.brightness * 100) + '%'; I.sens.value = s.sens; I.invert.checked = s.invert; I.vol.value = s.volume; I.fov.value = s.fov; I.q.value = s.quality; I.subs.checked = s.showObjective;
       $('m-sens-v').textContent = (+s.sens).toFixed(2); $('m-vol-v').textContent = Math.round(s.volume * 100) + '%'; $('m-fov-v').textContent = s.fov + '°';
     };
     this.sync = sync; sync();
     const change = () => {
       const s = this.settings;
-      s.sens = +I.sens.value; s.invert = I.invert.checked; s.volume = +I.vol.value; s.fov = +I.fov.value; s.quality = I.q.value; s.showObjective = I.subs.checked;
+      s.brightness = +I.bright.value; s.sens = +I.sens.value; s.invert = I.invert.checked; s.volume = +I.vol.value; s.fov = +I.fov.value; s.quality = I.q.value; s.showObjective = I.subs.checked;
       save(s); sync(); this.apply();
     };
     for (const k in I) { I[k].addEventListener('input', change); I[k].addEventListener('change', change); }
@@ -10579,8 +10742,10 @@ class Menu {
   lock() { const c = this.game.renderer && this.game.renderer.domElement; if (c && c.requestPointerLock && !this.locked) { try { const r = c.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (e) { /* not allowed here */ } } }
   unlock() { if (typeof document !== 'undefined' && document.exitPointerLock && this.locked) document.exitPointerLock(); }
   /* push the settings into the game */
+  save() { save(this.settings); }
   apply() {
     const g = this.game, s = this.settings;
+    if (g.renderer && g.renderer.domElement && g.renderer.domElement.style) g.renderer.domElement.style.filter = Math.abs(s.brightness - 1) < 0.01 ? '' : 'brightness(' + s.brightness + ')';
     if (g.audio && g.audio.master) g.audio.master.gain.value = s.volume;
     if (g.audio) g.audio.volume = s.volume;
     if (g.camera && g.camera.fov !== s.fov) { g.camera.fov = s.fov; g.camera.updateProjectionMatrix(); }
@@ -10843,7 +11008,7 @@ class UI {
     this.el.reader.style.display = 'block';
   }
   close() {
-    this.el.reader.style.display = 'none'; this.el.panel.style.display = 'none'; this.el.phone.style.display = 'none';
+    this.el.reader.style.display = 'none'; this.el.panel.style.display = 'none'; this.el.phone.style.display = 'none'; this.el.panelBody.style.fontSize = '';
     const was = this.mode; this.mode = null;
     if (was === 'lights') { this.lightsT = 0; this.lightsHtml = ''; this.renderLights(); if (this.game.menu) this.game.menu.lock(); }
     if (was === 'read' && this.game.onReadClosed) this.game.onReadClosed();
@@ -10871,6 +11036,22 @@ class UI {
     }).join('');
     this.el.panelBody.innerHTML = rows + `<div class="row"><span class="key">A</span><span>ALL ON / ALL OFF</span><span></span><span></span></div>` +
       `<div class="hint">${grid.lodge ? 'Lodge supply: ON.' : 'Lodge supply: OFF. Throw the main switch first.'}<br>1–0, - = [ ] to switch a group · A for everything · E to close</div>`;
+  }
+  /* H: every control on one card */
+  help() {
+    this.mode = 'help'; this.el.panel.style.display = 'block';
+    this.el.panelTitle.textContent = 'CONTROLS';
+    const g = this.game, row = (k, t) => `<div style="display:flex;gap:12px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.06)"><span class="key" style="flex:0 0 5.2em">${k}</span><span>${t}</span></div>`;
+    const estate = g.estateGroups.map(([k], i) => `${BM.ESTATE_KEY_LABELS[i]} ${({ street: 'Street', gate: 'Gate', flood: 'Floodlights', drive: 'Drive', garden: 'Garden', pool: 'Pool', pond: 'Pond', garage: 'Coach house', shed: 'Shed', cemetery: 'Chapel', glasshouse: 'Glass house', lake: 'Lake', stables: 'Stables', folly: 'Folly' })[k] || k}`).join(' · ');
+    this.el.panelBody.style.fontSize = '13px';
+    this.el.panelBody.innerHTML =
+      row('Mouse', 'look round (click the view to capture the mouse)') + row('W A S D', 'move · Shift to run · Space to jump') +
+      row('← → R F', 'turn, look up and down without a mouse') + row('E', 'use, open, read, climb, row') +
+      row('T', 'torch on and off') + row('P', 'your phone: notes, photos of documents, Eleanor\'s trail') +
+      row('L', 'show or hide the lighting panel') + row('Tab', 'free the mouse to click the lighting panel (↑ ↓ Enter work too)') +
+      row('O / I', 'outside and inside master switches') + `<div class="hint" style="margin:6px 0 4px">Estate lights, from anywhere once the lodge supply is on:<br>${estate}</div>` +
+      row('Esc', 'pause, settings, brightness') + row('H', 'this card') +
+      '<div class="hint">H, Esc or E to close</div>';
   }
   phone() {
     if (this.mode === 'phone') { this.close(); return; }
@@ -11003,6 +11184,7 @@ class Game {
     BM.buildBilliards(this.B, this);
     BM.buildIcehouse(this.B, this);
     BM.buildWild(this.B, this);
+    BM.buildHouseTouches(this.B, this);
     BM.buildGlimpses(this.B, this);
     this.interactables = this.B.interactables;
     this.byId = {};
@@ -11065,7 +11247,11 @@ class Game {
       const p = this.player;
       if (Math.hypot(a.pos.x - p.x, a.pos.z - p.z) < 10 && Math.abs(a.pos.y - p.y) < 3) this.ui.say('The ' + a.name.toLowerCase() + ' rumbles to the boil and clicks itself off.');
     });
-    ev.on('power:trip', () => { this.fx.strike(true); this.audio.clunk(); this.ui.say('A white crack of lightning, right overhead — and every light in the house goes out.', 6); });
+    ev.on('power:trip', () => {
+      this.audio.clunk();
+      if (!this.night || this.night === 'storm') { this.fx.strike(true); this.ui.say('A white crack of lightning, right overhead — and every light in the house goes out.', 6); }
+      else { this.audio.bang && this.audio.bang(0.5); this.ui.say('Somewhere in the walls the old wiring cracks like a gunshot — and every light in the house goes out.', 6); }
+    });
     ev.on('power:main', e => { this.audio.lever(); this.ui.say(e.reset ? 'MAIN goes back up with a clunk. The house comes back on around you.' : 'MAIN. A deep clunk through the walls, then fittings all over the house begin to stutter into life.', 6); });
   }
 
@@ -11359,6 +11545,7 @@ class Game {
     this.keys[code] = true;
     const ui = this.ui;
     if (ui.mode === 'title') {
+      { const i = ['Digit1', 'Digit2', 'Digit3'].indexOf(code); if (i >= 0) { this.chooseNight(['storm', 'fog', 'clear'][i]); return; } }
       // with a night saved, only a deliberate key starts again: Enter or C continues, N begins a new night
       if (BM.Save && BM.Save.has()) { if (code === 'Enter' || code === 'KeyC') this.continueGame(); else if (code === 'KeyN') this.begin(); return; }
       this.begin(); return;
@@ -11396,6 +11583,8 @@ class Game {
     }
     if (code === 'Tab' && !ui.mode) { ui.openLights(); return; }
     if (code === 'Escape' && !ui.mode && this.menu) { this.menu.pause(); return; }
+    if (ui.mode === 'help') { if (code === 'KeyH' || code === 'Escape' || code === 'KeyE' || code === 'Enter') ui.close(); return; }
+    if (code === 'KeyH' && !ui.mode) { ui.help(); return; }
     if (code === 'KeyP') { ui.phone(); return; }
     if (code === 'KeyL') { ui.lightsVisible = !ui.lightsVisible; ui.lightsT = 0; return; }
     if (code === 'KeyO' && !ui.mode) { this.masterOutside(); ui.lightsT = 0; return; }
@@ -11408,11 +11597,19 @@ class Game {
     if (code === 'Space' && this.player.grounded && !this.climbing) { this.player.vy = 4.3; this.player.grounded = false; }
   }
   keyUp(code) { this.keys[code] = false; }
+  /* the night to play: chosen on the title screen, remembered for next time */
+  chooseNight(n) {
+    this.chosenNight = n;
+    if (this.menu) { this.menu.settings.night = n; this.menu.save && this.menu.save(); }
+    if (typeof document !== 'undefined') for (const b of document.querySelectorAll('#title .night button')) b.classList.toggle('on', b.dataset.n === n);
+    const d = typeof document !== 'undefined' && document.getElementById('night-blurb'); if (d) d.textContent = BM.NIGHTS[n].blurb;
+  }
   begin() {
     if (BM.Save) BM.Save.clear();
     this.ui.mode = null;
     if (this.ui.el.title) this.ui.el.title.style.display = 'none';
     this.audio.start();
+    BM.applyNight(this, this.chosenNight || (this.menu && this.menu.settings.night) || 'storm');
     this.intro = new BM.Intro(this); // your car arrives; when it dies, you walk
     if (this.menu) this.menu.lock();
   }
@@ -11425,6 +11622,7 @@ class Game {
     this.audio.start();
     this.intro = new BM.Intro(this); this.intro.skip();
     BM.Save.restore(this, s);
+    BM.applyNight(this, this.story.night || 'storm');
     this.ui.say('You pick up where you left off.', 3);
     if (this.menu) this.menu.lock();
   }
@@ -11433,7 +11631,7 @@ class Game {
   update(dt) {
     this.time += dt; this.clock += dt;
     const p = this.player;
-    const frozen = this.ui.mode === 'read' || this.ui.mode === 'fuse' || this.ui.mode === 'estate' || this.ui.mode === 'lights' || this.ui.mode === 'title' || this.ui.mode === 'ending';
+    const frozen = this.ui.mode === 'read' || this.ui.mode === 'fuse' || this.ui.mode === 'estate' || this.ui.mode === 'lights' || this.ui.mode === 'help' || this.ui.mode === 'title' || this.ui.mode === 'ending';
     if (this.intro) this.intro.update(dt);
     else if (this.outro) this.updateOutro(dt);
     else if (this.climbing) this.updateClimb(dt);
@@ -11562,6 +11760,7 @@ class Game {
     BM.updateBilliards(this);
     BM.updateIcehouse(this, dt);
     BM.updateWild(this, dt, this.time);
+    BM.updateHouseTouches(this, dt, this.time);
     BM.updateSave(this, dt);
     BM.updateGlimpses(this, dt);
     BM.updateChapel(this, dt, this.time);
@@ -11815,6 +12014,13 @@ BM.boot = function (opts) {
   if (title) {
     // a saved night: Continue, or a new one; otherwise a click anywhere begins
     const keys = title.querySelector('.keys'), saved = BM.Save && BM.Save.has();
+    // which night: the storm, fog, or a clear moonlit one
+    const nb = document.createElement('div'); nb.className = 'night';
+    nb.innerHTML = '<span>Choose the night:</span>' + Object.keys(BM.NIGHTS).map((n, i) => `<button data-n="${n}">${i + 1} · ${BM.NIGHTS[n].name}</button>`).join('') + '<div id="night-blurb"></div>';
+    title.insertBefore(nb, keys);
+    for (const b of nb.querySelectorAll('button')) b.addEventListener('click', e => { e.stopPropagation(); game.chooseNight(b.dataset.n); });
+    nb.addEventListener('click', e => e.stopPropagation());
+    game.chooseNight((game.menu && game.menu.settings.night) || 'storm');
     if (saved) {
       const b = document.createElement('div'); b.className = 'title-btns';
       b.innerHTML = '<button id="t-continue">Continue</button><button id="t-new">New game</button>';

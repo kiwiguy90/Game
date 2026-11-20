@@ -41,7 +41,7 @@ BM.buildWild = function (B, game) {
   const starMat = new THREE.PointsMaterial({ color: 0xc8d4ff, size: 1.6, sizeAttenuation: false, transparent: true, opacity: 0, depthWrite: false, fog: false });
   const stars = new THREE.Points(sg, starMat); stars.scale.setScalar(200); stars.frustumCulled = false; stars.renderOrder = -3; stars.userData.dynamic = true;
   game.scene.add(stars);
-  game.weather = { clear: 0, moon, moonMat, stars, starMat, said: 0, fog0: BM.FOG.exterior.colour.clone(), dens0: BM.FOG.exterior.density };
+  game.weather = { clear: 0, rain: 1, moon, moonMat, stars, starMat, said: 0, fog0: BM.FOG.exterior.colour.clone(), dens0: BM.FOG.exterior.density, base: { colour: BM.FOG.exterior.colour.clone(), density: BM.FOG.exterior.density } };
 
   /* ---- the fox ---- */
   const fur = new THREE.MeshLambertMaterial({ color: 0x9a4a1c }), white = new THREE.MeshLambertMaterial({ color: 0xd8d0c0 }), dark = new THREE.MeshLambertMaterial({ color: 0x1a120c });
@@ -89,6 +89,22 @@ BM.buildWild = function (B, game) {
   B.zone = 'exterior';
 };
 
+/* The night you chose on the title screen: the storm, a still night of thick fog, or a clear one under the moon. */
+BM.NIGHTS = {
+  storm: { name: 'Storm', blurb: 'Rain, wind and lightning all night.' },
+  fog: { name: 'Fog', blurb: 'No wind, no rain: a white fog you can barely see the lamps through.' },
+  clear: { name: 'Moonlit', blurb: 'A clear, still night under a full moon.' },
+};
+BM.applyNight = function (game, night) {
+  const W = game.weather; night = BM.NIGHTS[night] ? night : 'storm';
+  game.night = night; game.story.night = night;
+  if (!W) return;
+  W.clear = 0; W.started = false; W.delay = 0; W.said = 0; W.rain = 1; W.noLightning = false;
+  W.fog0.copy(W.base.colour); W.dens0 = W.base.density; game.storm = true;
+  if (night === 'fog') { W.rain = 0; W.noLightning = true; W.fog0.setHex(0x30363e); W.dens0 = 0.05; }
+  if (night === 'clear') { W.rain = 0; W.started = true; W.clear = 1; W.said = 2; }
+};
+
 BM.updateWild = function (game, dt, t) {
   const p = game.player, A = game.audio;
   /* ---- weather ---- */
@@ -100,11 +116,11 @@ BM.updateWild = function (game, dt, t) {
     const c = W.clear, cam = game.camera.position;
     if (W.started && W.delay <= 0 && W.said === 0) { W.said = 1; game.ui.say('The rain is easing. Somewhere off down the valley the thunder is going away.', 5); }
     if (c > 0.55 && W.said === 1) { W.said = 2; game.ui.say('The cloud tears open over the lake, and there is the moon — low and enormous, and the whole estate silver under it.', 7); }
-    if (c > 0.25 && game.fx) game.fx.nextStrike = Math.max(game.fx.nextStrike, 6);
+    if ((c > 0.25 || W.noLightning) && game.fx) game.fx.nextStrike = Math.max(game.fx.nextStrike, 6);
     if (c >= 1 && game.storm) game.storm = false;
-    if (game.fx && game.fx.rain) { const u = game.fx.rain.material.uniforms; if (u.density) u.density.value = 1 - c; }
+    if (game.fx && game.fx.rain) { const u = game.fx.rain.material.uniforms; if (u.density) u.density.value = W.rain * (1 - c); }
     BM.FOG.exterior.colour.copy(W.fog0).lerp(new THREE.Color(0x34445c), c);
-    BM.FOG.exterior.density = W.dens0 * (1 - 0.4 * c);
+    BM.FOG.exterior.density = W.dens0 + (0.0102 - W.dens0) * c;
     const outside = game.ctx && game.ctx.zone === 'exterior', show = outside ? Math.max(0, (c - 0.35) / 0.65) : 0;
     W.moon.position.copy(cam).addScaledVector(MOON_DIR, 180); W.moon.quaternion.copy(game.camera.quaternion); W.moon.visible = show > 0.01; W.moonMat.opacity = show;
     W.stars.position.copy(cam); W.stars.visible = show > 0.01; W.starMat.opacity = show * 0.9;

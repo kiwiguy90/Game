@@ -846,6 +846,34 @@ suite('save', () => {
   return 'saved at rest, Enter continues, power, gates, doors, windows, fires, items, lift and position restored';
 });
 
+suite('nights', () => {
+  // the three nights, the help card, the bell board and Eleanor's room
+  const env = H.load({ quiet: true });
+  const { game, BM } = env, g = game.grid;
+  game.ui.mode = 'title'; game.keyDown('Digit2'); assert(game.ui.mode === 'title' && game.chosenNight === 'fog', 'a number on the title chooses the night, and does not start it');
+  game.keyDown('Digit1'); assert(game.chosenNight === 'storm', 'back to the storm');
+  BM.applyNight(game, 'fog'); game.ui.mode = null;
+  for (let i = 0; i < 60; i++) game.update(1 / 30);
+  assert(game.weather.rain === 0 && game.fx.nextStrike > 5 && BM.FOG.exterior.density > 0.04, 'fog: no rain, no lightning, thick fog');
+  BM.applyNight(game, 'clear'); for (let i = 0; i < 60; i++) game.update(1 / 30);
+  assert(!game.storm && game.weather.clear === 1, 'moonlit: clear from the start');
+  game.teleport(0, 0, 40, 0); game.frame(1 / 60, 16);
+  assert(game.weather.moon.visible && game.frameErrors === 0, 'the moon is up');
+  // the power still goes, but not by lightning
+  g.setLodge(true); g.throwMain(); g.stormTrip();
+  assert(/wiring cracks/.test(game.ui.el.msg.textContent), 'no lightning on a still night: the wiring goes');
+  BM.applyNight(game, 'storm'); assert(game.storm && game.weather.rain === 1, 'storm restored');
+  // H: the controls card lists every estate key
+  game.ui.mode = null; game.keyDown('KeyH');
+  assert(game.ui.mode === 'help' && /Folly/.test(game.ui.el.panelBody.innerHTML) && /Tab/.test(game.ui.el.panelBody.innerHTML), 'help card');
+  game.keyDown('KeyH'); assert(game.ui.mode === null, 'and closes');
+  // the bell board, and Eleanor's room off the attic
+  for (const id of ['bell-board', 'attic-drawings', 'attic-tally', 'sw-eleanor-attic']) { const it = game.byId[id]; game.standAt(it); assert(game.pick() === it, id + ' can be used'); }
+  const b = game.bellBoard.bells[0]; BM.ringBell(game, b); for (let i = 0; i < 10; i++) game.update(1 / 30);
+  assert(b.flag.visible && Math.abs(b.pivot.rotation.x) > 0, 'a bell rings and drops its flag');
+  return 'storm, fog and moonlit nights; the help card; the bells; her room';
+});
+
 suite('eleanor', () => {
   // the trail: seven places she went, read in turn; the panel lit end to end brings her to the window
   const env = H.load({ quiet: true });

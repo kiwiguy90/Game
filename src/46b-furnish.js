@@ -285,12 +285,12 @@ BM.buildFurnishings = function (B, game) {
 
   /* ================= THE ATTIC ================= */
   at('attic', 'attic');
-  pram(-8.0, 8.2, 4.0, 0.4); pram(8.5, 8.2, -4.0, -2.2);
-  P.addWall(-8.4, -7.6, 3.4, 4.6, 8.2, 9.3, { kind: 'furniture', tag: 'pram' }); P.addWall(8.0, 9.0, -4.6, -3.4, 8.2, 9.3, { kind: 'furniture', tag: 'pram' });
+  pram(-8.0, 8.2, 5.2, 0.4); pram(8.5, 8.2, -4.0, -2.2);
+  P.addWall(-8.4, -7.6, 4.6, 5.8, 8.2, 9.3, { kind: 'furniture', tag: 'pram' }); P.addWall(8.0, 9.0, -4.6, -3.4, 8.2, 9.3, { kind: 'furniture', tag: 'pram' });
   B.furniture('wood', -12.0, -4.6, 8.2, 0.6, 0.9, 0.6, 'hat boxes');
   for (let i = 0; i < 3; i++) B.mesh(G.cyl, ['fabricCream', 'fabricRed', 'leather'][i], -12.0, 8.32 + i * 0.3, -4.6, 0.55 - i * 0.08, 0.26, 0.55 - i * 0.08);
-  for (let i = 0; i < 3; i++) { const c = B.mesh(G.cyl, 'carpet', -15.5, 8.33 + (i === 2 ? 0.26 : 0), -5.0 + i * 0.32 - (i === 2 ? 0.16 : 0), 0.3, 2.4, 0.3); c.rotation.z = Math.PI / 2; c.updateMatrix(); }
-  P.addWall(-16.7, -14.3, -5.2, -4.2, 8.2, 8.8, { kind: 'furniture', tag: 'rolled carpets' });
+  for (let i = 0; i < 3; i++) { const c = B.mesh(G.cyl, 'carpet', -15.5, 8.33 + (i === 2 ? 0.26 : 0), -5.25 + i * 0.32 - (i === 2 ? 0.16 : 0), 0.3, 2.4, 0.3); c.rotation.z = Math.PI / 2; c.updateMatrix(); }
+  P.addWall(-16.7, -14.3, -5.45, -4.45, 8.2, 8.8, { kind: 'furniture', tag: 'rolled carpets' });
   B.furniture('metalDark', 5.0, -5.4, 8.2, 1.4, 0.45, 0.7, 'tin bath');
   B.furniture('wood', 14.5, 4.6, 8.2, 1.2, 0.8, 0.65, 'broken cot');
   B.furniture('iron', 15.5, -5.0, 8.2, 1.9, 0.5, 0.9, 'servant bed');

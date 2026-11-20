@@ -433,7 +433,7 @@ class Synth {
     // an open window lets the weather in
     let winIn = 0;
     for (const w of game.openWindows || []) winIn = Math.max(winIn, near({ x: w.x, y: w.y, z: w.z }, 9));
-    const wet = 1 - (game.weather ? game.weather.clear : 0);
+    const wet = game.weather ? game.weather.rain * (1 - game.weather.clear) : 1;
     this.set('rain', storm ? wet * 0.2 * out + (zone === 'house' && p.y > 7.5 ? 0.15 : 0) + winIn * 0.22 : 0);
     this.set('rainLow', storm ? wet * 0.25 * out : 0);
     this.set('wind', storm ? 0.12 * out + 0.04 + winIn * 0.1 : 0.02);

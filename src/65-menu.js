@@ -10,7 +10,7 @@
 const BM = window.BM;
 
 const KEY = 'blackthorn-manor-settings';
-const DEFAULTS = { sens: 1.0, invert: false, volume: 0.8, quality: 'auto', fov: 70, showObjective: true };
+const DEFAULTS = { sens: 1.0, invert: false, volume: 0.8, quality: 'auto', fov: 70, showObjective: true, brightness: 1.0, night: 'storm' };
 const QUALITY = ['auto', 'low', 'medium', 'high'];
 
 function load() {
@@ -50,26 +50,27 @@ class Menu {
       <div class="row"><label>Mouse sensitivity</label><input id="m-sens" type="range" min="0.2" max="3" step="0.05"><span class="v" id="m-sens-v"></span></div>
       <div class="row"><label>Invert mouse</label><input id="m-invert" type="checkbox"><span></span></div>
       <div class="row"><label>Volume</label><input id="m-vol" type="range" min="0" max="1" step="0.05"><span class="v" id="m-vol-v"></span></div>
+      <div class="row"><label>Brightness</label><input id="m-bright" type="range" min="0.6" max="1.8" step="0.05"><span class="v" id="m-bright-v"></span></div>
       <div class="row"><label>Field of view</label><input id="m-fov" type="range" min="55" max="95" step="1"><span class="v" id="m-fov-v"></span></div>
       <div class="row"><label>Graphics</label><select id="m-q">${QUALITY.map(q => `<option value="${q}">${q[0].toUpperCase() + q.slice(1)}</option>`).join('')}</select><span></span></div>
       <div class="row"><label>Show objective</label><input id="m-subs" type="checkbox"><span></span></div>
       <div class="btns"><button class="main" id="m-resume">Resume</button><button id="m-restart">Start again</button></div>
-      <div class="keys"><b>Mouse</b> look · <b>Click</b> capture mouse<br><b>W A S D</b> move · <b>Shift</b> run<br><b>← →</b> turn · <b>R / F</b> look up / down<br><b>Space</b> jump · <b>E</b> use, open, read<br><b>T</b> torch · <b>P</b> phone and notes<br><b>L</b> lighting panel · <b>O / I</b> master switches<br><b>1 – 0</b> estate lights · <b>Esc</b> pause</div>
+      <div class="keys"><b>Mouse</b> look · <b>Click</b> capture mouse<br><b>W A S D</b> move · <b>Shift</b> run<br><b>← →</b> turn · <b>R / F</b> look up / down<br><b>Space</b> jump · <b>E</b> use, open, read<br><b>T</b> torch · <b>P</b> phone and notes<br><b>L</b> lighting panel · <b>Tab</b> click it<br><b>O / I</b> master switches<br><b>1 – 0 - = [ ]</b> estate lights<br><b>H</b> all the controls · <b>Esc</b> pause</div>
     </div>`;
     document.body.appendChild(el);
     const hint = this.hint = document.createElement('div'); hint.id = 'clickhint'; hint.textContent = 'Click to look around with the mouse'; document.body.appendChild(hint);
     const $ = id => document.getElementById(id);
-    this.inputs = { sens: $('m-sens'), invert: $('m-invert'), vol: $('m-vol'), fov: $('m-fov'), q: $('m-q'), subs: $('m-subs') };
+    this.inputs = { sens: $('m-sens'), invert: $('m-invert'), vol: $('m-vol'), fov: $('m-fov'), q: $('m-q'), subs: $('m-subs'), bright: $('m-bright') };
     const I = this.inputs;
     const sync = () => {
       const s = this.settings;
-      I.sens.value = s.sens; I.invert.checked = s.invert; I.vol.value = s.volume; I.fov.value = s.fov; I.q.value = s.quality; I.subs.checked = s.showObjective;
+      I.bright.value = s.brightness; $('m-bright-v').textContent = Math.round(s.brightness * 100) + '%'; I.sens.value = s.sens; I.invert.checked = s.invert; I.vol.value = s.volume; I.fov.value = s.fov; I.q.value = s.quality; I.subs.checked = s.showObjective;
       $('m-sens-v').textContent = (+s.sens).toFixed(2); $('m-vol-v').textContent = Math.round(s.volume * 100) + '%'; $('m-fov-v').textContent = s.fov + '°';
     };
     this.sync = sync; sync();
     const change = () => {
       const s = this.settings;
-      s.sens = +I.sens.value; s.invert = I.invert.checked; s.volume = +I.vol.value; s.fov = +I.fov.value; s.quality = I.q.value; s.showObjective = I.subs.checked;
+      s.brightness = +I.bright.value; s.sens = +I.sens.value; s.invert = I.invert.checked; s.volume = +I.vol.value; s.fov = +I.fov.value; s.quality = I.q.value; s.showObjective = I.subs.checked;
       save(s); sync(); this.apply();
     };
     for (const k in I) { I[k].addEventListener('input', change); I[k].addEventListener('change', change); }
@@ -94,8 +95,10 @@ class Menu {
   lock() { const c = this.game.renderer && this.game.renderer.domElement; if (c && c.requestPointerLock && !this.locked) { try { const r = c.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (e) { /* not allowed here */ } } }
   unlock() { if (typeof document !== 'undefined' && document.exitPointerLock && this.locked) document.exitPointerLock(); }
   /* push the settings into the game */
+  save() { save(this.settings); }
   apply() {
     const g = this.game, s = this.settings;
+    if (g.renderer && g.renderer.domElement && g.renderer.domElement.style) g.renderer.domElement.style.filter = Math.abs(s.brightness - 1) < 0.01 ? '' : 'brightness(' + s.brightness + ')';
     if (g.audio && g.audio.master) g.audio.master.gain.value = s.volume;
     if (g.audio) g.audio.volume = s.volume;
     if (g.camera && g.camera.fov !== s.fov) { g.camera.fov = s.fov; g.camera.updateProjectionMatrix(); }

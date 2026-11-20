@@ -85,7 +85,7 @@ class UI {
     this.el.reader.style.display = 'block';
   }
   close() {
-    this.el.reader.style.display = 'none'; this.el.panel.style.display = 'none'; this.el.phone.style.display = 'none';
+    this.el.reader.style.display = 'none'; this.el.panel.style.display = 'none'; this.el.phone.style.display = 'none'; this.el.panelBody.style.fontSize = '';
     const was = this.mode; this.mode = null;
     if (was === 'lights') { this.lightsT = 0; this.lightsHtml = ''; this.renderLights(); if (this.game.menu) this.game.menu.lock(); }
     if (was === 'read' && this.game.onReadClosed) this.game.onReadClosed();
@@ -113,6 +113,22 @@ class UI {
     }).join('');
     this.el.panelBody.innerHTML = rows + `<div class="row"><span class="key">A</span><span>ALL ON / ALL OFF</span><span></span><span></span></div>` +
       `<div class="hint">${grid.lodge ? 'Lodge supply: ON.' : 'Lodge supply: OFF. Throw the main switch first.'}<br>1–0, - = [ ] to switch a group · A for everything · E to close</div>`;
+  }
+  /* H: every control on one card */
+  help() {
+    this.mode = 'help'; this.el.panel.style.display = 'block';
+    this.el.panelTitle.textContent = 'CONTROLS';
+    const g = this.game, row = (k, t) => `<div style="display:flex;gap:12px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.06)"><span class="key" style="flex:0 0 5.2em">${k}</span><span>${t}</span></div>`;
+    const estate = g.estateGroups.map(([k], i) => `${BM.ESTATE_KEY_LABELS[i]} ${({ street: 'Street', gate: 'Gate', flood: 'Floodlights', drive: 'Drive', garden: 'Garden', pool: 'Pool', pond: 'Pond', garage: 'Coach house', shed: 'Shed', cemetery: 'Chapel', glasshouse: 'Glass house', lake: 'Lake', stables: 'Stables', folly: 'Folly' })[k] || k}`).join(' · ');
+    this.el.panelBody.style.fontSize = '13px';
+    this.el.panelBody.innerHTML =
+      row('Mouse', 'look round (click the view to capture the mouse)') + row('W A S D', 'move · Shift to run · Space to jump') +
+      row('← → R F', 'turn, look up and down without a mouse') + row('E', 'use, open, read, climb, row') +
+      row('T', 'torch on and off') + row('P', 'your phone: notes, photos of documents, Eleanor\'s trail') +
+      row('L', 'show or hide the lighting panel') + row('Tab', 'free the mouse to click the lighting panel (↑ ↓ Enter work too)') +
+      row('O / I', 'outside and inside master switches') + `<div class="hint" style="margin:6px 0 4px">Estate lights, from anywhere once the lodge supply is on:<br>${estate}</div>` +
+      row('Esc', 'pause, settings, brightness') + row('H', 'this card') +
+      '<div class="hint">H, Esc or E to close</div>';
   }
   phone() {
     if (this.mode === 'phone') { this.close(); return; }
@@ -245,6 +261,7 @@ class Game {
     BM.buildBilliards(this.B, this);
     BM.buildIcehouse(this.B, this);
     BM.buildWild(this.B, this);
+    BM.buildHouseTouches(this.B, this);
     BM.buildGlimpses(this.B, this);
     this.interactables = this.B.interactables;
     this.byId = {};
@@ -307,7 +324,11 @@ class Game {
       const p = this.player;
       if (Math.hypot(a.pos.x - p.x, a.pos.z - p.z) < 10 && Math.abs(a.pos.y - p.y) < 3) this.ui.say('The ' + a.name.toLowerCase() + ' rumbles to the boil and clicks itself off.');
     });
-    ev.on('power:trip', () => { this.fx.strike(true); this.audio.clunk(); this.ui.say('A white crack of lightning, right overhead — and every light in the house goes out.', 6); });
+    ev.on('power:trip', () => {
+      this.audio.clunk();
+      if (!this.night || this.night === 'storm') { this.fx.strike(true); this.ui.say('A white crack of lightning, right overhead — and every light in the house goes out.', 6); }
+      else { this.audio.bang && this.audio.bang(0.5); this.ui.say('Somewhere in the walls the old wiring cracks like a gunshot — and every light in the house goes out.', 6); }
+    });
     ev.on('power:main', e => { this.audio.lever(); this.ui.say(e.reset ? 'MAIN goes back up with a clunk. The house comes back on around you.' : 'MAIN. A deep clunk through the walls, then fittings all over the house begin to stutter into life.', 6); });
   }
 
@@ -601,6 +622,7 @@ class Game {
     this.keys[code] = true;
     const ui = this.ui;
     if (ui.mode === 'title') {
+      { const i = ['Digit1', 'Digit2', 'Digit3'].indexOf(code); if (i >= 0) { this.chooseNight(['storm', 'fog', 'clear'][i]); return; } }
       // with a night saved, only a deliberate key starts again: Enter or C continues, N begins a new night
       if (BM.Save && BM.Save.has()) { if (code === 'Enter' || code === 'KeyC') this.continueGame(); else if (code === 'KeyN') this.begin(); return; }
       this.begin(); return;
@@ -638,6 +660,8 @@ class Game {
     }
     if (code === 'Tab' && !ui.mode) { ui.openLights(); return; }
     if (code === 'Escape' && !ui.mode && this.menu) { this.menu.pause(); return; }
+    if (ui.mode === 'help') { if (code === 'KeyH' || code === 'Escape' || code === 'KeyE' || code === 'Enter') ui.close(); return; }
+    if (code === 'KeyH' && !ui.mode) { ui.help(); return; }
     if (code === 'KeyP') { ui.phone(); return; }
     if (code === 'KeyL') { ui.lightsVisible = !ui.lightsVisible; ui.lightsT = 0; return; }
     if (code === 'KeyO' && !ui.mode) { this.masterOutside(); ui.lightsT = 0; return; }
@@ -650,11 +674,19 @@ class Game {
     if (code === 'Space' && this.player.grounded && !this.climbing) { this.player.vy = 4.3; this.player.grounded = false; }
   }
   keyUp(code) { this.keys[code] = false; }
+  /* the night to play: chosen on the title screen, remembered for next time */
+  chooseNight(n) {
+    this.chosenNight = n;
+    if (this.menu) { this.menu.settings.night = n; this.menu.save && this.menu.save(); }
+    if (typeof document !== 'undefined') for (const b of document.querySelectorAll('#title .night button')) b.classList.toggle('on', b.dataset.n === n);
+    const d = typeof document !== 'undefined' && document.getElementById('night-blurb'); if (d) d.textContent = BM.NIGHTS[n].blurb;
+  }
   begin() {
     if (BM.Save) BM.Save.clear();
     this.ui.mode = null;
     if (this.ui.el.title) this.ui.el.title.style.display = 'none';
     this.audio.start();
+    BM.applyNight(this, this.chosenNight || (this.menu && this.menu.settings.night) || 'storm');
     this.intro = new BM.Intro(this); // your car arrives; when it dies, you walk
     if (this.menu) this.menu.lock();
   }
@@ -667,6 +699,7 @@ class Game {
     this.audio.start();
     this.intro = new BM.Intro(this); this.intro.skip();
     BM.Save.restore(this, s);
+    BM.applyNight(this, this.story.night || 'storm');
     this.ui.say('You pick up where you left off.', 3);
     if (this.menu) this.menu.lock();
   }
@@ -675,7 +708,7 @@ class Game {
   update(dt) {
     this.time += dt; this.clock += dt;
     const p = this.player;
-    const frozen = this.ui.mode === 'read' || this.ui.mode === 'fuse' || this.ui.mode === 'estate' || this.ui.mode === 'lights' || this.ui.mode === 'title' || this.ui.mode === 'ending';
+    const frozen = this.ui.mode === 'read' || this.ui.mode === 'fuse' || this.ui.mode === 'estate' || this.ui.mode === 'lights' || this.ui.mode === 'help' || this.ui.mode === 'title' || this.ui.mode === 'ending';
     if (this.intro) this.intro.update(dt);
     else if (this.outro) this.updateOutro(dt);
     else if (this.climbing) this.updateClimb(dt);
@@ -804,6 +837,7 @@ class Game {
     BM.updateBilliards(this);
     BM.updateIcehouse(this, dt);
     BM.updateWild(this, dt, this.time);
+    BM.updateHouseTouches(this, dt, this.time);
     BM.updateSave(this, dt);
     BM.updateGlimpses(this, dt);
     BM.updateChapel(this, dt, this.time);
@@ -1057,6 +1091,13 @@ BM.boot = function (opts) {
   if (title) {
     // a saved night: Continue, or a new one; otherwise a click anywhere begins
     const keys = title.querySelector('.keys'), saved = BM.Save && BM.Save.has();
+    // which night: the storm, fog, or a clear moonlit one
+    const nb = document.createElement('div'); nb.className = 'night';
+    nb.innerHTML = '<span>Choose the night:</span>' + Object.keys(BM.NIGHTS).map((n, i) => `<button data-n="${n}">${i + 1} · ${BM.NIGHTS[n].name}</button>`).join('') + '<div id="night-blurb"></div>';
+    title.insertBefore(nb, keys);
+    for (const b of nb.querySelectorAll('button')) b.addEventListener('click', e => { e.stopPropagation(); game.chooseNight(b.dataset.n); });
+    nb.addEventListener('click', e => e.stopPropagation());
+    game.chooseNight((game.menu && game.menu.settings.night) || 'storm');
     if (saved) {
       const b = document.createElement('div'); b.className = 'title-btns';
       b.innerHTML = '<button id="t-continue">Continue</button><button id="t-new">New game</button>';

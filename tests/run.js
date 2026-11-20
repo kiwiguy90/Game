@@ -867,6 +867,12 @@ suite('eleanor', () => {
   // the ice house: down in the dark, the trunk her mother packed
   { const it = game.byId['icehouse-case']; game.standAt(it); assert(game.pick() === it, 'the trunk in the ice house can be read'); game.interact(); game.ui.close(); game.update(1 / 30);
     assert(game.story.iceSecret, 'the ice house secret is found'); }
+  // on the way out the storm blows itself out and the moon comes up
+  game.gates.escaping = true;
+  for (let i = 0; i < 30 * 60; i++) game.update(1 / 30);
+  assert(game.weather.clear === 1 && !game.storm, 'the storm blows out');
+  game.teleport(0, 0, 40, 0); game.frame(1 / 60, 16);
+  assert(game.weather.moon.visible && game.weather.stars.visible && game.frameErrors === 0, 'moon and stars outside');
   game.endGame();
   assert(/ice house/.test(game.ui.el.endingText.textContent), 'the ending remembers the trunk');
   assert(/all seven of her places/.test(game.ui.el.endingText.textContent) && /Somebody saw/.test(game.ui.el.endingText.textContent), 'the ending remembers');

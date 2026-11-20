@@ -244,6 +244,7 @@ class Game {
     BM.buildLife(this.B, this);
     BM.buildBilliards(this.B, this);
     BM.buildIcehouse(this.B, this);
+    BM.buildWild(this.B, this);
     BM.buildGlimpses(this.B, this);
     this.interactables = this.B.interactables;
     this.byId = {};
@@ -802,6 +803,7 @@ class Game {
     BM.updateLife(this, dt, this.time);
     BM.updateBilliards(this);
     BM.updateIcehouse(this, dt);
+    BM.updateWild(this, dt, this.time);
     BM.updateSave(this, dt);
     BM.updateGlimpses(this, dt);
     BM.updateChapel(this, dt, this.time);

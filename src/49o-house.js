@@ -56,7 +56,7 @@ BM.buildHouseTouches = function (B, game) {
   const P = B.phys;
   /* ======================= ELEANOR'S ROOM ======================= */
   B.zone = 'mansion'; B.levelName = 'attic'; B.room = "eleanor's attic";
-  const Y = 8.2, X0 = -17.8, XP = -7.5, ZN = -4.2, ZS = 2.7, TOP = 10.4;   // (the front gable's roof comes down into the attic just south of here)
+  const Y = 8.2, X0 = -17.8, XP = -7.5, ZN = -4.2, ZS = 2.7, TOP = 10.65;   // (the front gable's roof comes down into the attic just south of here)
   const BOARD = { t: 0.08, mat: 'boards', y0: Y, y1: TOP };
   B.wall('x', ZS, X0, XP, BOARD);
   B.wall('x', ZN, X0, XP, BOARD);
@@ -81,6 +81,14 @@ BM.buildHouseTouches = function (B, game) {
   // one bare bulb, on its own switch inside the door
   B.fixture({ id: 'eleanor-attic-bulb', name: "Eleanor's bulb", circuit: 'attic', style: 'cage', pos: [-13.0, 10.1, 0.4], colour: 0xffc070, target: 0.9, range: 7 });
   B.lightSwitch('sw-eleanor-attic', "Eleanor's room light", [XP - 0.06, Y + 1.4, 0.6], [-1, 0], ['eleanor-attic-bulb']);
+
+  /* the two front gables come down into the attic: board them off as low eaves box-rooms */
+  B.room = 'attic';
+  const EAV = { t: 0.08, mat: 'boards', y0: Y, y1: 10.7 };
+  B.wall('x', ZS, XP, -6.9, EAV); B.wall('z', -6.9, ZS, 6.2, EAV);
+  B.wall('x', 3.6, 6.9, 15.3, EAV); B.wall('z', 6.9, 3.6, 6.2, EAV); B.wall('z', 15.3, 3.6, 6.2, EAV);
+  B.box('darkWood', 11.1, Y + 0.9, 3.55, 0.7, 1.2, 0.04); B.box('iron', 11.38, Y + 0.95, 3.52, 0.03, 0.12, 0.02);   // a low cupboard door into the eaves, nailed shut
+  for (const x of [10.85, 11.35]) B.box('iron', x, Y + 1.3, 3.52, 0.25, 0.03, 0.02);
 
   /* ======================= THE BELL BOARD ======================= */
   B.levelName = 'ground'; B.room = 'kitchen';

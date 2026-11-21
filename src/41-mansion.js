@@ -207,7 +207,7 @@ BM.buildMansion = function (B, game) {
   B.fixture({ id: 'lobby-pendant', name: 'Stair hall light', circuit: 'ground', style: 'pendant', pos: [0, 3.2, -3.5], ceiling: 4, colour: 0xffc786, target: 1.2, range: 9 });
   B.fixture({ id: 'corridor-w', name: 'Stair hall light', circuit: 'ground', style: 'pendant', pos: [-3, 3.3, -8.5], ceiling: 4, colour: 0xffc786, target: 0.9, range: 7, blink: 0.25 });
   B.fixture({ id: 'corridor-e', name: 'Cellar stair light', circuit: 'ground', style: 'pendant', pos: [2.5, 3.3, -9.2], ceiling: 4, colour: 0xffc786, target: 0.9, range: 7 });
-  roomSwitch('sw-corridor', 'Stair hall lights', [-2.2, 1.4, -0.25], [0, -1], ['lobby-pendant', 'corridor-w', 'corridor-e']);
+  roomSwitch('sw-corridor', 'Stair hall lights', [-2.2, 1.4, -0.25], [0, -1], ['lobby-pendant', 'corridor-w', 'corridor-e', 'stairhall-lamp']);
   // the cellar stairs: a straight flight down along the back wall, from a landing in the south-east corner
   P.ramp(-2.4, 3.6, -11.8, -10.0, 'x', -3.2, 0, -3.2, 'cellar stairs');
   for (let i = 0; i < 16; i++) { const x = 3.6 - (i + 0.5) * 6.0 / 16, top = -3.2 * (i + 1) / 16; B.boxE('wood', x - 0.19, x + 0.19, -3.2, top + 0.02, -11.8, -10.0); B.boxE('stone', x - 0.19, x + 0.19, top, top + 0.025, -11.78, -10.02); }
@@ -228,7 +228,8 @@ BM.buildMansion = function (B, game) {
   B.furniture('metalDark', -13.5, -9.6, 0, 0.8, 0.95, 3.4, 'range');
   B.furniture('white', -11, -11.45, 0, 2.4, 0.9, 0.6, 'sink unit');
   B.furniture('wood', -6.45, -9.6, 0, 0.5, 2.0, 2.4, 'dresser');
-  B.fixture({ id: 'kitchen-tube', name: 'Kitchen tube', circuit: 'ground', kind: 'fluorescent', style: 'tube', pos: [-10, 3.9, -8], colour: 0xeaf4ff, target: 1.8, range: 10, flicker: 0.25 });
+  for (const dx of [-0.55, 0.55]) B.box('white', -10 + dx, 3.8, -8, 0.02, 0.36, 0.02);   // the tube hangs on two drop-rods
+  B.fixture({ id: 'kitchen-tube', name: 'Kitchen tube', circuit: 'ground', kind: 'fluorescent', style: 'tube', pos: [-10, 3.58, -8], colour: 0xeaf4ff, target: 1.8, range: 10, flicker: 0.25 });
   roomSwitch('sw-kitchen', 'Kitchen light', [-6.25, 1.4, -5.4], [-1, 0], ['kitchen-tube']);
   const radio1Box = B.box('wood', -11.1, 1.05, -8.2, 0.42, 0.28, 0.22);
   const radio1Dial = B.box(BM.Own(0x221608), -11.1, 1.07, -8.08, 0.3, 0.08, 0.02); radio1Dial.userData.dynamic = true;
@@ -241,7 +242,8 @@ BM.buildMansion = function (B, game) {
   B.room = 'pantry';
   B.furniture('wood', -16.0, -4.45, 0, 3.6, 2.2, 0.5, 'pantry shelves');
   for (let i = 0; i < 12; i++) B.mesh(G.cyl, i % 3 ? 'porcelain' : 'brick', -17.4 + (i % 6) * 0.55, 1.2 + Math.floor(i / 6) * 0.6, -4.5, 0.18, 0.25, 0.18);
-  B.fixture({ id: 'pantry-tube', name: 'Pantry tube', circuit: 'ground', kind: 'fluorescent', style: 'tube', pos: [-16, 3.9, -8], colour: 0xeaf4ff, target: 1.3, range: 7, len: 1.2 });
+  for (const dx of [-0.45, 0.45]) B.box('white', -16 + dx, 3.82, -8, 0.02, 0.32, 0.02);
+  B.fixture({ id: 'pantry-tube', name: 'Pantry tube', circuit: 'ground', kind: 'fluorescent', style: 'tube', pos: [-16, 3.62, -8], colour: 0xeaf4ff, target: 1.3, range: 7, len: 1.2 });
   B.interactable({
     id: 'fuse-board', label: 'Fuse board', pos: [-14.3, 1.75, -8.0], n: [-1, 0], kind: 'control', approachDist: 0.95,
     act: g => g.ui.openFuseBoard(),
@@ -433,7 +435,7 @@ BM.buildMansion = function (B, game) {
   // hatch surround
   B.boxE('darkWood', -4.1, -2.9, 8.2, 8.3, -5.3, -4.2);
   // trunks, dress form, rocking chair
-  B.furniture('wood', -13, 3.2, 8.2, 1.2, 0.6, 0.7, 'trunk');
+  B.furniture('wood', -12.4, 2.15, 8.2, 1.2, 0.6, 0.7, 'trunk');
   B.furniture('darkWood', 13.5, -2.5, 8.2, 1.0, 0.7, 0.7, 'trunk');
   B.furniture('wood', 6.0, 3.8, 8.2, 1.4, 0.5, 0.8, 'tea chest');
   B.furniture('fabricCream', -6.0, 3.0, 8.2, 0.5, 1.6, 0.5, 'dress form');
@@ -470,7 +472,7 @@ BM.buildMansion = function (B, game) {
   B.fixture({ id: 'cellar-2', name: 'Cellar bulb', circuit: 'cellar', style: 'cage', pos: [0, -0.6, -6], colour: 0xffbb70, target: 1.0, range: 8 });
   B.fixture({ id: 'cellar-3', name: 'Cellar bulb', circuit: 'cellar', style: 'cage', pos: [12, -0.6, -5], colour: 0xffbb70, target: 0.9, range: 7, dead: true });
   B.fixture({ id: 'cellar-4', name: 'Cellar bulb', circuit: 'cellar', style: 'cage', pos: [12, -0.6, -1], colour: 0xffbb70, target: 0.8, range: 7 });
-  roomSwitch('sw-cellar', 'Cellar lights', [17.75, -1.8, -9.2], [-1, 0], ['cellar-1', 'cellar-2', 'cellar-3', 'cellar-4']);
+  roomSwitch('sw-cellar', 'Cellar lights', [17.75, -1.8, -9.2], [-1, 0], ['cellar-1', 'cellar-2', 'cellar-3', 'cellar-4', 'cellar-5']);
   // a coal heap, and the gate motor's cable running up the wall from the box by the boiler
   B.mesh(G.lowSphere, 'black', 8, CY + 0.35, -10.5, 2.6, 0.9, 2.2);
   B.box('metalDark', 17.78, CY + 1.6, -5.5, 0.04, 3.2, 0.06);

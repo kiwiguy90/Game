@@ -149,8 +149,9 @@ BM.buildCoachHouse = function (B, game) {
     });
   }
   // the garage lights, on the estate panel, and a switch by the doors
-  B.fixture({ id: 'garage-tube', name: 'Garage tube', circuit: 'lodge', on: false, kind: 'fluorescent', style: 'tube', pos: [G1, 2.85, -1.2], colour: 0xe6f2ff, target: 1.6, range: 10, ry: Math.PI / 2, len: 1.6 });
-  B.fixture({ id: 'garage-tube-2', name: 'Garage tube', circuit: 'lodge', on: false, kind: 'fluorescent', style: 'tube', pos: [G2, 2.85, -1.2], colour: 0xe6f2ff, target: 1.5, range: 10, ry: Math.PI / 2, len: 1.6 });
+  for (const gx of [G1, G2]) for (const dz of [-0.6, 0.6]) B.box('white', gx, 2.84, -1.2 + dz, 0.02, 0.3, 0.02);
+  B.fixture({ id: 'garage-tube', name: 'Garage tube', circuit: 'lodge', on: false, kind: 'fluorescent', style: 'tube', pos: [G1, 2.66, -1.2], colour: 0xe6f2ff, target: 1.6, range: 10, ry: Math.PI / 2, len: 1.6 });
+  B.fixture({ id: 'garage-tube-2', name: 'Garage tube', circuit: 'lodge', on: false, kind: 'fluorescent', style: 'tube', pos: [G2, 2.66, -1.2], colour: 0xe6f2ff, target: 1.5, range: 10, ry: Math.PI / 2, len: 1.6 });
   B.fixture({ id: 'garage-lantern', name: 'Garage lantern', circuit: 'lodge', on: false, kind: 'incandescent', style: 'lantern', pos: [(G1 + G2) / 2, 2.5, 4.3], nz: 1, colour: 0xffb866, target: 0.9, range: 7 });
   B.fixture({ id: 'annexe-lantern', name: 'Annexe lantern', circuit: 'lodge', on: false, kind: 'incandescent', style: 'lantern', pos: [45.9, 2.3, 4.3], nz: 1, colour: 0xffb866, target: 0.8, range: 6 });
   B.fixture({ id: 'garage-side-lamp', name: 'Garage side lamp', circuit: 'lodge', on: false, kind: 'incandescent', style: 'lantern', pos: [x0 - 0.3, 2.4, -1.9], nx: -1, colour: 0xffb866, target: 0.7, range: 6 });

@@ -263,6 +263,7 @@ class Game {
     BM.buildIcehouse(this.B, this);
     BM.buildWild(this.B, this);
     BM.buildHouseTouches(this.B, this);
+    BM.buildPolish(this.B, this);
     this.map = new BM.EstateMap(this);
     BM.buildGlimpses(this.B, this);
     this.interactables = this.B.interactables;

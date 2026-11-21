@@ -153,13 +153,20 @@ BM.buildFurnishings = function (B, game) {
   // copper pans on the wall above the range, largest to smallest
   for (let i = 0; i < 6; i++) { const r = 0.32 - i * 0.035, z = -11.0 + i * 0.55; const p = B.mesh(G.cyl, 'brass', -13.84, 1.75, z, r, 0.07, r); p.rotation.z = Math.PI / 2; p.updateMatrix(); B.box('brass', -13.84, 1.75 + r / 2 + 0.08, z, 0.02, 0.18, 0.025); }
   B.box('iron', -13.86, 2.0, -9.6, 0.02, 0.02, 3.4);
-  // the bells board high over the corridor door, every room on it
-  B.box('darkWood', -8.6, 2.75, -4.12, 1.6, 0.42, 0.04);
-  ['DINING', 'DRAWING', 'LIBRARY', 'SITTING', 'BED 1', 'BED 2', 'MISS E.', 'NURSERY'].forEach((t, i) => {
-    const x = -9.25 + (i % 4) * 0.42, y = 2.86 - Math.floor(i / 4) * 0.2;
-    B.mesh(G.cone, 'brass', x, y, -4.16, 0.07, 0.07, 0.07);
-    label(t, x, y - 0.07, -4.15, Math.PI, 0.18, 0.04, { w: 160, h: 40, size: 18, bg: '#e8dcc0' });
-  });
+  // the north wall: a run of base cupboards with a cream worktop, wall cupboards over, the calendar, the bread bin and the scales
+  B.furniture('white', -10.6, -4.43, 0, 3.4, 0.88, 0.62, 'kitchen cabinet');
+  B.boxE('linen', -12.32, -8.88, 0.88, 0.92, -4.76, -4.1);                                                    // the worktop
+  for (let i = 0; i < 4; i++) { const x = -11.9 + i * 0.86;
+    B.boxE('white', x - 0.38, x + 0.38, 2.0, 2.72, -4.46, -4.1);                                             // wall cupboards
+    B.boxE('linen', x - 0.36, x + 0.36, 2.02, 2.7, -4.47, -4.46); B.box('chrome', x + 0.3, 2.12, -4.48, 0.02, 0.08, 0.015); }
+  B.boxE('white', -12.32, -8.88, 2.72, 2.76, -4.48, -4.1);
+  B.mesh(G.cyl, 'garageGreen', -12.0, 1.06, -4.4, 0.36, 0.28, 0.3); B.box('garageGreen', -12.0, 1.21, -4.4, 0.36, 0.04, 0.3);        // the bread bin
+  B.box('chrome', -11.3, 0.96, -4.38, 0.3, 0.08, 0.2); B.mesh(G.cyl, 'chrome', -11.3, 1.06, -4.38, 0.24, 0.04, 0.24);              // the scales
+  B.mesh(G.sphere, 'porcelain', -10.5, 0.98, -4.42, 0.32, 0.16, 0.32);                                                            // a mixing bowl
+  for (let i = 0; i < 4; i++) B.mesh(G.cyl, ['fabricRed', 'porcelain', 'garageGreen', 'brass'][i], -9.95 + i * 0.2, 1.02, -4.33, 0.12, 0.2 - i * 0.02, 0.12);   // the canisters
+  B.box('wood', -9.2, 0.94, -4.42, 0.5, 0.03, 0.34);                                                                           // a bread board
+  label('OCTOBER\n1974\n\n  1  2  3  4  5\n 6  7  8  9 10 11 12\n13 14 15 16 17 18 19\n20 21 ×× ×× ×× ×× ××', -7.4, 1.75, -4.12, Math.PI, 0.36, 0.48, { w: 192, h: 256, size: 15, bg: '#ece4cc' });
+  wallClock(-13.88, 2.55, -6.4, Math.PI / 2, 0.15);
   B.box('wood', -13.0, 1.7, -11.85, 1.1, 0.6, 0.12); for (let i = 0; i < 7; i++) { const p = B.mesh(G.disc, 'porcelain', -13.45 + i * 0.15, 1.72, -11.85, 0.2); p.rotation.x = 0; p.updateMatrix(); } // the plate rack
   label('EGGS\nFLOUR\nCANDLES\nMATCHES', -13.3, 1.5, -4.12, Math.PI, 0.32, 0.4, { w: 160, h: 200, size: 20, bg: '#2a2a2a', fg: '#ddd' }); // the cook's slate
   B.box('black', -11.9, 0.9, -11.45, 0.4, 0.04, 0.3); B.mesh(G.cyl, 'brass', -12.0, 0.98, -11.45, 0.12, 0.14, 0.12); // the scales
@@ -170,6 +177,13 @@ BM.buildFurnishings = function (B, game) {
   for (let i = 0; i < 5; i++) B.mesh(G.cyl, i % 2 ? 'metalDark' : 'flowersRed', -17.4 + i * 0.3, 1.82, -4.45, 0.09, 0.13, 0.09);
   B.furniture('wood', -17.45, -10.6, 0, 0.6, 0.85, 1.6, 'meat safe');
   B.mesh(G.cyl, 'metalDark', -15.0, 0.18, -11.4, 0.3, 0.36, 0.3); B.box('black', -15.6, 0.12, -11.5, 0.12, 0.24, 0.28); B.box('black', -15.8, 0.12, -11.5, 0.12, 0.24, 0.28); // a pail and boots
+  // sacks and crocks under the shelves, onions on a nail, a slate keeping-shelf over the meat safe
+  for (const [x, z, h] of [[-15.2, -11.25, 0.62], [-14.65, -11.3, 0.5], [-15.0, -10.65, 0.55]]) { B.mesh(G.lowSphere, 'linen', x, h / 2, z, 0.5, h, 0.42); B.mesh(G.cyl, 'linen', x, h + 0.02, z, 0.2, 0.1, 0.2); }
+  P.addWall(-15.5, -14.35, -11.55, -10.4, 0, 0.6, { kind: 'furniture', tag: 'sacks' });
+  for (let i = 0; i < 4; i++) { B.mesh(G.cyl, 'porcelain', -17.5 + i * 0.42, 0.2, -5.05, 0.3, 0.4, 0.3); B.mesh(G.cyl, 'leather', -17.5 + i * 0.42, 0.42, -5.05, 0.31, 0.04, 0.31); }
+  B.boxE('stone', -17.8, -17.0, 1.1, 1.15, -11.6, -9.8);
+  for (let i = 0; i < 6; i++) B.mesh(G.sphere, 'leafLitter', -17.72, 1.45 - i * 0.09, -7.6 + (i % 2) * 0.05, 0.09, 0.08, 0.09);
+  B.box('iron', -17.75, 1.52, -7.6, 0.02, 0.02, 0.1);
   B.box('wood', -17.85, 1.5, -6.2, 0.12, 0.3, 0.6); label('MATCHES', -17.78, 1.5, -6.2, Math.PI / 2, 0.18, 0.05, { w: 128, h: 36, size: 20 });
 
   /* ================= THE BATHROOM ================= */
@@ -292,7 +306,7 @@ BM.buildFurnishings = function (B, game) {
   for (let i = 0; i < 3; i++) { const c = B.mesh(G.cyl, 'carpet', -15.5, 8.33 + (i === 2 ? 0.26 : 0), -5.25 + i * 0.32 - (i === 2 ? 0.16 : 0), 0.3, 2.4, 0.3); c.rotation.z = Math.PI / 2; c.updateMatrix(); }
   P.addWall(-16.7, -14.3, -5.45, -4.45, 8.2, 8.8, { kind: 'furniture', tag: 'rolled carpets' });
   B.furniture('metalDark', 5.0, -5.4, 8.2, 1.4, 0.45, 0.7, 'tin bath');
-  B.furniture('wood', 14.5, 4.6, 8.2, 1.2, 0.8, 0.65, 'broken cot');
+  B.furniture('wood', 14.5, 2.6, 8.2, 1.2, 0.8, 0.65, 'broken cot');
   B.furniture('iron', 15.5, -5.0, 8.2, 1.9, 0.5, 0.9, 'servant bed');
   B.box('linen', 15.5, 8.75, -5.0, 1.8, 0.1, 0.85); B.box('dustSheet', 15.1, 8.82, -5.0, 1.0, 0.05, 0.86);
   label('PREPARE TO\nMEET THY GOD', 17.79, 9.1, -5.0, -Math.PI / 2, 0.42, 0.3, { w: 192, h: 140, size: 22, bg: '#e2d6b4', fg: '#222' });

@@ -187,9 +187,16 @@ BM.buildEstatePlaces = function (B, game) {
     game.tackDoor = B.hingedDoor({ id: 'tack-door', axis: 'x', at: -56.5, c: z1, w: 1.0, h: 2.1, hinge: 'low', swing: -1, mat: 'shutter', panelMat: 'boards', dur: 1.3, sound: 'creak', label: 'the tack room door', wallT: 0.3 });
     B.boxE('boards', x0 + 0.15, -55.1, 0, 0.03, z0 + 0.15, z1 - 0.15);
     for (const z of [-3.0, -1.6, -0.2]) {                                                               // saddles on their racks
-      B.boxE('darkWood', x0 + 0.15, x0 + 0.65, 1.2, 1.26, z - 0.12, z + 0.12);
-      B.mesh(G.sphere, 'leather', x0 + 0.48, 1.38, z, 0.55, 0.28, 0.42);
-      B.boxE('leather', x0 + 0.42, x0 + 0.46, 0.75, 1.3, z - 0.18, z - 0.14);
+      // a saddle horse out from the wall: a ridged rack, the saddle astride it with its skirts and flaps hanging, the stirrups run up
+      B.boxE('darkWood', x0 + 0.15, x0 + 0.75, 1.14, 1.2, z - 0.05, z + 0.05); B.boxE('darkWood', x0 + 0.15, x0 + 0.2, 0.9, 1.2, z - 0.05, z + 0.05);
+      B.mesh(G.sphere, 'leather', x0 + 0.47, 1.26, z, 0.56, 0.16, 0.36);                          // the seat
+      B.mesh(G.sphere, 'leather', x0 + 0.72, 1.31, z, 0.12, 0.14, 0.26);                          // the pommel
+      B.mesh(G.sphere, 'leather', x0 + 0.24, 1.32, z, 0.1, 0.16, 0.32);                           // the cantle
+      for (const s of [-1, 1]) {
+        const f = B.box('leather', x0 + 0.5, 1.02, z + s * 0.2, 0.42, 0.42, 0.02); f.rotation.x = -s * 0.22; f.updateMatrix();   // the flaps
+        B.box('iron', x0 + 0.55, 1.08, z + s * 0.23, 0.1, 0.02, 0.06);                                                      // stirrup irons, run up
+      }
+      B.box('linen', x0 + 0.47, 1.21, z, 0.6, 0.02, 0.5);                                         // the numnah under it
     }
     for (const z of [-3.4, -2.6]) B.boxE('leather', -55.25, -55.12, 1.2, 1.9, z - 0.03, z + 0.03); // bridles on their hooks
     B.furniture('darkWood', -56.4, -3.3, 0, 1.4, 0.55, 0.65, 'tack chest');

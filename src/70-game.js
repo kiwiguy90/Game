@@ -85,7 +85,7 @@ class UI {
     this.el.reader.style.display = 'block';
   }
   close() {
-    this.el.reader.style.display = 'none'; this.el.panel.style.display = 'none'; this.el.phone.style.display = 'none'; this.el.panelBody.style.fontSize = '';
+    this.el.reader.style.display = 'none'; this.el.panel.style.display = 'none'; this.el.phone.style.display = 'none'; this.el.panelBody.style.fontSize = ''; if (this.game.map) this.game.map.close();
     const was = this.mode; this.mode = null;
     if (was === 'lights') { this.lightsT = 0; this.lightsHtml = ''; this.renderLights(); if (this.game.menu) this.game.menu.lock(); }
     if (was === 'read' && this.game.onReadClosed) this.game.onReadClosed();
@@ -124,7 +124,7 @@ class UI {
     this.el.panelBody.innerHTML =
       row('Mouse', 'look round (click the view to capture the mouse)') + row('W A S D', 'move · Shift to run · Space to jump') +
       row('← → R F', 'turn, look up and down without a mouse') + row('E', 'use, open, read, climb, row') +
-      row('T', 'torch on and off') + row('P', 'your phone: notes, photos of documents, Eleanor\'s trail') +
+      row('T', 'torch on and off') + row('P', 'your phone: notes, photos of documents, Eleanor\'s trail') + row('M', 'the estate plan: where you are, where you have been, what is lit') +
       row('L', 'show or hide the lighting panel') + row('Tab', 'free the mouse to click the lighting panel (↑ ↓ Enter work too)') +
       row('O / I', 'outside and inside master switches') + `<div class="hint" style="margin:6px 0 4px">Estate lights, from anywhere once the lodge supply is on:<br>${estate}</div>` +
       row('Esc', 'pause, settings, brightness') + row('H', 'this card') +
@@ -141,6 +141,7 @@ class UI {
       `<div class="ph-h">Photos of documents (${read.size})</div>${docs}` +
       `<div class="ph-h">Eleanor's trail (${BM.ELEANOR_TRAIL.filter(([id]) => read.has(id)).length} / ${BM.ELEANOR_TRAIL.length})</div>` +
       BM.ELEANOR_TRAIL.map(([id, hint]) => read.has(id) ? `<div class="doc">✓ ${(g.byId[id] && g.byId[id].title) || id}</div>` : `<div class="doc" style="opacity:.6">· ${hint}</div>`).join('') +
+      `<div class="ph-h">Map</div><div>The estate plan — press M</div>` +
       `<div class="ph-h">Torch</div><div>${g.player.torch ? 'On' : 'Off'} — press T</div>`;
   }
   fade(v) { this.fadeV = v; if (this.el.fade) this.el.fade.style.opacity = String(v); }
@@ -169,7 +170,7 @@ class UI {
   renderLights() {
     const el = this.el.lights; if (!el) return;
     const active = this.mode === 'lights';
-    const show = (this.lightsVisible || active) && this.mode !== 'title' && this.mode !== 'ending' && !this.game.intro;
+    const show = (this.lightsVisible || active) && this.mode !== 'map' && this.mode !== 'title' && this.mode !== 'ending' && !this.game.intro;
     el.style.display = show ? 'block' : 'none';
     if (!show) return;
     if (el.classList) el.classList.toggle('active', active);
@@ -262,6 +263,7 @@ class Game {
     BM.buildIcehouse(this.B, this);
     BM.buildWild(this.B, this);
     BM.buildHouseTouches(this.B, this);
+    this.map = new BM.EstateMap(this);
     BM.buildGlimpses(this.B, this);
     this.interactables = this.B.interactables;
     this.byId = {};
@@ -660,6 +662,8 @@ class Game {
     }
     if (code === 'Tab' && !ui.mode) { ui.openLights(); return; }
     if (code === 'Escape' && !ui.mode && this.menu) { this.menu.pause(); return; }
+    if (ui.mode === 'map') { if (code === 'KeyM' || code === 'Escape' || code === 'KeyE' || code === 'Enter') ui.close(); return; }
+    if (code === 'KeyM' && (!ui.mode || ui.mode === 'phone')) { if (ui.mode) ui.close(); ui.mode = 'map'; this.map.open(); return; }
     if (ui.mode === 'help') { if (code === 'KeyH' || code === 'Escape' || code === 'KeyE' || code === 'Enter') ui.close(); return; }
     if (code === 'KeyH' && !ui.mode) { ui.help(); return; }
     if (code === 'KeyP') { ui.phone(); return; }
@@ -708,7 +712,7 @@ class Game {
   update(dt) {
     this.time += dt; this.clock += dt;
     const p = this.player;
-    const frozen = this.ui.mode === 'read' || this.ui.mode === 'fuse' || this.ui.mode === 'estate' || this.ui.mode === 'lights' || this.ui.mode === 'help' || this.ui.mode === 'title' || this.ui.mode === 'ending';
+    const frozen = this.ui.mode === 'read' || this.ui.mode === 'fuse' || this.ui.mode === 'estate' || this.ui.mode === 'lights' || this.ui.mode === 'help' || this.ui.mode === 'map' || this.ui.mode === 'title' || this.ui.mode === 'ending';
     if (this.intro) this.intro.update(dt);
     else if (this.outro) this.updateOutro(dt);
     else if (this.climbing) this.updateClimb(dt);
@@ -838,6 +842,7 @@ class Game {
     BM.updateIcehouse(this, dt);
     BM.updateWild(this, dt, this.time);
     BM.updateHouseTouches(this, dt, this.time);
+    BM.updateMap(this, dt);
     BM.updateSave(this, dt);
     BM.updateGlimpses(this, dt);
     BM.updateChapel(this, dt, this.time);

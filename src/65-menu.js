@@ -55,7 +55,7 @@ class Menu {
       <div class="row"><label>Graphics</label><select id="m-q">${QUALITY.map(q => `<option value="${q}">${q[0].toUpperCase() + q.slice(1)}</option>`).join('')}</select><span></span></div>
       <div class="row"><label>Show objective</label><input id="m-subs" type="checkbox"><span></span></div>
       <div class="btns"><button class="main" id="m-resume">Resume</button><button id="m-restart">Start again</button></div>
-      <div class="keys"><b>Mouse</b> look · <b>Click</b> capture mouse<br><b>W A S D</b> move · <b>Shift</b> run<br><b>← →</b> turn · <b>R / F</b> look up / down<br><b>Space</b> jump · <b>E</b> use, open, read<br><b>T</b> torch · <b>P</b> phone and notes<br><b>L</b> lighting panel · <b>Tab</b> click it<br><b>O / I</b> master switches<br><b>1 – 0 - = [ ]</b> estate lights<br><b>H</b> all the controls · <b>Esc</b> pause</div>
+      <div class="keys"><b>Mouse</b> look · <b>Click</b> capture mouse<br><b>W A S D</b> move · <b>Shift</b> run<br><b>← →</b> turn · <b>R / F</b> look up / down<br><b>Space</b> jump · <b>E</b> use, open, read<br><b>T</b> torch · <b>P</b> phone and notes<br><b>L</b> lighting panel · <b>Tab</b> click it<br><b>O / I</b> master switches<br><b>1 – 0 - = [ ]</b> estate lights<br><b>M</b> estate map · <b>H</b> all the controls<br><b>Esc</b> pause</div>
     </div>`;
     document.body.appendChild(el);
     const hint = this.hint = document.createElement('div'); hint.id = 'clickhint'; hint.textContent = 'Click to look around with the mouse'; document.body.appendChild(hint);

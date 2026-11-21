@@ -871,7 +871,13 @@ suite('nights', () => {
   for (const id of ['bell-board', 'attic-drawings', 'attic-tally', 'sw-eleanor-attic']) { const it = game.byId[id]; game.standAt(it); assert(game.pick() === it, id + ' can be used'); }
   const b = game.bellBoard.bells[0]; BM.ringBell(game, b); for (let i = 0; i < 10; i++) game.update(1 / 30);
   assert(b.flag.visible && Math.abs(b.pivot.rotation.x) > 0, 'a bell rings and drops its flag');
-  return 'storm, fog and moonlit nights; the help card; the bells; her room';
+  // M: the estate plan; places tick off as you reach them
+  game.ui.mode = null; game.teleport(-45, 0, -24, 0); for (let i = 0; i < 3; i++) game.update(1 / 30);
+  assert(game.story.visited && game.story.visited.glass, 'the glass house is ticked off when you get there');
+  game.keyDown('KeyM'); assert(game.ui.mode === 'map', 'M opens the map'); for (let i = 0; i < 6; i++) game.update(1 / 30);
+  game.keyDown('KeyM'); assert(game.ui.mode === null && game.frameErrors === 0, 'and closes');
+  game.ui.phone(); game.keyDown('KeyM'); assert(game.ui.mode === 'map', 'the map opens from the phone'); game.ui.close();
+  return 'storm, fog and moonlit nights; the help card; the bells; her room; the map';
 });
 
 suite('eleanor', () => {

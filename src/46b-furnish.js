@@ -306,7 +306,7 @@ BM.buildFurnishings = function (B, game) {
   for (let i = 0; i < 3; i++) { const c = B.mesh(G.cyl, 'carpet', -15.5, 8.33 + (i === 2 ? 0.26 : 0), -5.25 + i * 0.32 - (i === 2 ? 0.16 : 0), 0.3, 2.4, 0.3); c.rotation.z = Math.PI / 2; c.updateMatrix(); }
   P.addWall(-16.7, -14.3, -5.45, -4.45, 8.2, 8.8, { kind: 'furniture', tag: 'rolled carpets' });
   B.furniture('metalDark', 5.0, -5.4, 8.2, 1.4, 0.45, 0.7, 'tin bath');
-  B.furniture('wood', 14.5, 2.6, 8.2, 1.2, 0.8, 0.65, 'broken cot');
+  B.furniture('wood', 14.5, 1.8, 8.2, 1.2, 0.8, 0.65, 'broken cot');
   B.furniture('iron', 15.5, -5.0, 8.2, 1.9, 0.5, 0.9, 'servant bed');
   B.box('linen', 15.5, 8.75, -5.0, 1.8, 0.1, 0.85); B.box('dustSheet', 15.1, 8.82, -5.0, 1.0, 0.05, 0.86);
   label('PREPARE TO\nMEET THY GOD', 17.79, 9.1, -5.0, -Math.PI / 2, 0.42, 0.3, { w: 192, h: 140, size: 22, bg: '#e2d6b4', fg: '#222' });

@@ -4815,7 +4815,7 @@ BM.buildFurnishings = function (B, game) {
   for (let i = 0; i < 3; i++) { const c = B.mesh(G.cyl, 'carpet', -15.5, 8.33 + (i === 2 ? 0.26 : 0), -5.25 + i * 0.32 - (i === 2 ? 0.16 : 0), 0.3, 2.4, 0.3); c.rotation.z = Math.PI / 2; c.updateMatrix(); }
   P.addWall(-16.7, -14.3, -5.45, -4.45, 8.2, 8.8, { kind: 'furniture', tag: 'rolled carpets' });
   B.furniture('metalDark', 5.0, -5.4, 8.2, 1.4, 0.45, 0.7, 'tin bath');
-  B.furniture('wood', 14.5, 2.6, 8.2, 1.2, 0.8, 0.65, 'broken cot');
+  B.furniture('wood', 14.5, 1.8, 8.2, 1.2, 0.8, 0.65, 'broken cot');
   B.furniture('iron', 15.5, -5.0, 8.2, 1.9, 0.5, 0.9, 'servant bed');
   B.box('linen', 15.5, 8.75, -5.0, 1.8, 0.1, 0.85); B.box('dustSheet', 15.1, 8.82, -5.0, 1.0, 0.05, 0.86);
   label('PREPARE TO\nMEET THY GOD', 17.79, 9.1, -5.0, -Math.PI / 2, 0.42, 0.3, { w: 192, h: 140, size: 22, bg: '#e2d6b4', fg: '#222' });
@@ -8981,9 +8981,9 @@ BM.buildHouseTouches = function (B, game) {
   B.room = 'attic';
   const EAV = { t: 0.08, mat: 'boards', y0: Y, y1: 10.7 };
   B.wall('x', ZS, XP, -6.9, EAV); B.wall('z', -6.9, ZS, 6.2, EAV);
-  B.wall('x', 3.6, 6.9, 15.3, EAV); B.wall('z', 6.9, 3.6, 6.2, EAV); B.wall('z', 15.3, 3.6, 6.2, EAV);
-  B.box('darkWood', 11.1, Y + 0.9, 3.55, 0.7, 1.2, 0.04); B.box('iron', 11.38, Y + 0.95, 3.52, 0.03, 0.12, 0.02);   // a low cupboard door into the eaves, nailed shut
-  for (const x of [10.85, 11.35]) B.box('iron', x, Y + 1.3, 3.52, 0.25, 0.03, 0.02);
+  B.wall('x', 2.7, 6.9, 17.8, EAV); B.wall('z', 6.9, 2.7, 6.2, EAV);   // closed off right to the gable end: no dead-end pocket behind it
+  B.box('darkWood', 11.1, Y + 0.9, 2.65, 0.7, 1.2, 0.04); B.box('iron', 11.38, Y + 0.95, 2.62, 0.03, 0.12, 0.02);   // a low cupboard door into the eaves, nailed shut
+  for (const x of [10.85, 11.35]) B.box('iron', x, Y + 1.3, 2.62, 0.25, 0.03, 0.02);
 
   /* ======================= THE BELL BOARD ======================= */
   B.levelName = 'ground'; B.room = 'kitchen';
@@ -9340,7 +9340,8 @@ BM.buildPolish = function (B, game) {
   for (const [x, z, y] of [[-7.2, -10.9, 0], [-7.95, -10.9, 0], [-7.55, -10.9, 0.6], [-7.2, -10.1, 0]]) B.solid('wood', x - 0.32, x + 0.32, C + y, C + y + 0.6, z - 0.32, z + 0.32, { kind: 'furniture', tag: 'crate' });
   // the furniture they put down here when the rooms upstairs were shut: shapes under dust sheets
   for (const [x, z, w, d, h] of [[-13.0, -6.2, 2.0, 1.0, 0.95], [-10.4, -2.4, 1.2, 1.2, 1.4], [-14.6, -2.2, 0.9, 0.9, 1.1]]) {
-    B.mesh(G.lowSphere, 'dustSheet', x, C + h / 2, z, w * 1.05, h * 1.05, d * 1.05); B.boxE('dustSheet', x - w / 2, x + w / 2, C, C + h * 0.7, z - d / 2, z + d / 2);
+    // the sheet: a soft rounded top over the shape, falling in a slightly wider skirt to the floor
+    B.mesh(G.sphere, 'dustSheet', x, C, z, w * 1.2, h * 2, d * 1.2);
     P.addWall(x - w / 2, x + w / 2, z - d / 2, z + d / 2, C, C + h, { kind: 'furniture', tag: 'something under a sheet' }); }
   B.fixture({ id: 'cellar-5', name: 'Cellar bulb', circuit: 'cellar', style: 'cage', pos: [-12, -0.6, -9.6], colour: 0xffbb70, target: 0.8, range: 7 });
 

@@ -86,9 +86,9 @@ BM.buildHouseTouches = function (B, game) {
   B.room = 'attic';
   const EAV = { t: 0.08, mat: 'boards', y0: Y, y1: 10.7 };
   B.wall('x', ZS, XP, -6.9, EAV); B.wall('z', -6.9, ZS, 6.2, EAV);
-  B.wall('x', 3.6, 6.9, 15.3, EAV); B.wall('z', 6.9, 3.6, 6.2, EAV); B.wall('z', 15.3, 3.6, 6.2, EAV);
-  B.box('darkWood', 11.1, Y + 0.9, 3.55, 0.7, 1.2, 0.04); B.box('iron', 11.38, Y + 0.95, 3.52, 0.03, 0.12, 0.02);   // a low cupboard door into the eaves, nailed shut
-  for (const x of [10.85, 11.35]) B.box('iron', x, Y + 1.3, 3.52, 0.25, 0.03, 0.02);
+  B.wall('x', 2.7, 6.9, 17.8, EAV); B.wall('z', 6.9, 2.7, 6.2, EAV);   // closed off right to the gable end: no dead-end pocket behind it
+  B.box('darkWood', 11.1, Y + 0.9, 2.65, 0.7, 1.2, 0.04); B.box('iron', 11.38, Y + 0.95, 2.62, 0.03, 0.12, 0.02);   // a low cupboard door into the eaves, nailed shut
+  for (const x of [10.85, 11.35]) B.box('iron', x, Y + 1.3, 2.62, 0.25, 0.03, 0.02);
 
   /* ======================= THE BELL BOARD ======================= */
   B.levelName = 'ground'; B.room = 'kitchen';

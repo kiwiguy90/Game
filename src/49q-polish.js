@@ -112,7 +112,8 @@ BM.buildPolish = function (B, game) {
   for (const [x, z, y] of [[-7.2, -10.9, 0], [-7.95, -10.9, 0], [-7.55, -10.9, 0.6], [-7.2, -10.1, 0]]) B.solid('wood', x - 0.32, x + 0.32, C + y, C + y + 0.6, z - 0.32, z + 0.32, { kind: 'furniture', tag: 'crate' });
   // the furniture they put down here when the rooms upstairs were shut: shapes under dust sheets
   for (const [x, z, w, d, h] of [[-13.0, -6.2, 2.0, 1.0, 0.95], [-10.4, -2.4, 1.2, 1.2, 1.4], [-14.6, -2.2, 0.9, 0.9, 1.1]]) {
-    B.mesh(G.lowSphere, 'dustSheet', x, C + h / 2, z, w * 1.05, h * 1.05, d * 1.05); B.boxE('dustSheet', x - w / 2, x + w / 2, C, C + h * 0.7, z - d / 2, z + d / 2);
+    // the sheet: a soft rounded top over the shape, falling in a slightly wider skirt to the floor
+    B.mesh(G.sphere, 'dustSheet', x, C, z, w * 1.2, h * 2, d * 1.2);
     P.addWall(x - w / 2, x + w / 2, z - d / 2, z + d / 2, C, C + h, { kind: 'furniture', tag: 'something under a sheet' }); }
   B.fixture({ id: 'cellar-5', name: 'Cellar bulb', circuit: 'cellar', style: 'cage', pos: [-12, -0.6, -9.6], colour: 0xffbb70, target: 0.8, range: 7 });
 

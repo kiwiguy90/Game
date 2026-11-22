@@ -726,6 +726,7 @@ suite('controls', () => {
   assert(!fails.length, 'could not do with the controls: ' + fails.join('; '));
   assert(game.story.ended, 'reached the ending with the keyboard alone');
   assert(game.frameErrors === 0, 'frame errors');
+  if (process.env.AP_LOG) require('fs').writeFileSync(process.env.AP_LOG, JSON.stringify(AP.log.filter(e => e.stuck), null, 1));
   return `ending reached by keyboard in ${(AP.frames / 60 / 60).toFixed(1)} game minutes, ${AP.stuck} recoveries from snags`;
 });
 

@@ -113,3 +113,84 @@ weather and time of day; the map; the haunt that undoes your lights.
       record a trailer and store screenshots.
 - [ ] **Packaging** as a desktop app (Windows and Mac) for selling on a
       store such as itch.io or Steam.
+
+## More ideas (second batch)
+
+### Lights and power to play with
+
+- [ ] **A diesel generator** in an outbuilding: pull-start it, it coughs and
+      catches, and the estate runs on it when the mains is down. It runs
+      out of fuel unless you fill it.
+- [ ] **A lighting timer** in the lodge: set groups to come on at dusk and go
+      off at dawn by themselves, with an old clockwork time-switch dial.
+- [ ] **Coloured lights:** a gel box in the attic to change the floodlights
+      to red, green, blue or amber.
+- [ ] **A light-show mode:** at the lodge panel, record a sequence of
+      switches and play it back in time with the radio.
+- [ ] **Motion-sensor lights** on the garage and the stables that click on
+      when something walks past, even when you are not there.
+- [ ] **Search beam on the folly tower** you can sweep across the lake and
+      the woods by hand.
+- [ ] **Fairy lights in the trees** along the drive, and floating lanterns
+      on the lake.
+- [ ] **A power meter** in the cellar whose needle swings as you switch more
+      of the house on, with a way to overload it.
+
+### New places
+
+- [ ] **An observatory** on the roof or the hill, with a telescope that
+      shows the moon and the stars (and once, a lit window that should be
+      dark).
+- [ ] **A treehouse** in the woods, Eleanor's, with her drawings pinned up.
+- [ ] **A doll's house of the manor** in the nursery whose tiny lights copy
+      the real ones you have switched on.
+- [ ] **A darkroom** with a red safelight and photographs that develop as you
+      watch.
+- [ ] **A gazebo / bandstand** on the lawn, strung with bulbs.
+- [ ] **A dovecote, kennels and beehives** for a working-estate feel.
+- [ ] **A windmill or water pump** by the lake that once made the estate's
+      power.
+- [ ] **A train halt** at the end of a disused line through the woods, with
+      a signal lamp you can light.
+
+### Things to do
+
+- [ ] **Puzzles:** a wall safe with a combination found in letters, a
+      fuse-box puzzle in the cellar, a hidden switch behind a painting.
+- [ ] **Keys:** a ring of keys in the lodge, labelled rooms kept locked
+      until you find the right key.
+- [ ] **A camera:** take photographs with an old camera and pin them up in
+      the lodge; sometimes the photo shows something you did not see.
+- [ ] **Fishing from the jetty** and **rowing the boat** yourself.
+- [ ] **Fill the fountain and the pool** by turning on the pumps.
+- [ ] **A gramophone party:** light the ballroom, wind the gramophone and the
+      room seems to fill with dancers for a moment.
+- [ ] **Fireworks** in the boathouse for the end of the game.
+
+### Ways to play
+
+- [ ] **"Caretaker" mode:** no story or scares, just the estate to explore
+      and light at your own pace.
+- [ ] **Speedrun timer** for getting out, with a best time.
+- [ ] **Daily challenge:** a random set of lights to switch on in the
+      fewest steps.
+- [ ] **A hard setting:** fewer matches, the torch runs down, the haunt more
+      often.
+
+### Sound and music
+
+- [ ] **More music:** a quiet piece for each night, a music-box tune in the
+      nursery, the theme on the playable piano.
+- [ ] **Room acoustics:** echoes in the hall and the cellar, muffled sound in
+      the bedrooms, a hollow sound in the ice house.
+- [ ] **A sound for every switch type** (see the Light section above).
+
+### Selling and sharing
+
+- [ ] **A store page kit:** screenshots, a short trailer, a description and
+      a capsule image.
+- [ ] **A free demo** of the first night (the drive, the lodge and the
+      ground floor).
+- [ ] **A feedback button** that copies your settings and position to the
+      clipboard to paste into a bug report.
+- [ ] **A credits screen** and a version number on the title screen.

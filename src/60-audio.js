@@ -160,6 +160,57 @@ class Synth {
     }
     this.burst(this.white, 'bandpass', f * 4, 3, gain * 0.5, 0.001, 0.05, when || 0);
   }
+  /* The theme: a slow, sparse piano in A minor, for the title and the ending. Synthesised: each note a struck
+     string (a few slightly stretched partials, a soft hammer), through a small room. Loops until stopped. */
+  pianoNote(m, when, vel, bus) {
+    const ctx = this.ctx, t = ctx.currentTime + when, f = 440 * Math.pow(2, (m - 69) / 12), D = 2.2 + Math.max(0, (60 - m) * 0.08);
+    for (const [r, a] of [[1, 1], [2, 0.42], [3, 0.18], [4, 0.1], [5, 0.04]]) {
+      const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = f * r * (1 + 0.0004 * r * r);
+      const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vel * a * 0.22), t + 0.006);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + D / Math.sqrt(r));
+      o.connect(g); g.connect(bus); o.start(t); o.stop(t + D + 0.1);
+    }
+    const src = ctx.createBufferSource(); src.buffer = this.brown; const fl = ctx.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = f * 3;
+    const hg = ctx.createGain(); hg.gain.setValueAtTime(vel * 0.05, t); hg.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+    src.connect(fl); fl.connect(hg); hg.connect(bus); src.start(t, Math.random()); src.stop(t + 0.08);
+  }
+  theme(level) {
+    if (!this.ctx || !this.white) return;
+    const ctx = this.ctx;
+    if (!this.themeBus) {
+      // a small room: a darkened feedback echo under the dry piano
+      const bus = this.themeBus = ctx.createGain(), dly = ctx.createDelay(1), fb = ctx.createGain(), lp = ctx.createBiquadFilter(), wet = ctx.createGain();
+      dly.delayTime.value = 0.29; fb.gain.value = 0.42; lp.type = 'lowpass'; lp.frequency.value = 1800; wet.gain.value = 0.5;
+      bus.connect(this.master); bus.connect(dly); dly.connect(lp); lp.connect(fb); fb.connect(dly); lp.connect(wet); wet.connect(this.master);
+    }
+    const bus = this.themeBus, now = ctx.currentTime;
+    bus.gain.cancelScheduledValues(now); bus.gain.setValueAtTime(bus.gain.value, now); bus.gain.linearRampToValueAtTime(level || 0.6, now + 2);
+    if (this.themeOn) return;
+    this.themeOn = true; this.themeAt = now + 0.3;
+    const B = 0.94;                                     // one beat, at 64 to the minute
+    const bass = [45, 41, 48, 43, 45, 50, 40, 45];      // Am  F  C  G  Am  Dm  E  Am
+    const third = [3, 4, 4, 4, 3, 3, 4, 3];
+    const tune = [[[76, 0], [72, 2], [69, 3]], [[72, 0], [69, 2], [65, 3]], [[67, 0], [64, 2], [67, 3]], [[71, 0], [74, 3]],
+                  [[76, 0], [81, 2], [79, 3]], [[77, 0], [74, 2], [69, 3]], [[68, 0], [71, 2], [76, 3]], [[69, 0]]];
+    const pass = () => {
+      if (!this.themeOn) return;
+      const t0 = this.themeAt - ctx.currentTime;
+      for (let bar = 0; bar < 8; bar++) {
+        const b0 = t0 + bar * 4 * B, r = bass[bar];
+        this.pianoNote(r, b0, 0.55, bus); this.pianoNote(r + 7 + 12, b0 + B, 0.28, bus); this.pianoNote(r + third[bar] + 12, b0 + 2 * B, 0.26, bus); this.pianoNote(r + 7 + 12, b0 + 3 * B, 0.22, bus);
+        for (const [m, beat] of tune[bar]) this.pianoNote(m, b0 + beat * B, 0.5 + (beat ? 0 : 0.1), bus);
+      }
+      this.themeAt += 8 * 4 * B + 2 * B;                // a breath between passes
+      this.themeTimer = setTimeout(pass, (this.themeAt - ctx.currentTime - 3) * 1000);
+    };
+    pass();
+  }
+  stopTheme(fade) {
+    if (!this.ctx || !this.themeBus) return;
+    const now = this.ctx.currentTime, g = this.themeBus.gain;
+    g.cancelScheduledValues(now); g.setValueAtTime(g.value, now); g.linearRampToValueAtTime(0, now + (fade || 3));
+    this.themeOn = false; if (this.themeTimer) clearTimeout(this.themeTimer);
+  }
   /* The song on the car radio: a slow seventies ballad in A minor, scheduled a few beats ahead. */
   songUpdate(level) {
     if (!this.ctx || !this.loops.song) return;

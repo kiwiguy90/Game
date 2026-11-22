@@ -554,6 +554,7 @@ class Game {
   }
   endGame() {
     this.story.ended = true;
+    if (this.audio.theme) this.audio.theme(0.7);
     if (BM.Save) BM.Save.clear();
     this.ui.mode = 'ending';
     const text = [
@@ -632,7 +633,7 @@ class Game {
     this.keys[code] = true;
     const ui = this.ui;
     if (ui.mode === 'title') {
-      { const i = ['Digit1', 'Digit2', 'Digit3'].indexOf(code); if (i >= 0) { this.chooseNight(['storm', 'fog', 'clear'][i]); return; } }
+      { const i = ['Digit1', 'Digit2', 'Digit3'].indexOf(code); if (i >= 0) { this.chooseNight(['storm', 'fog', 'clear'][i]); this.audio.start(); this.audio.theme(0.55); return; } }
       // with a night saved, only a deliberate key starts again: Enter or C continues, N begins a new night
       if (BM.Save && BM.Save.has()) { if (code === 'Enter' || code === 'KeyC') this.continueGame(); else if (code === 'KeyN') this.begin(); return; }
       this.begin(); return;
@@ -695,6 +696,7 @@ class Game {
   }
   begin() {
     if (BM.Save) BM.Save.clear();
+    this.audio.stopTheme && this.audio.stopTheme(5);
     this.ui.mode = null;
     if (this.ui.el.title) this.ui.el.title.style.display = 'none';
     this.audio.start();
@@ -707,6 +709,7 @@ class Game {
   /* Go back to a saved night: the arrival is skipped and the world is put back as it was. */
   continueGame() {
     const s = BM.Save && BM.Save.read(); if (!s) { this.begin(); return; }
+    this.audio.stopTheme && this.audio.stopTheme(5);
     this.ui.mode = null;
     if (this.ui.el.title) this.ui.el.title.style.display = 'none';
     this.audio.start();
@@ -1117,7 +1120,7 @@ BM.boot = function (opts) {
     const nb = document.createElement('div'); nb.className = 'night';
     nb.innerHTML = '<span>Choose the night:</span>' + Object.keys(BM.NIGHTS).map((n, i) => `<button data-n="${n}">${i + 1} · ${BM.NIGHTS[n].name}</button>`).join('') + '<div id="night-blurb"></div>';
     title.insertBefore(nb, keys);
-    for (const b of nb.querySelectorAll('button')) b.addEventListener('click', e => { e.stopPropagation(); game.chooseNight(b.dataset.n); });
+    for (const b of nb.querySelectorAll('button')) b.addEventListener('click', e => { e.stopPropagation(); game.chooseNight(b.dataset.n); game.audio.start(); game.audio.theme(0.55); });
     nb.addEventListener('click', e => e.stopPropagation());
     game.chooseNight((game.menu && game.menu.settings.night) || 'storm');
     if (saved) {

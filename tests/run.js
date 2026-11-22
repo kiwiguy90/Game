@@ -911,6 +911,16 @@ suite('nights', () => {
     assert(g5.weather.rain === 1 && g5.fx.nextStrike > 5 && g5.fx.hemi.intensity > 0.4 && !g5.weather.moon.visible && g5.frameErrors === 0, 'a rainy day: rain, no lightning, daylight, no moon');
     BM.applyNight(g5, 'clear'); BM.setTimeOfDay(g5, 'night'); for (let i = 0; i < 30; i++) g5.update(1 / 30); g5.frame(1 / 60, 16);
     assert(g5.weather.moon.visible && g5.fx.hemi.intensity < 0.3, 'and back to a clear night'); }
+  // the house puts itself back: a room you lit, far away, goes dark, and you are told when you come back
+  { const e6 = H.load({ quiet: true }), g6 = e6.game, run = t => { for (let i = 0; i < 30 * t; i++) g6.update(1 / 30); };
+    g6.ui.mode = null; g6.hauntTest = true; g6.grid.setLodge(true); g6.grid.throwMain(); g6.grid.stormHasTripped = true; g6.grid.failureRate = 0;
+    const sw = g6.byId['sw-library']; g6.standAt(sw); g6.interact(); if (!sw.leverOn) g6.interact(); run(2);
+    assert(sw.leverOn, 'the library lit');
+    g6.teleport(-12, 0, -8, 0); for (const d of g6.B.doors) if (d.open) g6.toggleDoor(d); run(3); g6.haunt.next = 0; run(0.2);
+    const ev = g6.haunt.pending[0];
+    assert(g6.haunt.events === 1 && ev, 'while you are in the kitchen, somewhere far off is undone');
+    if (ev.kind === 'light') { const it = g6.interactables.find(i => i.switchVisual && Math.abs(i.pos.x - ev.x) < 0.01 && Math.abs(i.pos.z - ev.z) < 0.01); assert(it && !it.leverOn, 'its switch is down'); }
+    g6.teleport(ev.x, ev.y, ev.z, 0); run(0.5); assert(/dark|shut/.test(g6.ui.lastSay) && !g6.haunt.pending.length, 'and you find out when you get back'); }
   return 'storm, fog and moonlit nights; the help card; the bells; her room; the map';
 });
 

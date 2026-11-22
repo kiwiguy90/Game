@@ -294,7 +294,14 @@ BM.buildCar = function (B, game) {
   for (let i = 0; i < 10; i++) { const m = add(G.lowSphere, flashMat, -0.25, 1.1, -1.3, 0.025, 0.025, 0.025); m.matrixAutoUpdate = true; sparks.push({ m, v: [0, 0, 0] }); }
   // smoke from under the bonnet: a few soft puffs recycled as they rise
   const puffs = [];
-  for (let i = 0; i < 14; i++) { const m = add(G.lowSphere, BM.Basic(0x9a9a98, { transparent: true, opacity: 0, depthWrite: false }), 0, 0.9, -2.0, 0.2, 0.2, 0.2); m.matrixAutoUpdate = true; puffs.push({ m, t: -1, seed: i * 0.37 }); }
+  // (soft round sprites that always face you, fading to nothing at the edges, not faceted balls)
+  const puffTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'); if (!g || !g.createRadialGradient) return null;
+    const gr = g.createRadialGradient(32, 32, 2, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,0.9)'); gr.addColorStop(0.5, 'rgba(255,255,255,0.4)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
+  for (let i = 0; i < 14; i++) {
+    const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: puffTex, color: 0xa8a8a4, transparent: true, opacity: 0, depthWrite: false }));
+    m.position.set(0, 0.9, -2.0); m.scale.setScalar(0.2); m.userData.dynamic = true; car.add(m); puffs.push({ m, t: -1, seed: i * 0.37 });
+  }
 
   car.traverse(o => { o.userData.dynamic = true; });
   for (const w of wipers) w.arm.matrixAutoUpdate = true;

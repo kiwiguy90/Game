@@ -129,8 +129,9 @@ BM.buildGrounds = function (B, game) {
     const r = B.box('roof', -10, L.h + 1.0, 84 + s * 2.2, 9.2, 0.18, 5.2);
     r.rotation.x = s * 0.42; r.updateMatrix();
   }
-  B.box('brick', -10, L.h + 0.9, 80.2, 8.4, 1.8, 0.2);
-  B.box('brick', -10, L.h + 0.9, 87.8, 8.4, 1.8, 0.2);
+  // the gable ends: brick triangles at each end of the ridge (the roof runs along the lane)
+  for (const x of [L.x0 + 0.1, L.x1 - 0.1]) { B.mesh(G.wedge, 'brick', x, L.h + 0.15, 84, 0.3, 1.85, 8.2); }
+  B.box('darkWood', -10, L.h + 2.0, 84, 9.3, 0.12, 0.18);                                       // the ridge board
   B.furniture('darkWood', -8.0, 82.0, 0, 1.6, 0.78, 0.8, 'lodge desk');
   B.furniture('wood', -7.0, 86.6, 0, 0.6, 0.45, 0.6, 'lodge stool');
   const lodgeLamp = B.fixture({ id: 'lodge-lamp', name: 'Lodge lamp', circuit: 'lodge', kind: 'incandescent', style: 'pendant', pos: [-10, 2.5, 84], ceiling: L.h, colour: 0xffc27a, target: 1.4, range: 8 });

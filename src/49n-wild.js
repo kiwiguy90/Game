@@ -137,13 +137,19 @@ BM.updateWild = function (game, dt, t) {
     const T = TIMES[game.timeOfDay] || TIMES.night, overcast = (1 - c) * (game.night === 'clear' ? 0 : 1);
     if (T.mix) { const sky = new THREE.Color(T.sky).lerp(new THREE.Color(T.cloud), overcast * 0.8); BM.FOG.exterior.colour.lerp(sky, T.mix); BM.FOG.exterior.density *= T.dens + (game.night === 'fog' ? 0.6 : 0) * (1 - c); }
     const outside = game.ctx && game.ctx.zone === 'exterior', show = (outside ? Math.max(0, (c - 0.35) / 0.65) : 0) * (T.mix ? 0 : 1);
+    // how much day there is: full at midday, a little at dusk and dawn, less under cloud
+    const day = (game.timeOfDay === 'day' ? 1 : T.mix ? 0.35 : 0) * (1 - overcast * 0.3);
+    game.grid.daylight = day;
+    // indoors by day: the windows let the light in, the rooms are no longer black
+    const H = BM.FOG.house; if (!W.houseBase) W.houseBase = { colour: H.colour.clone(), density: H.density };
+    H.colour.copy(W.houseBase.colour).lerp(new THREE.Color(0x6a6058), day * 0.65); H.density = W.houseBase.density * (1 - 0.55 * day);
     W.moon.position.copy(cam).addScaledVector(MOON_DIR, 180); W.moon.quaternion.copy(game.camera.quaternion); W.moon.visible = show > 0.01; W.moonMat.opacity = show;
     W.stars.position.copy(cam); W.stars.visible = show > 0.01; W.starMat.opacity = show * 0.9;
     if (game.fx && game.fx.moon) {
       const sunI = T.sunI * (1 - overcast * 0.65);
       if (T.mix) { game.fx.moon.position.set(T.dir[0] * 100, T.dir[1] * 100, T.dir[2] * 100); game.fx.moon.color.setHex(T.sun); game.fx.moon.intensity += (outside ? 1 : 0.25) * sunI; }
       else { game.fx.moon.position.copy(MOON_DIR).multiplyScalar(100); game.fx.moon.color.setHex(T.sun); game.fx.moon.intensity += (outside ? 0.32 : 0.06) * c; }
-      if (game.fx.hemi) game.fx.hemi.intensity += T.amb * (outside ? 1 : 0.3) * (1 - overcast * 0.35);
+      if (game.fx.hemi) game.fx.hemi.intensity += T.amb * (outside ? 1 : 0.3) * (1 - overcast * 0.35) + (outside ? 0 : 0.42 * day);
     }
   }
   /* ---- the fox ---- */

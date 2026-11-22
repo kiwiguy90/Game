@@ -333,6 +333,8 @@ class PowerGrid {
         if (l.flicker > 0) { const n = noise1(t * 9 + l.phase * 77); if (n < l.flicker * 0.5) k *= 0.1 + n; }
         if (l.blink > 0) { if (((t * l.blink + l.phase) % 1) > 0.55) k *= 0.03; }
       }
+      // in daylight an outdoor lamp is still on, but its light is lost in the day: it shows as a dim glow
+      if (k > 0 && this.daylight > 0 && l.zone !== 'mansion' && l.circuit !== 'car' && l.circuit !== 'fire') k *= 1 - 0.82 * this.daylight;
       l.intensity = l.target * k;
     }
     for (const a of this.appliances) {

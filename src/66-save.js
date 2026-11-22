@@ -43,7 +43,7 @@ const Save = BM.Save = {
       player: { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, torch: !!p.torch },
       grid: { lodge: grid.lodge, breakers: Object.assign({}, grid.breakers), tripped: grid.tripped, stormHasTripped: grid.stormHasTripped,
         on: grid.lights.filter(l => l.on).map(l => l.id) },
-      gates: { open: G.open, lockedIn: G.lockedIn, escaping: G.escaping, lodgeLocked: !!G.lodgeLocked },
+      gates: { open: G.open, lockedIn: G.lockedIn, escaping: G.escaping, lodgeLocked: !!G.lodgeLocked, side: g.sideGate ? g.sideGate.locked : true },
       doors: g.B.doors.filter(d => d.open).map(d => d.id),
       story, carry: g.carry || null,
       spare: { taken: g.spare.taken, fitted: g.spare.fitted },
@@ -76,6 +76,7 @@ const Save = BM.Save = {
     for (const l of grid.lights) if (!l.dead && l.circuit !== 'car') l.on = on.has(l.id);
     grid.events.emit('power:changed');
     // the gates
+    if (g.sideGate && s.gates.side !== undefined) g.sideGate.locked = s.gates.side;
     Object.assign(G, { open: s.gates.open, lockedIn: s.gates.lockedIn, escaping: s.gates.escaping, lodgeLocked: s.gates.lodgeLocked, closing: false, t: s.gates.open ? 1 : 0, wait: 0, saidOpen: true });
     const a = s.gates.open ? 1.65 : 0;
     G.leaves[0].rotation.y = a; G.leaves[1].rotation.y = -a; G.wall.enabled = !s.gates.open;

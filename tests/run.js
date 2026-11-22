@@ -884,6 +884,20 @@ suite('nights', () => {
     g2.teleport(14, 0, 82, 0); g2.keys.KeyW = true; for (let i = 0; i < 30 * 4; i++) g2.update(1 / 30); g2.keys.KeyW = false;
     for (let i = 0; i < 30 * 12; i++) g2.update(1 / 30);
     assert(g2.player.z < 85 && (g2.gates.closing || g2.gates.lockedIn), 'walking in on the grass beside the drive still trips the gates (z ' + g2.player.z.toFixed(1) + ')'); }
+  // the side gate: released from the lodge, walked through, and then bolted with the big gates; the motor gives the lodge both back
+  { const e3 = H.load({ quiet: true }), g3 = e3.game, sg = g3.sideGate, run = t => { for (let i = 0; i < 30 * t; i++) g3.update(1 / 30); };
+    g3.ui.mode = null; g3.grid.setLodge(true);
+    g3.teleport(6.0, 0, 90, Math.PI); run(0.2); g3.standAt(g3.byId['side-gate']); g3.interact(); run(2);
+    assert(!sg.door.open, 'the side gate is locked at the start');
+    BM.sideGateLever(g3); assert(!sg.locked, 'the green lever releases it');
+    g3.standAt(g3.byId['side-gate']); g3.interact(); run(2); assert(sg.door.open, 'and it opens by hand');
+    g3.teleport(6.0, 0, 89.5, 0); g3.keys.KeyW = true; run(3); g3.keys.KeyW = false; run(3);
+    assert(g3.gates.lockedIn && sg.locked, 'walking in by the side gate bolts both from the house side');
+    BM.sideGateLever(g3); assert(sg.locked, 'and the lodge cannot release it now');
+    g3.grid.throwMain(); g3.throwGateMotor(); run(16);
+    assert(!sg.locked && g3.gates.open && g3.gates.t >= 1, 'the motor opens the big gates and draws the side gate bolt');
+    g3.gateLever(); run(14); assert(!g3.gates.open && !g3.gates.lockedIn, 'afterwards the lodge lever shuts the big gates again');
+    g3.gateLever(); run(14); assert(g3.gates.open, 'and opens them'); }
   return 'storm, fog and moonlit nights; the help card; the bells; her room; the map';
 });
 

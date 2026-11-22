@@ -66,7 +66,8 @@ BM.buildGrounds = function (B, game) {
   for (const x of [-64.6, 64]) P.addWall(x, x + 0.6, 88.2, 100.6, 0, 4, { kind: 'hedge', tag: 'the road on' });
   B.solid('stone', -64, -14, 0, wallH, 87.8, 88.2);             // estate wall
   B.solid('stone', -6, -4.2, 0, wallH, 87.8, 88.2);
-  B.solid('stone', 4.2, 64, 0, wallH, 87.8, 88.2);
+  B.solid('stone', 4.2, 5.4, 0, wallH, 87.8, 88.2);              // (the side gate for people on foot goes in the gap; built in 49r)
+  B.solid('stone', 6.6, 64, 0, wallH, 87.8, 88.2);
   // gate piers with ball finials
   for (const sx of [-1, 1]) {
     B.solid('stone', sx * 3.8 - 0.4, sx * 3.8 + 0.4, 0, 3.2, 87.6, 88.4);
@@ -194,19 +195,27 @@ BM.buildGrounds = function (B, game) {
     B.box('metalDark', -0.01, 0, 0.21, 0.02, 0.62, 0.42, 0, door);
     B.mesh(G.sphere, 'brass', -0.03, -0.05, 0.36, 0.025, 0, door);
     door.traverse(o => { o.userData.dynamic = true; });
-    const lever = new THREE.Group(); lever.position.set(bx - 0.03, by - 0.04, bz); lever.rotation.order = 'YXZ'; B.root.add(lever);
-    B.mesh(G.post, 'iron', 0, 0.11, 0, 0.022, 0.22, 0.022, 0, lever); B.mesh(G.sphere, BM.M('fabricRed'), 0, 0.23, 0, 0.035, 0, lever);
-    const hub = B.mesh(G.cyl, 'brass', 0, 0, 0, 0.06, 0.03, 0.06, 0, lever); hub.rotation.x = Math.PI / 2; hub.updateMatrix();
-    lever.traverse(o => { o.userData.dynamic = true; });
-    game.gateBox = { door, lever, open: false, t: 0, leverT: 0 };
+    const mkLever = (dz, knob) => {
+      const lever = new THREE.Group(); lever.position.set(bx - 0.03, by - 0.04, bz + dz); lever.rotation.order = 'YXZ'; B.root.add(lever);
+      B.mesh(G.post, 'iron', 0, 0.11, 0, 0.022, 0.22, 0.022, 0, lever); B.mesh(G.sphere, BM.M(knob), 0, 0.23, 0, 0.035, 0, lever);
+      const hub = B.mesh(G.cyl, 'brass', 0, 0, 0, 0.06, 0.03, 0.06, 0, lever); hub.rotation.x = Math.PI / 2; hub.updateMatrix();
+      lever.traverse(o => { o.userData.dynamic = true; }); return lever;
+    };
+    const lever = mkLever(-0.08, 'fabricRed'), sideLever = mkLever(0.09, 'garageGreen');
+    game.gateBox = { door, lever, sideLever, open: false, t: 0, leverT: 0, sideT: 0 };
     B.interactable({
       id: 'gate-box', label: () => game.gateBox.open ? 'Close the gate control box' : 'Open the gate control box', pos: [bx - 0.04, by + 0.27, bz + 0.17], n: [-1, 0], approachDist: 0.85,
       act: g => { g.gateBox.open = !g.gateBox.open; g.audio.latch(0.6); g.ui.say(g.gateBox.open ? 'The steel door swings open on a lever marked GATES: UP locked, DOWN released.' : 'You shut the box.', 3); },
     });
     B.interactable({
       id: 'gate-release', label: () => !game.gateBox.open ? '' : game.gates.lockedIn ? 'Pull the lever (gates bolted from the house)' : game.gates.open ? 'Push the lever up: lock the gates' : 'Pull the lever down: release the gates',
-      pos: [bx - 0.06, by - 0.04, bz], n: [-1, 0], approachDist: 0.85, enabled: () => game.gateBox.open,
+      pos: [bx - 0.06, by - 0.04, bz - 0.08], n: [-1, 0], approachDist: 0.85, enabled: () => game.gateBox.open,
       act: g => { if (!grid.lodge) { g.ui.say('The lever moves, but the gates do not. No power to the lodge.'); g.audio.click(); return; } g.gateLever(); },
+    });
+    B.interactable({
+      id: 'side-release', label: () => !game.gateBox.open ? '' : game.sideGate && game.sideGate.locked ? 'Green lever down: release the side gate' : 'Green lever up: lock the side gate',
+      pos: [bx - 0.06, by - 0.04, bz + 0.09], n: [-1, 0], approachDist: 0.85, enabled: () => game.gateBox.open,
+      act: g => { if (!grid.lodge) { g.ui.say('The lever moves, but nothing clicks. No power to the lodge.'); g.audio.click(); return; } BM.sideGateLever(g); },
     });
   }
   // the gatekeeper's telephone on the wall by the door: an extension from the house, dead these fifty years

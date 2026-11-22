@@ -265,6 +265,7 @@ class Game {
     BM.buildWild(this.B, this);
     BM.buildHouseTouches(this.B, this);
     BM.buildPolish(this.B, this);
+    BM.buildSideGate(this.B, this);
     this.map = new BM.EstateMap(this);
     BM.buildGlimpses(this.B, this);
     this.interactables = this.B.interactables;
@@ -358,6 +359,7 @@ class Game {
     const need = [];
     if (!sp.fitted) need.push(this.carry === 'spare wheel' ? 'the spare on' : 'a wheel from the garage');
     if (!bat.fitted) need.push(this.carry === 'battery' ? 'the battery in' : 'the battery from the garage');
+    if (gates.escaping && !gates.open && !gates.closing) return 'The gates are shut — the lever in the lodge works them again now, or walk out through the side gate.';
     if (gates.escaping) return gates.t < 1 ? 'The gate motor is running. ' + (this.carry ? 'Get the ' + this.carry + ' down the drive to the car.' : 'Get down the drive.') : 'The gates are open. The car needs ' + need.join(' and ') + '.';
     if (!g.lodge) return s.phoneTried ? 'The phone is dead. Try the lodge\'s main switch, on the left wall.' : 'The car is dead and the road is blocked both ways. The gatekeeper\'s lodge, to the left of the gates, might have a telephone.';
     if (!gates.open && !gates.lockedIn) return 'There is power at the lodge. Work the gate release — and the estate lighting panel under the window lights the grounds.';
@@ -463,7 +465,7 @@ class Game {
   gateLever() {
     const gates = this.gates;
     if (gates.lockedIn) { this.audio.click(); this.ui.say('The lever goes down and comes back up on its spring. Out at the gates, nothing moves: the bolt is on the house side now.'); return; }
-    if (gates.escaping) { this.ui.say('The motor has them. Leave it.'); return; }
+    if (gates.escaping && gates.t < 1 && gates.open) { this.ui.say('The motor has them. Leave it.'); return; }   // once it has run, the lodge has them back
     if (!gates.open && !gates.closing) { this.openGates(); return; }
     if (gates.open && gates.t >= 1 && !gates.closing) {
       gates.closing = true; gates.closeT = 0; gates.closeWait = 0; gates.lodgeLocked = true;
@@ -537,6 +539,7 @@ class Game {
     if (!this.grid.live('cellar')) { this.audio.denied(); this.ui.say('The switch is dead. The gate motor is on the house supply: MAIN, and the CELLAR circuit.'); return; }
     if (!gates.lockedIn) { this.audio.click(); this.ui.say('The gates are open already.'); return; }
     gates.escaping = true; gates.lockedIn = false; gates.closing = false;
+    if (this.sideGate) BM.lockSideGate(this, false);
     gates.open = true; gates.t = 0; gates.wait = 0; gates.swing = GATE.escape;
     this.audio.lever();
     this.ui.say('A deep grinding starts up in the wall and travels away through the ground. Far off at the lane, the bolt draws, and the gates begin to open.', 7);
@@ -827,7 +830,7 @@ class Game {
         g.closing = false; g.open = false; g.t = 0; g.wall.enabled = true;
         this.audio.gateBang(Math.max(0.35, 1 - Math.hypot(p.x, p.z - 88) / 60));
         if (g.lodgeLocked) { g.lodgeLocked = false; this.ui.say('They meet with a bang, and the bolt drops. Locked, from the lodge.', 4); }
-        else { g.lockedIn = true; this.ui.say('They meet with a bang that goes away down the lane — and a bolt shoots home. Locked. From the house side.', 7); }
+        else { g.lockedIn = true; if (this.sideGate) BM.lockSideGate(this, true); this.ui.say('They meet with a bang that goes away down the lane — and a bolt shoots home, and another, smaller, along the wall: the side gate too. Locked. From the house side.', 7); }
       }
     }
     this.updateHingedDoors(dt);
@@ -846,6 +849,7 @@ class Game {
     BM.updateWild(this, dt, this.time);
     BM.updateHouseTouches(this, dt, this.time);
     BM.updateMap(this, dt);
+    BM.updateSideGate(this);
     BM.updateSave(this, dt);
     BM.updateGlimpses(this, dt);
     BM.updateChapel(this, dt, this.time);
@@ -868,8 +872,9 @@ class Game {
     const gb = this.gateBox;
     if (gb) {
       gb.t += ((gb.open ? 1 : 0) - gb.t) * Math.min(1, dt * 6); gb.door.rotation.y = -gb.t * 1.9;
-      const down = g.open || (g.closing && !g.lodgeLocked) || g.escaping;
+      const down = g.open || (g.closing && !g.lodgeLocked);
       gb.leverT += ((down ? 1 : 0) - gb.leverT) * Math.min(1, dt * 8); gb.lever.rotation.z = 0; gb.lever.rotation.x = gb.leverT * 2.7;   // swings down across the face of the box, never back into the wall
+      if (gb.sideLever && this.sideGate) { gb.sideT += ((this.sideGate.locked ? 0 : 1) - gb.sideT) * Math.min(1, dt * 8); gb.sideLever.rotation.x = gb.sideT * 2.7; }
     }
   }
   /* ---- the way out: you stop on the lane and look back, and the house goes dark one light at a time ---- */

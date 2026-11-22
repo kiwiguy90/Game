@@ -2452,7 +2452,8 @@ BM.buildGrounds = function (B, game) {
   for (const x of [-64.6, 64]) P.addWall(x, x + 0.6, 88.2, 100.6, 0, 4, { kind: 'hedge', tag: 'the road on' });
   B.solid('stone', -64, -14, 0, wallH, 87.8, 88.2);             // estate wall
   B.solid('stone', -6, -4.2, 0, wallH, 87.8, 88.2);
-  B.solid('stone', 4.2, 64, 0, wallH, 87.8, 88.2);
+  B.solid('stone', 4.2, 5.4, 0, wallH, 87.8, 88.2);              // (the side gate for people on foot goes in the gap; built in 49r)
+  B.solid('stone', 6.6, 64, 0, wallH, 87.8, 88.2);
   // gate piers with ball finials
   for (const sx of [-1, 1]) {
     B.solid('stone', sx * 3.8 - 0.4, sx * 3.8 + 0.4, 0, 3.2, 87.6, 88.4);
@@ -2580,19 +2581,27 @@ BM.buildGrounds = function (B, game) {
     B.box('metalDark', -0.01, 0, 0.21, 0.02, 0.62, 0.42, 0, door);
     B.mesh(G.sphere, 'brass', -0.03, -0.05, 0.36, 0.025, 0, door);
     door.traverse(o => { o.userData.dynamic = true; });
-    const lever = new THREE.Group(); lever.position.set(bx - 0.03, by - 0.04, bz); lever.rotation.order = 'YXZ'; B.root.add(lever);
-    B.mesh(G.post, 'iron', 0, 0.11, 0, 0.022, 0.22, 0.022, 0, lever); B.mesh(G.sphere, BM.M('fabricRed'), 0, 0.23, 0, 0.035, 0, lever);
-    const hub = B.mesh(G.cyl, 'brass', 0, 0, 0, 0.06, 0.03, 0.06, 0, lever); hub.rotation.x = Math.PI / 2; hub.updateMatrix();
-    lever.traverse(o => { o.userData.dynamic = true; });
-    game.gateBox = { door, lever, open: false, t: 0, leverT: 0 };
+    const mkLever = (dz, knob) => {
+      const lever = new THREE.Group(); lever.position.set(bx - 0.03, by - 0.04, bz + dz); lever.rotation.order = 'YXZ'; B.root.add(lever);
+      B.mesh(G.post, 'iron', 0, 0.11, 0, 0.022, 0.22, 0.022, 0, lever); B.mesh(G.sphere, BM.M(knob), 0, 0.23, 0, 0.035, 0, lever);
+      const hub = B.mesh(G.cyl, 'brass', 0, 0, 0, 0.06, 0.03, 0.06, 0, lever); hub.rotation.x = Math.PI / 2; hub.updateMatrix();
+      lever.traverse(o => { o.userData.dynamic = true; }); return lever;
+    };
+    const lever = mkLever(-0.08, 'fabricRed'), sideLever = mkLever(0.09, 'garageGreen');
+    game.gateBox = { door, lever, sideLever, open: false, t: 0, leverT: 0, sideT: 0 };
     B.interactable({
       id: 'gate-box', label: () => game.gateBox.open ? 'Close the gate control box' : 'Open the gate control box', pos: [bx - 0.04, by + 0.27, bz + 0.17], n: [-1, 0], approachDist: 0.85,
       act: g => { g.gateBox.open = !g.gateBox.open; g.audio.latch(0.6); g.ui.say(g.gateBox.open ? 'The steel door swings open on a lever marked GATES: UP locked, DOWN released.' : 'You shut the box.', 3); },
     });
     B.interactable({
       id: 'gate-release', label: () => !game.gateBox.open ? '' : game.gates.lockedIn ? 'Pull the lever (gates bolted from the house)' : game.gates.open ? 'Push the lever up: lock the gates' : 'Pull the lever down: release the gates',
-      pos: [bx - 0.06, by - 0.04, bz], n: [-1, 0], approachDist: 0.85, enabled: () => game.gateBox.open,
+      pos: [bx - 0.06, by - 0.04, bz - 0.08], n: [-1, 0], approachDist: 0.85, enabled: () => game.gateBox.open,
       act: g => { if (!grid.lodge) { g.ui.say('The lever moves, but the gates do not. No power to the lodge.'); g.audio.click(); return; } g.gateLever(); },
+    });
+    B.interactable({
+      id: 'side-release', label: () => !game.gateBox.open ? '' : game.sideGate && game.sideGate.locked ? 'Green lever down: release the side gate' : 'Green lever up: lock the side gate',
+      pos: [bx - 0.06, by - 0.04, bz + 0.09], n: [-1, 0], approachDist: 0.85, enabled: () => game.gateBox.open,
+      act: g => { if (!grid.lodge) { g.ui.say('The lever moves, but nothing clicks. No power to the lodge.'); g.audio.click(); return; } BM.sideGateLever(g); },
     });
   }
   // the gatekeeper's telephone on the wall by the door: an extension from the house, dead these fifty years
@@ -9372,6 +9381,89 @@ BM.buildPolish = function (B, game) {
 };
 })();
 </script>
+<script id="bm-49r-sidegate">
+/* ==========================================================================
+   BLACKTHORN MANOR — 6z. THE SIDE GATE
+   A narrow wrought-iron gate for people on foot, in the estate wall just
+   east of the main gates, between two small piers. Its electric bolt is
+   worked from the second (green) lever in the lodge's gate box. Released,
+   it opens by hand from either side.
+
+   It is wired into the same contact as the main gates: however you come in,
+   once you are inside, both bolt from the house side, and only the gate
+   motor in the cellar draws them. After that the lodge has them both back.
+   ========================================================================== */
+(function () {
+'use strict';
+const BM = window.BM;
+const G = BM.G;
+
+const SG = { x0: 5.4, x1: 6.6, z: 88, h: 2.1 };
+
+BM.buildSideGate = function (B, game) {
+  B.zone = 'exterior'; B.levelName = 'ground'; B.room = 'grounds';
+  const cx = (SG.x0 + SG.x1) / 2, w = SG.x1 - SG.x0;
+  // two small piers with stone caps, an iron arch over the gap
+  for (const x of [SG.x0 - 0.15, SG.x1 + 0.15]) {
+    B.solid('stone', x - 0.15, x + 0.15, 0, 2.6, 87.75, 88.25, { kind: 'wall' });
+    B.box('gothicTrim', x, 2.66, 88, 0.4, 0.12, 0.6); B.mesh(G.pyramid, 'stone', x, 2.86, 88, 0.3, 0.3, 0.3);
+  }
+  B.box('iron', cx, 2.55, 88, w + 0.3, 0.05, 0.05);
+  for (let i = 0; i < 7; i++) { const a = i / 6 * Math.PI, x = cx - Math.cos(a) * w * 0.5; B.box('iron', x, 2.55 + Math.sin(a) * 0.32, 88, 0.05, 0.05, 0.05); }
+  B.box('iron', cx, 2.87, 88, 0.05, 0.05, 0.05);
+  // the leaf: a hinged door whose panels are swapped for iron bars and a scroll
+  const door = B.hingedDoor({ id: 'side-gate-leaf', axis: 'x', at: cx, c: SG.z, w, h: SG.h, y0: 0, hinge: 'low', swing: 1, mat: 'iron', panelMat: 'iron', dur: 1.3, sound: 'creak', label: 'the side gate', wallT: 0.2, interact: false });
+  const pivot = door.leaves[0].pivot;
+  for (const c of [...pivot.children]) pivot.remove(c);
+  const bar = (x, y, sx, sy) => { const m = B.box('iron', x, y, 0, sx, sy, 0.035, 0, pivot); m.userData.dynamic = true; };
+  for (const y of [0.12, 1.0, SG.h - 0.06]) bar(w / 2, y, w - 0.04, 0.05);
+  for (let i = 0; i < 9; i++) bar(0.06 + i * (w - 0.12) / 8, SG.h / 2, 0.03, SG.h - 0.08);
+  for (let i = 0; i < 9; i++) { const s = B.mesh(G.cone, 'iron', 0.06 + i * (w - 0.12) / 8, SG.h + 0.06, 0, 0.05, 0.12, 0.05, 0, pivot); s.userData.dynamic = true; }
+  { const r = B.mesh(G.ring, 'iron', w / 2, 1.42, 0.02, 0.36, 0.36, 0.36, 0, pivot); r.userData.dynamic = true; }   // a scroll in the middle
+  { const k = B.mesh(G.sphere, 'brass', w - 0.1, 1.0, 0.04, 0.05, 0.05, 0.05, 0, pivot); k.userData.dynamic = true; }   // the latch
+  B.box('metalDark', SG.x1 + 0.02, 1.0, 88.17, 0.1, 0.2, 0.06);                                  // the electric lock box on the pier
+  const lamp = B.mesh(G.sphere, new THREE.MeshBasicMaterial({ color: 0x401010 }), SG.x1 + 0.02, 1.16, 88.21, 0.04, 0.04, 0.04); lamp.userData.dynamic = true;
+  B.doorways.push({ id: 'side-gate', x: cx, z: SG.z, y: 0, axis: 'x', width: w, thick: 0.4, zone: B.zone, room: B.room });
+  game.sideGate = { door, locked: true, lamp };
+  const act = g => {
+    const s = g.sideGate;
+    if (s.locked) { g.audio.rattle(); g.ui.say(g.gates.lockedIn ? 'The side gate rattles in its frame. The bolt is shot — from the house side, like the big gates.' : 'The side gate is locked: an electric bolt in the pier, with a dead red lamp. It is worked from the lodge.', 4); return; }
+    g.toggleDoor(s.door);
+  };
+  const label = () => game.sideGate.locked ? 'Side gate: locked' : (game.sideGate.door.open ? 'Close the side gate' : 'Open the side gate');
+  B.interactable({ id: 'side-gate', kind: 'door', label, pos: [cx + 0.3, 1.1, SG.z + 0.15], n: [0, 1], approachDist: 0.95, act });
+  B.interactable({ id: 'side-gate-in', kind: 'door', label, pos: [cx + 0.3, 1.1, SG.z - 0.15], n: [0, -1], approachDist: 0.95, act });
+};
+
+BM.lockSideGate = function (game, lock) {
+  const s = game.sideGate; if (!s) return;
+  s.locked = lock;
+  if (lock && (s.door.open || s.door.target)) game.toggleDoor(s.door);
+};
+
+/* the green lever in the lodge's gate box */
+BM.sideGateLever = function (game) {
+  const s = game.sideGate; if (!s) return;
+  if (game.gates.lockedIn) { game.audio.click(); game.ui.say('The green lever goes down and springs back. Along the wall, nothing: the side gate is bolted from the house side too.', 5); return; }
+  BM.lockSideGate(game, !s.locked);
+  game.audio.clunk(0.6);
+  game.ui.say(s.locked ? 'Green lever up. Along the wall, the side gate\'s bolt shoots home.' : 'Green lever down. Along the wall by the gates, a smaller bolt draws back with a clack: the side gate.', 4);
+};
+
+/* every frame: the bolt's lamp, and the contact for anyone who comes in by the side gate while the big gates are shut */
+BM.updateSideGate = function (game) {
+  const s = game.sideGate; if (!s) return;
+  s.lamp.material.color.setHex(game.grid.lodge ? (s.locked ? 0xd02010 : 0x20c030) : 0x401010);
+  const g = game.gates, p = game.player;
+  const inside = p.z < 85 && p.z > 50 && p.y > -1 && !(p.x > -17.8 && p.x < -5.4 && p.z > 79.4);
+  if (inside && !g.lockedIn && !g.escaping && !g.open && !g.closing && !game.story.ended && !s.locked) {
+    g.lockedIn = true; BM.lockSideGate(game, true);
+    game.audio.gateBang && game.audio.gateBang(0.4);
+    game.ui.say('Behind you the side gate swings to on its own and a bolt shoots home — and another, heavier, in the big gates. Locked. From the house side.', 7);
+  }
+};
+})();
+</script>
 <script id="bm-50-fx">
 /* ==========================================================================
    BLACKTHORN MANOR — 7. ATMOSPHERE
@@ -11191,7 +11283,7 @@ const Save = BM.Save = {
       player: { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, torch: !!p.torch },
       grid: { lodge: grid.lodge, breakers: Object.assign({}, grid.breakers), tripped: grid.tripped, stormHasTripped: grid.stormHasTripped,
         on: grid.lights.filter(l => l.on).map(l => l.id) },
-      gates: { open: G.open, lockedIn: G.lockedIn, escaping: G.escaping, lodgeLocked: !!G.lodgeLocked },
+      gates: { open: G.open, lockedIn: G.lockedIn, escaping: G.escaping, lodgeLocked: !!G.lodgeLocked, side: g.sideGate ? g.sideGate.locked : true },
       doors: g.B.doors.filter(d => d.open).map(d => d.id),
       story, carry: g.carry || null,
       spare: { taken: g.spare.taken, fitted: g.spare.fitted },
@@ -11224,6 +11316,7 @@ const Save = BM.Save = {
     for (const l of grid.lights) if (!l.dead && l.circuit !== 'car') l.on = on.has(l.id);
     grid.events.emit('power:changed');
     // the gates
+    if (g.sideGate && s.gates.side !== undefined) g.sideGate.locked = s.gates.side;
     Object.assign(G, { open: s.gates.open, lockedIn: s.gates.lockedIn, escaping: s.gates.escaping, lodgeLocked: s.gates.lodgeLocked, closing: false, t: s.gates.open ? 1 : 0, wait: 0, saidOpen: true });
     const a = s.gates.open ? 1.65 : 0;
     G.leaves[0].rotation.y = a; G.leaves[1].rotation.y = -a; G.wall.enabled = !s.gates.open;
@@ -11551,6 +11644,7 @@ class Game {
     BM.buildWild(this.B, this);
     BM.buildHouseTouches(this.B, this);
     BM.buildPolish(this.B, this);
+    BM.buildSideGate(this.B, this);
     this.map = new BM.EstateMap(this);
     BM.buildGlimpses(this.B, this);
     this.interactables = this.B.interactables;
@@ -11644,6 +11738,7 @@ class Game {
     const need = [];
     if (!sp.fitted) need.push(this.carry === 'spare wheel' ? 'the spare on' : 'a wheel from the garage');
     if (!bat.fitted) need.push(this.carry === 'battery' ? 'the battery in' : 'the battery from the garage');
+    if (gates.escaping && !gates.open && !gates.closing) return 'The gates are shut — the lever in the lodge works them again now, or walk out through the side gate.';
     if (gates.escaping) return gates.t < 1 ? 'The gate motor is running. ' + (this.carry ? 'Get the ' + this.carry + ' down the drive to the car.' : 'Get down the drive.') : 'The gates are open. The car needs ' + need.join(' and ') + '.';
     if (!g.lodge) return s.phoneTried ? 'The phone is dead. Try the lodge\'s main switch, on the left wall.' : 'The car is dead and the road is blocked both ways. The gatekeeper\'s lodge, to the left of the gates, might have a telephone.';
     if (!gates.open && !gates.lockedIn) return 'There is power at the lodge. Work the gate release — and the estate lighting panel under the window lights the grounds.';
@@ -11749,7 +11844,7 @@ class Game {
   gateLever() {
     const gates = this.gates;
     if (gates.lockedIn) { this.audio.click(); this.ui.say('The lever goes down and comes back up on its spring. Out at the gates, nothing moves: the bolt is on the house side now.'); return; }
-    if (gates.escaping) { this.ui.say('The motor has them. Leave it.'); return; }
+    if (gates.escaping && gates.t < 1 && gates.open) { this.ui.say('The motor has them. Leave it.'); return; }   // once it has run, the lodge has them back
     if (!gates.open && !gates.closing) { this.openGates(); return; }
     if (gates.open && gates.t >= 1 && !gates.closing) {
       gates.closing = true; gates.closeT = 0; gates.closeWait = 0; gates.lodgeLocked = true;
@@ -11823,6 +11918,7 @@ class Game {
     if (!this.grid.live('cellar')) { this.audio.denied(); this.ui.say('The switch is dead. The gate motor is on the house supply: MAIN, and the CELLAR circuit.'); return; }
     if (!gates.lockedIn) { this.audio.click(); this.ui.say('The gates are open already.'); return; }
     gates.escaping = true; gates.lockedIn = false; gates.closing = false;
+    if (this.sideGate) BM.lockSideGate(this, false);
     gates.open = true; gates.t = 0; gates.wait = 0; gates.swing = GATE.escape;
     this.audio.lever();
     this.ui.say('A deep grinding starts up in the wall and travels away through the ground. Far off at the lane, the bolt draws, and the gates begin to open.', 7);
@@ -12113,7 +12209,7 @@ class Game {
         g.closing = false; g.open = false; g.t = 0; g.wall.enabled = true;
         this.audio.gateBang(Math.max(0.35, 1 - Math.hypot(p.x, p.z - 88) / 60));
         if (g.lodgeLocked) { g.lodgeLocked = false; this.ui.say('They meet with a bang, and the bolt drops. Locked, from the lodge.', 4); }
-        else { g.lockedIn = true; this.ui.say('They meet with a bang that goes away down the lane — and a bolt shoots home. Locked. From the house side.', 7); }
+        else { g.lockedIn = true; if (this.sideGate) BM.lockSideGate(this, true); this.ui.say('They meet with a bang that goes away down the lane — and a bolt shoots home, and another, smaller, along the wall: the side gate too. Locked. From the house side.', 7); }
       }
     }
     this.updateHingedDoors(dt);
@@ -12132,6 +12228,7 @@ class Game {
     BM.updateWild(this, dt, this.time);
     BM.updateHouseTouches(this, dt, this.time);
     BM.updateMap(this, dt);
+    BM.updateSideGate(this);
     BM.updateSave(this, dt);
     BM.updateGlimpses(this, dt);
     BM.updateChapel(this, dt, this.time);
@@ -12154,8 +12251,9 @@ class Game {
     const gb = this.gateBox;
     if (gb) {
       gb.t += ((gb.open ? 1 : 0) - gb.t) * Math.min(1, dt * 6); gb.door.rotation.y = -gb.t * 1.9;
-      const down = g.open || (g.closing && !g.lodgeLocked) || g.escaping;
+      const down = g.open || (g.closing && !g.lodgeLocked);
       gb.leverT += ((down ? 1 : 0) - gb.leverT) * Math.min(1, dt * 8); gb.lever.rotation.z = 0; gb.lever.rotation.x = gb.leverT * 2.7;   // swings down across the face of the box, never back into the wall
+      if (gb.sideLever && this.sideGate) { gb.sideT += ((this.sideGate.locked ? 0 : 1) - gb.sideT) * Math.min(1, dt * 8); gb.sideLever.rotation.x = gb.sideT * 2.7; }
     }
   }
   /* ---- the way out: you stop on the lane and look back, and the house goes dark one light at a time ---- */

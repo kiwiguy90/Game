@@ -898,6 +898,13 @@ suite('nights', () => {
     assert(!sg.locked && g3.gates.open && g3.gates.t >= 1, 'the motor opens the big gates and draws the side gate bolt');
     g3.gateLever(); run(14); assert(!g3.gates.open && !g3.gates.lockedIn, 'afterwards the lodge lever shuts the big gates again');
     g3.gateLever(); run(14); assert(g3.gates.open, 'and opens them'); }
+  // the doorbells: the gate bell is dead until the lodge has power; the bell pull at the front doors always rings, and is answered once
+  { const e4 = H.load({ quiet: true }), g4 = e4.game, run = t => { for (let i = 0; i < 30 * t; i++) g4.update(1 / 30); }; g4.ui.mode = null;
+    g4.standAt(g4.byId['gate-bell']); assert(g4.pick() === g4.byId['gate-bell'], 'the gate bell can be reached from the lane'); g4.interact();
+    assert(/Nothing/.test(g4.ui.lastSay) && !g4.story.gateBellRung, 'no power, no bell');
+    g4.grid.setLodge(true); g4.interact(); assert(g4.story.gateBellRung === 1, 'with the lodge on it rings');
+    g4.standAt(g4.byId['door-bell']); assert(g4.pick() === g4.byId['door-bell'], 'the bell pull is on the porch'); g4.interact(); run(6);
+    assert(g4.story.doorBellRung === 1 && /Footsteps/.test(g4.ui.lastSay) && g4.frameErrors === 0, 'the front door bell rings, and something answers'); }
   return 'storm, fog and moonlit nights; the help card; the bells; her room; the map';
 });
 

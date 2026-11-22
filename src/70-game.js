@@ -267,6 +267,7 @@ class Game {
     BM.buildPolish(this.B, this);
     BM.buildSideGate(this.B, this);
     BM.buildPond(this.B, this);
+    BM.buildDoorbells(this.B, this);
     this.map = new BM.EstateMap(this);
     BM.buildGlimpses(this.B, this);
     this.interactables = this.B.interactables;
@@ -853,6 +854,7 @@ class Game {
     BM.updateSideGate(this);
     BM.updateFans(this, dt);
     BM.updatePond(this, dt, this.time);
+    BM.updateDoorbells(this, dt);
     BM.updateSave(this, dt);
     BM.updateGlimpses(this, dt);
     BM.updateChapel(this, dt, this.time);

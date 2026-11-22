@@ -118,11 +118,7 @@ BM.buildMansion = function (B, game) {
   roomSwitch('sw-dining', 'Dining room lights', [-6.25, 1.4, 10.8], [-1, 0], ['dining-pendant', 'dining-sconce']);
   B.readable('note-dining', 'Place card and menu', 'Dinner, Friday 18 October 1974\n\nConsommé · Sole Véronique · Pheasant · Syllabub\n\nGuests: Dr R. Haldane. Mr P. Voss (solicitor).\n\nThe card at the head of the table reads ELEANOR. Someone has crossed it out and written the name of a different chair.', [-12.0, 0.79, 8.62], [0, 1], { approachDist: 1.2 });
   // ceiling fan (west circuit), stops where it stands
-  const fanA = new THREE.Group(); fanA.position.set(-12, 3.7, 5.4); B.root.add(fanA);
-  B.mesh(G.cyl, 'brass', 0, 0.12, 0, 0.18, 0.25, 0.18, 0, fanA);
-  for (let i = 0; i < 4; i++) B.box('darkWood', 0, 0, 0, 1.3, 0.02, 0.18, i * Math.PI / 2, fanA).position.x = 0;
-  fanA.children.slice(1).forEach((b, i) => { b.position.set(Math.cos(i * Math.PI / 2) * 0.6, 0, -Math.sin(i * Math.PI / 2) * 0.6); b.updateMatrix(); });
-  fanA.traverse(o => { o.userData.dynamic = true; });
+  const fanA = BM.ceilingFan(B, -12, 3.5, 5.4, 4.0).rotor;
   const fan1 = grid.addAppliance({ id: 'fan-dining', name: 'Ceiling fan', kind: 'fan', circuit: 'west', room: 'dining', pos: [-12, 3.7, 5.4] });
   fan1.object = fanA;
   B.box('brass', -9.5, 1.4, 4.13, 0.1, 0.16, 0.04);
@@ -147,14 +143,10 @@ BM.buildMansion = function (B, game) {
     '— E.',
   ].join('\n\n'), [12.4, 0.46, 7.65], [0, -1]);
   // desk fan on the writing desk (east circuit)
-  const fanB = new THREE.Group(); fanB.position.set(16.9, 1.05, 11.15); B.root.add(fanB);
-  B.mesh(G.cyl, 'iron', 0, -0.2, 0, 0.16, 0.06, 0.16, 0, fanB);
-  B.mesh(G.post, 'iron', 0, -0.1, 0, 0.03, 0.2, 0.03, 0, fanB);
-  const blades = new THREE.Group(); fanB.add(blades);
-  for (let i = 0; i < 3; i++) { const b = B.box('brass', 0, 0, 0, 0.04, 0.3, 0.02, 0, blades); b.rotation.set(0, 0, i * Math.PI * 2 / 3); b.position.set(Math.sin(i * 2.094) * 0.12, Math.cos(i * 2.094) * 0.12, 0); b.updateMatrix(); }
-  fanB.traverse(o => { o.userData.dynamic = true; });
+  const fanB = new THREE.Group(); fanB.position.set(16.95, 0.8, 11.2); fanB.rotation.y = -Math.PI / 2 - 0.4; B.root.add(fanB);   // on the writing desk, turned to the room
+  const deskFanB = BM.deskFan(B, fanB, { body: 'black' });
   const fan2 = grid.addAppliance({ id: 'fan-desk', name: 'Desk fan', kind: 'fan', circuit: 'east', room: 'drawing', pos: [16.9, 1.05, 11.15] });
-  fan2.object = blades; fan2.axis = 'z';
+  fan2.object = deskFanB.rotor; fan2.axis = 'z'; fan2.head = deskFanB.head;
   B.interactable({ id: 'fan-desk-switch', label: () => fan2.switchedOn ? 'Desk fan: switch off' : 'Desk fan: switch on', pos: [16.6, 0.9, 11.4], n: [-1, 0], approachDist: 1.0, act: g => g.toggleAppliance(fan2) });
 
   /* ---- LIBRARY OF MIRRORS (east) ---- */

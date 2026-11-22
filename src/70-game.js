@@ -850,6 +850,7 @@ class Game {
     BM.updateHouseTouches(this, dt, this.time);
     BM.updateMap(this, dt);
     BM.updateSideGate(this);
+    BM.updateFans(this, dt);
     BM.updateSave(this, dt);
     BM.updateGlimpses(this, dt);
     BM.updateChapel(this, dt, this.time);

@@ -41,14 +41,9 @@ BM.buildAppliances = function (B, game) {
   };
   const deskFan = (id, name, circuit, x, y, z, facing) => {
     const g = group(x, y, z, facing);
-    B.mesh(G.cyl, 'iron', 0, 0.03, 0, 0.18, 0.06, 0.18, 0, g);
-    B.mesh(G.post, 'iron', 0, 0.16, 0, 0.03, 0.22, 0.03, 0, g);
-    B.mesh(G.ring, 'iron', 0, 0.3, 0.04, 0.34, 0.34, 0.34, 0, g);
-    const blades = new THREE.Group(); blades.position.set(0, 0.3, 0.02); g.add(blades);
-    for (let i = 0; i < 3; i++) { const b = B.box('brass', 0, 0, 0, 0.05, 0.13, 0.01, 0, blades); b.rotation.set(0, 0, i * Math.PI * 2 / 3); b.position.set(Math.sin(i * 2.094) * 0.07, Math.cos(i * 2.094) * 0.07, 0); b.updateMatrix(); }
-    dyn(g);
+    const df = BM.deskFan(B, g);
     const a = grid.addAppliance({ id, name, kind: 'fan', circuit, room: B.room, pos: [x, y + 0.3, z] });
-    a.object = blades; a.axis = 'z';
+    a.object = df.rotor; a.axis = 'z'; a.head = df.head;
     return a;
   };
   const radio = (id, name, circuit, x, y, z, nx, nz, station) => {

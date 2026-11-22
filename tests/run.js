@@ -1118,7 +1118,7 @@ suite('budgets', () => {
   // carved and turned statuary shares its own small set of shapes; everything else stays primitive
   const sculpt = [...geos].filter(g => /^(statuary|car|fitting|stair):/.test(g.userData && g.userData.canonical || '')).length;
   assert(geos.size - sculpt <= 20, 'unique geometries ' + (geos.size - sculpt));
-  assert(sculpt <= 84, 'statuary, car, fitting and stair geometries ' + sculpt);
+  assert(sculpt <= 100, 'statuary, car, fitting and stair geometries ' + sculpt);
   let tris = 0; for (const g of geos) tris += (g.index ? g.index.count : (g.attributes.position ? g.attributes.position.count : 0)) / 3;
   assert(tris < 60000, 'unique triangles ' + tris);
   assert(game.optStats.instancedMeshes > 10, 'instancing pass did not run');

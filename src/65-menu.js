@@ -10,7 +10,7 @@
 const BM = window.BM;
 
 const KEY = 'blackthorn-manor-settings';
-const DEFAULTS = { sens: 1.0, invert: false, volume: 0.8, quality: 'auto', fov: 70, showObjective: true, brightness: 1.0, night: 'storm' };
+const DEFAULTS = { sens: 1.0, invert: false, volume: 0.8, quality: 'auto', fov: 70, showObjective: true, brightness: 1.0, night: 'storm', time: 'night' };
 const QUALITY = ['auto', 'low', 'medium', 'high'];
 
 function load() {
@@ -53,6 +53,8 @@ class Menu {
       <div class="row"><label>Brightness</label><input id="m-bright" type="range" min="0.6" max="1.8" step="0.05"><span class="v" id="m-bright-v"></span></div>
       <div class="row"><label>Field of view</label><input id="m-fov" type="range" min="55" max="95" step="1"><span class="v" id="m-fov-v"></span></div>
       <div class="row"><label>Graphics</label><select id="m-q">${QUALITY.map(q => `<option value="${q}">${q[0].toUpperCase() + q.slice(1)}</option>`).join('')}</select><span></span></div>
+      <div class="row"><label>Weather</label><select id="m-weather">${Object.keys(BM.WEATHERS || { storm: 1 }).map(w => `<option value="${w}">${(BM.WEATHERS || {})[w] || w}</option>`).join('')}</select><span></span></div>
+      <div class="row"><label>Time of day</label><select id="m-time">${Object.keys(BM.TIMES || { night: 1 }).map(t => `<option value="${t}">${(BM.TIMES || {})[t] ? BM.TIMES[t].name : t}</option>`).join('')}</select><span></span></div>
       <div class="row"><label>Show objective</label><input id="m-subs" type="checkbox"><span></span></div>
       <div class="btns"><button class="main" id="m-resume">Resume</button><button id="m-restart">Start again</button></div>
       <div class="keys"><b>Mouse</b> look · <b>Click</b> capture mouse<br><b>W A S D</b> move · <b>Shift</b> run<br><b>← →</b> turn · <b>R / F</b> look up / down<br><b>Space</b> jump · <b>E</b> use, open, read<br><b>T</b> torch · <b>P</b> phone and notes<br><b>L</b> lighting panel · <b>Tab</b> click it<br><b>O / I</b> master switches<br><b>1 – 0 - = [ ]</b> estate lights<br><b>M</b> estate map · <b>H</b> all the controls<br><b>Esc</b> pause</div>
@@ -60,16 +62,18 @@ class Menu {
     document.body.appendChild(el);
     const hint = this.hint = document.createElement('div'); hint.id = 'clickhint'; hint.textContent = 'Click to look around with the mouse'; document.body.appendChild(hint);
     const $ = id => document.getElementById(id);
-    this.inputs = { sens: $('m-sens'), invert: $('m-invert'), vol: $('m-vol'), fov: $('m-fov'), q: $('m-q'), subs: $('m-subs'), bright: $('m-bright') };
+    this.inputs = { sens: $('m-sens'), invert: $('m-invert'), vol: $('m-vol'), fov: $('m-fov'), q: $('m-q'), subs: $('m-subs'), bright: $('m-bright'), weather: $('m-weather'), time: $('m-time') };
     const I = this.inputs;
     const sync = () => {
       const s = this.settings;
-      I.bright.value = s.brightness; $('m-bright-v').textContent = Math.round(s.brightness * 100) + '%'; I.sens.value = s.sens; I.invert.checked = s.invert; I.vol.value = s.volume; I.fov.value = s.fov; I.q.value = s.quality; I.subs.checked = s.showObjective;
+      I.weather.value = game.night || s.night || 'storm'; I.time.value = game.timeOfDay || s.time || 'night'; I.bright.value = s.brightness; $('m-bright-v').textContent = Math.round(s.brightness * 100) + '%'; I.sens.value = s.sens; I.invert.checked = s.invert; I.vol.value = s.volume; I.fov.value = s.fov; I.q.value = s.quality; I.subs.checked = s.showObjective;
       $('m-sens-v').textContent = (+s.sens).toFixed(2); $('m-vol-v').textContent = Math.round(s.volume * 100) + '%'; $('m-fov-v').textContent = s.fov + '°';
     };
     this.sync = sync; sync();
     const change = () => {
       const s = this.settings;
+      if (I.weather.value !== game.night) { BM.applyNight(game, I.weather.value); s.night = I.weather.value; }
+      if (I.time.value !== game.timeOfDay) { BM.setTimeOfDay(game, I.time.value); s.time = I.time.value; }
       s.brightness = +I.bright.value; s.sens = +I.sens.value; s.invert = I.invert.checked; s.volume = +I.vol.value; s.fov = +I.fov.value; s.quality = I.q.value; s.showObjective = I.subs.checked;
       save(s); sync(); this.apply();
     };

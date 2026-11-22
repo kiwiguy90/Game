@@ -127,7 +127,7 @@ class UI {
       row('T', 'torch on and off') + row('P', 'your phone: notes, photos of documents, Eleanor\'s trail') + row('M', 'the estate plan: where you are, where you have been, what is lit') +
       row('L', 'show or hide the lighting panel') + row('Tab', 'free the mouse to click the lighting panel (↑ ↓ Enter work too)') +
       row('O / I', 'outside and inside master switches') + `<div class="hint" style="margin:6px 0 4px">Estate lights, from anywhere once the lodge supply is on:<br>${estate}</div>` +
-      row('Esc', 'pause, settings, brightness') + row('H', 'this card') +
+      row('Esc', 'pause and settings: weather, time of day, brightness') + row('H', 'this card') +
       '<div class="hint">H, Esc or E to close</div>';
   }
   phone() {
@@ -698,6 +698,7 @@ class Game {
     if (this.ui.el.title) this.ui.el.title.style.display = 'none';
     this.audio.start();
     BM.applyNight(this, this.chosenNight || (this.menu && this.menu.settings.night) || 'storm');
+    BM.setTimeOfDay(this, (this.menu && this.menu.settings.time) || 'night');
     this.intro = new BM.Intro(this); // your car arrives; when it dies, you walk
     if (this.menu) this.menu.lock();
   }
@@ -710,7 +711,7 @@ class Game {
     this.audio.start();
     this.intro = new BM.Intro(this); this.intro.skip();
     BM.Save.restore(this, s);
-    BM.applyNight(this, this.story.night || 'storm');
+    BM.applyNight(this, this.story.night || 'storm'); BM.setTimeOfDay(this, this.story.time || 'night');
     this.ui.say('You pick up where you left off.', 3);
     if (this.menu) this.menu.lock();
   }
@@ -736,6 +737,7 @@ class Game {
     this.ctx = ctx;
     for (const z in this.B.zones) this.B.zones[z].visible = ctx.visibleZones[z];
     this.fx.update(dt, ctx);
+    BM.updateWild(this, dt, this.time);   // after the effects: weather and time of day add their light on top
     this.audio.update(dt, ctx);
     this.ui.update(dt);
     this.updateCamera();
@@ -848,7 +850,6 @@ class Game {
     BM.updateLife(this, dt, this.time);
     BM.updateBilliards(this);
     BM.updateIcehouse(this, dt);
-    BM.updateWild(this, dt, this.time);
     BM.updateHouseTouches(this, dt, this.time);
     BM.updateMap(this, dt);
     BM.updateSideGate(this);

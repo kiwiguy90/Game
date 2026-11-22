@@ -8919,12 +8919,24 @@ BM.NIGHTS = {
   fog: { name: 'Fog', blurb: 'No wind, no rain: a white fog you can barely see the lamps through.' },
   clear: { name: 'Moonlit', blurb: 'A clear, still night under a full moon.' },
 };
+/* the weather you can switch to at any time from the pause menu (the title offers the first three as the night) */
+BM.WEATHERS = { storm: 'Storm', rain: 'Rain', fog: 'Fog', clear: 'Clear' };
+/* the time of day: the sky and the murk, the light from all round, and the sun (or the moon) */
+const TIMES = {
+  night: { name: 'Night', mix: 0, dens: 1, amb: 0, sun: 0x7f95b5, sunI: 0, dir: [0.55, 0.27, -0.79] },
+  dusk: { name: 'Dusk', sky: 0x5c4a64, cloud: 0x3e3a48, mix: 0.8, dens: 0.8, amb: 0.22, sun: 0xff9a60, sunI: 0.4, dir: [-0.85, 0.18, 0.3] },
+  dawn: { name: 'Dawn', sky: 0x8a8aa6, cloud: 0x585c68, mix: 0.8, dens: 0.8, amb: 0.3, sun: 0xffc890, sunI: 0.5, dir: [0.85, 0.2, -0.25] },
+  day: { name: 'Day', sky: 0x9ab4d2, cloud: 0x7c8690, mix: 0.92, dens: 0.5, amb: 0.75, sun: 0xfff2dc, sunI: 1.0, dir: [0.3, 0.8, 0.35] },
+};
+BM.TIMES = TIMES;
+BM.setTimeOfDay = function (game, t) { game.timeOfDay = TIMES[t] ? t : 'night'; game.story.time = game.timeOfDay; };
 BM.applyNight = function (game, night) {
-  const W = game.weather; night = BM.NIGHTS[night] ? night : 'storm';
+  const W = game.weather; night = BM.WEATHERS[night] ? night : 'storm';
   game.night = night; game.story.night = night;
   if (!W) return;
   W.clear = 0; W.started = false; W.delay = 0; W.said = 0; W.rain = 1; W.noLightning = false;
   W.fog0.copy(W.base.colour); W.dens0 = W.base.density; game.storm = true;
+  if (night === 'rain') { W.noLightning = true; }
   if (night === 'fog') { W.rain = 0; W.noLightning = true; W.fog0.setHex(0x30363e); W.dens0 = 0.05; }
   if (night === 'clear') { W.rain = 0; W.started = true; W.clear = 1; W.said = 2; }
 };
@@ -8945,10 +8957,18 @@ BM.updateWild = function (game, dt, t) {
     if (game.fx && game.fx.rain) { const u = game.fx.rain.material.uniforms; if (u.density) u.density.value = W.rain * (1 - c); }
     BM.FOG.exterior.colour.copy(W.fog0).lerp(new THREE.Color(0x34445c), c);
     BM.FOG.exterior.density = W.dens0 + (0.0102 - W.dens0) * c;
-    const outside = game.ctx && game.ctx.zone === 'exterior', show = outside ? Math.max(0, (c - 0.35) / 0.65) : 0;
+    // the time of day over the weather: a cloudy day is grey and dim, a clear one blue and bright
+    const T = TIMES[game.timeOfDay] || TIMES.night, overcast = (1 - c) * (game.night === 'clear' ? 0 : 1);
+    if (T.mix) { const sky = new THREE.Color(T.sky).lerp(new THREE.Color(T.cloud), overcast * 0.8); BM.FOG.exterior.colour.lerp(sky, T.mix); BM.FOG.exterior.density *= T.dens + (game.night === 'fog' ? 0.6 : 0) * (1 - c); }
+    const outside = game.ctx && game.ctx.zone === 'exterior', show = (outside ? Math.max(0, (c - 0.35) / 0.65) : 0) * (T.mix ? 0 : 1);
     W.moon.position.copy(cam).addScaledVector(MOON_DIR, 180); W.moon.quaternion.copy(game.camera.quaternion); W.moon.visible = show > 0.01; W.moonMat.opacity = show;
     W.stars.position.copy(cam); W.stars.visible = show > 0.01; W.starMat.opacity = show * 0.9;
-    if (game.fx && game.fx.moon) { game.fx.moon.position.copy(MOON_DIR).multiplyScalar(100); game.fx.moon.intensity += (outside ? 0.32 : 0.06) * c; }
+    if (game.fx && game.fx.moon) {
+      const sunI = T.sunI * (1 - overcast * 0.65);
+      if (T.mix) { game.fx.moon.position.set(T.dir[0] * 100, T.dir[1] * 100, T.dir[2] * 100); game.fx.moon.color.setHex(T.sun); game.fx.moon.intensity += (outside ? 1 : 0.25) * sunI; }
+      else { game.fx.moon.position.copy(MOON_DIR).multiplyScalar(100); game.fx.moon.color.setHex(T.sun); game.fx.moon.intensity += (outside ? 0.32 : 0.06) * c; }
+      if (game.fx.hemi) game.fx.hemi.intensity += T.amb * (outside ? 1 : 0.3) * (1 - overcast * 0.35);
+    }
   }
   /* ---- the fox ---- */
   const F = game.fox;
@@ -11523,7 +11543,7 @@ BM.Synth = Synth;
 const BM = window.BM;
 
 const KEY = 'blackthorn-manor-settings';
-const DEFAULTS = { sens: 1.0, invert: false, volume: 0.8, quality: 'auto', fov: 70, showObjective: true, brightness: 1.0, night: 'storm' };
+const DEFAULTS = { sens: 1.0, invert: false, volume: 0.8, quality: 'auto', fov: 70, showObjective: true, brightness: 1.0, night: 'storm', time: 'night' };
 const QUALITY = ['auto', 'low', 'medium', 'high'];
 
 function load() {
@@ -11566,6 +11586,8 @@ class Menu {
       <div class="row"><label>Brightness</label><input id="m-bright" type="range" min="0.6" max="1.8" step="0.05"><span class="v" id="m-bright-v"></span></div>
       <div class="row"><label>Field of view</label><input id="m-fov" type="range" min="55" max="95" step="1"><span class="v" id="m-fov-v"></span></div>
       <div class="row"><label>Graphics</label><select id="m-q">${QUALITY.map(q => `<option value="${q}">${q[0].toUpperCase() + q.slice(1)}</option>`).join('')}</select><span></span></div>
+      <div class="row"><label>Weather</label><select id="m-weather">${Object.keys(BM.WEATHERS || { storm: 1 }).map(w => `<option value="${w}">${(BM.WEATHERS || {})[w] || w}</option>`).join('')}</select><span></span></div>
+      <div class="row"><label>Time of day</label><select id="m-time">${Object.keys(BM.TIMES || { night: 1 }).map(t => `<option value="${t}">${(BM.TIMES || {})[t] ? BM.TIMES[t].name : t}</option>`).join('')}</select><span></span></div>
       <div class="row"><label>Show objective</label><input id="m-subs" type="checkbox"><span></span></div>
       <div class="btns"><button class="main" id="m-resume">Resume</button><button id="m-restart">Start again</button></div>
       <div class="keys"><b>Mouse</b> look · <b>Click</b> capture mouse<br><b>W A S D</b> move · <b>Shift</b> run<br><b>← →</b> turn · <b>R / F</b> look up / down<br><b>Space</b> jump · <b>E</b> use, open, read<br><b>T</b> torch · <b>P</b> phone and notes<br><b>L</b> lighting panel · <b>Tab</b> click it<br><b>O / I</b> master switches<br><b>1 – 0 - = [ ]</b> estate lights<br><b>M</b> estate map · <b>H</b> all the controls<br><b>Esc</b> pause</div>
@@ -11573,16 +11595,18 @@ class Menu {
     document.body.appendChild(el);
     const hint = this.hint = document.createElement('div'); hint.id = 'clickhint'; hint.textContent = 'Click to look around with the mouse'; document.body.appendChild(hint);
     const $ = id => document.getElementById(id);
-    this.inputs = { sens: $('m-sens'), invert: $('m-invert'), vol: $('m-vol'), fov: $('m-fov'), q: $('m-q'), subs: $('m-subs'), bright: $('m-bright') };
+    this.inputs = { sens: $('m-sens'), invert: $('m-invert'), vol: $('m-vol'), fov: $('m-fov'), q: $('m-q'), subs: $('m-subs'), bright: $('m-bright'), weather: $('m-weather'), time: $('m-time') };
     const I = this.inputs;
     const sync = () => {
       const s = this.settings;
-      I.bright.value = s.brightness; $('m-bright-v').textContent = Math.round(s.brightness * 100) + '%'; I.sens.value = s.sens; I.invert.checked = s.invert; I.vol.value = s.volume; I.fov.value = s.fov; I.q.value = s.quality; I.subs.checked = s.showObjective;
+      I.weather.value = game.night || s.night || 'storm'; I.time.value = game.timeOfDay || s.time || 'night'; I.bright.value = s.brightness; $('m-bright-v').textContent = Math.round(s.brightness * 100) + '%'; I.sens.value = s.sens; I.invert.checked = s.invert; I.vol.value = s.volume; I.fov.value = s.fov; I.q.value = s.quality; I.subs.checked = s.showObjective;
       $('m-sens-v').textContent = (+s.sens).toFixed(2); $('m-vol-v').textContent = Math.round(s.volume * 100) + '%'; $('m-fov-v').textContent = s.fov + '°';
     };
     this.sync = sync; sync();
     const change = () => {
       const s = this.settings;
+      if (I.weather.value !== game.night) { BM.applyNight(game, I.weather.value); s.night = I.weather.value; }
+      if (I.time.value !== game.timeOfDay) { BM.setTimeOfDay(game, I.time.value); s.time = I.time.value; }
       s.brightness = +I.bright.value; s.sens = +I.sens.value; s.invert = I.invert.checked; s.volume = +I.vol.value; s.fov = +I.fov.value; s.quality = I.q.value; s.showObjective = I.subs.checked;
       save(s); sync(); this.apply();
     };
@@ -11917,7 +11941,7 @@ class UI {
       row('T', 'torch on and off') + row('P', 'your phone: notes, photos of documents, Eleanor\'s trail') + row('M', 'the estate plan: where you are, where you have been, what is lit') +
       row('L', 'show or hide the lighting panel') + row('Tab', 'free the mouse to click the lighting panel (↑ ↓ Enter work too)') +
       row('O / I', 'outside and inside master switches') + `<div class="hint" style="margin:6px 0 4px">Estate lights, from anywhere once the lodge supply is on:<br>${estate}</div>` +
-      row('Esc', 'pause, settings, brightness') + row('H', 'this card') +
+      row('Esc', 'pause and settings: weather, time of day, brightness') + row('H', 'this card') +
       '<div class="hint">H, Esc or E to close</div>';
   }
   phone() {
@@ -12488,6 +12512,7 @@ class Game {
     if (this.ui.el.title) this.ui.el.title.style.display = 'none';
     this.audio.start();
     BM.applyNight(this, this.chosenNight || (this.menu && this.menu.settings.night) || 'storm');
+    BM.setTimeOfDay(this, (this.menu && this.menu.settings.time) || 'night');
     this.intro = new BM.Intro(this); // your car arrives; when it dies, you walk
     if (this.menu) this.menu.lock();
   }
@@ -12500,7 +12525,7 @@ class Game {
     this.audio.start();
     this.intro = new BM.Intro(this); this.intro.skip();
     BM.Save.restore(this, s);
-    BM.applyNight(this, this.story.night || 'storm');
+    BM.applyNight(this, this.story.night || 'storm'); BM.setTimeOfDay(this, this.story.time || 'night');
     this.ui.say('You pick up where you left off.', 3);
     if (this.menu) this.menu.lock();
   }
@@ -12526,6 +12551,7 @@ class Game {
     this.ctx = ctx;
     for (const z in this.B.zones) this.B.zones[z].visible = ctx.visibleZones[z];
     this.fx.update(dt, ctx);
+    BM.updateWild(this, dt, this.time);   // after the effects: weather and time of day add their light on top
     this.audio.update(dt, ctx);
     this.ui.update(dt);
     this.updateCamera();
@@ -12638,7 +12664,6 @@ class Game {
     BM.updateLife(this, dt, this.time);
     BM.updateBilliards(this);
     BM.updateIcehouse(this, dt);
-    BM.updateWild(this, dt, this.time);
     BM.updateHouseTouches(this, dt, this.time);
     BM.updateMap(this, dt);
     BM.updateSideGate(this);

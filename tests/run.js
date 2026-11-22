@@ -905,6 +905,12 @@ suite('nights', () => {
     g4.grid.setLodge(true); g4.interact(); assert(g4.story.gateBellRung === 1, 'with the lodge on it rings');
     g4.standAt(g4.byId['door-bell']); assert(g4.pick() === g4.byId['door-bell'], 'the bell pull is on the porch'); g4.interact(); run(6);
     assert(g4.story.doorBellRung === 1 && /Footsteps/.test(g4.ui.lastSay) && g4.frameErrors === 0, 'the front door bell rings, and something answers'); }
+  // weather and time can be changed at any time
+  { const e5 = H.load({ quiet: true }), g5 = e5.game; g5.ui.mode = null; g5.teleport(0, 0, 40, 0);
+    BM.applyNight(g5, 'rain'); BM.setTimeOfDay(g5, 'day'); for (let i = 0; i < 30; i++) g5.update(1 / 30); g5.frame(1 / 60, 16);
+    assert(g5.weather.rain === 1 && g5.fx.nextStrike > 5 && g5.fx.hemi.intensity > 0.4 && !g5.weather.moon.visible && g5.frameErrors === 0, 'a rainy day: rain, no lightning, daylight, no moon');
+    BM.applyNight(g5, 'clear'); BM.setTimeOfDay(g5, 'night'); for (let i = 0; i < 30; i++) g5.update(1 / 30); g5.frame(1 / 60, 16);
+    assert(g5.weather.moon.visible && g5.fx.hemi.intensity < 0.3, 'and back to a clear night'); }
   return 'storm, fog and moonlit nights; the help card; the bells; her room; the map';
 });
 

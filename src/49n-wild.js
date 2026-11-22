@@ -95,12 +95,24 @@ BM.NIGHTS = {
   fog: { name: 'Fog', blurb: 'No wind, no rain: a white fog you can barely see the lamps through.' },
   clear: { name: 'Moonlit', blurb: 'A clear, still night under a full moon.' },
 };
+/* the weather you can switch to at any time from the pause menu (the title offers the first three as the night) */
+BM.WEATHERS = { storm: 'Storm', rain: 'Rain', fog: 'Fog', clear: 'Clear' };
+/* the time of day: the sky and the murk, the light from all round, and the sun (or the moon) */
+const TIMES = {
+  night: { name: 'Night', mix: 0, dens: 1, amb: 0, sun: 0x7f95b5, sunI: 0, dir: [0.55, 0.27, -0.79] },
+  dusk: { name: 'Dusk', sky: 0x5c4a64, cloud: 0x3e3a48, mix: 0.8, dens: 0.8, amb: 0.22, sun: 0xff9a60, sunI: 0.4, dir: [-0.85, 0.18, 0.3] },
+  dawn: { name: 'Dawn', sky: 0x8a8aa6, cloud: 0x585c68, mix: 0.8, dens: 0.8, amb: 0.3, sun: 0xffc890, sunI: 0.5, dir: [0.85, 0.2, -0.25] },
+  day: { name: 'Day', sky: 0x9ab4d2, cloud: 0x7c8690, mix: 0.92, dens: 0.5, amb: 0.75, sun: 0xfff2dc, sunI: 1.0, dir: [0.3, 0.8, 0.35] },
+};
+BM.TIMES = TIMES;
+BM.setTimeOfDay = function (game, t) { game.timeOfDay = TIMES[t] ? t : 'night'; game.story.time = game.timeOfDay; };
 BM.applyNight = function (game, night) {
-  const W = game.weather; night = BM.NIGHTS[night] ? night : 'storm';
+  const W = game.weather; night = BM.WEATHERS[night] ? night : 'storm';
   game.night = night; game.story.night = night;
   if (!W) return;
   W.clear = 0; W.started = false; W.delay = 0; W.said = 0; W.rain = 1; W.noLightning = false;
   W.fog0.copy(W.base.colour); W.dens0 = W.base.density; game.storm = true;
+  if (night === 'rain') { W.noLightning = true; }
   if (night === 'fog') { W.rain = 0; W.noLightning = true; W.fog0.setHex(0x30363e); W.dens0 = 0.05; }
   if (night === 'clear') { W.rain = 0; W.started = true; W.clear = 1; W.said = 2; }
 };
@@ -121,10 +133,18 @@ BM.updateWild = function (game, dt, t) {
     if (game.fx && game.fx.rain) { const u = game.fx.rain.material.uniforms; if (u.density) u.density.value = W.rain * (1 - c); }
     BM.FOG.exterior.colour.copy(W.fog0).lerp(new THREE.Color(0x34445c), c);
     BM.FOG.exterior.density = W.dens0 + (0.0102 - W.dens0) * c;
-    const outside = game.ctx && game.ctx.zone === 'exterior', show = outside ? Math.max(0, (c - 0.35) / 0.65) : 0;
+    // the time of day over the weather: a cloudy day is grey and dim, a clear one blue and bright
+    const T = TIMES[game.timeOfDay] || TIMES.night, overcast = (1 - c) * (game.night === 'clear' ? 0 : 1);
+    if (T.mix) { const sky = new THREE.Color(T.sky).lerp(new THREE.Color(T.cloud), overcast * 0.8); BM.FOG.exterior.colour.lerp(sky, T.mix); BM.FOG.exterior.density *= T.dens + (game.night === 'fog' ? 0.6 : 0) * (1 - c); }
+    const outside = game.ctx && game.ctx.zone === 'exterior', show = (outside ? Math.max(0, (c - 0.35) / 0.65) : 0) * (T.mix ? 0 : 1);
     W.moon.position.copy(cam).addScaledVector(MOON_DIR, 180); W.moon.quaternion.copy(game.camera.quaternion); W.moon.visible = show > 0.01; W.moonMat.opacity = show;
     W.stars.position.copy(cam); W.stars.visible = show > 0.01; W.starMat.opacity = show * 0.9;
-    if (game.fx && game.fx.moon) { game.fx.moon.position.copy(MOON_DIR).multiplyScalar(100); game.fx.moon.intensity += (outside ? 0.32 : 0.06) * c; }
+    if (game.fx && game.fx.moon) {
+      const sunI = T.sunI * (1 - overcast * 0.65);
+      if (T.mix) { game.fx.moon.position.set(T.dir[0] * 100, T.dir[1] * 100, T.dir[2] * 100); game.fx.moon.color.setHex(T.sun); game.fx.moon.intensity += (outside ? 1 : 0.25) * sunI; }
+      else { game.fx.moon.position.copy(MOON_DIR).multiplyScalar(100); game.fx.moon.color.setHex(T.sun); game.fx.moon.intensity += (outside ? 0.32 : 0.06) * c; }
+      if (game.fx.hemi) game.fx.hemi.intensity += T.amb * (outside ? 1 : 0.3) * (1 - overcast * 0.35);
+    }
   }
   /* ---- the fox ---- */
   const F = game.fox;

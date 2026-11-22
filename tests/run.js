@@ -878,6 +878,12 @@ suite('nights', () => {
   game.keyDown('KeyM'); assert(game.ui.mode === 'map', 'M opens the map'); for (let i = 0; i < 6; i++) game.update(1 / 30);
   game.keyDown('KeyM'); assert(game.ui.mode === null && game.frameErrors === 0, 'and closes');
   game.ui.phone(); game.keyDown('KeyM'); assert(game.ui.mode === 'map', 'the map opens from the phone'); game.ui.close();
+  // the gate contact spans the whole estate: coming in over the grass beside the drive shuts the gates too
+  { const env2 = H.load({ quiet: true }), g2 = env2.game; g2.ui.mode = null; g2.grid.setLodge(true); g2.openGates();
+    for (let i = 0; i < 30 * 16; i++) g2.update(1 / 30);
+    g2.teleport(14, 0, 82, 0); g2.keys.KeyW = true; for (let i = 0; i < 30 * 4; i++) g2.update(1 / 30); g2.keys.KeyW = false;
+    for (let i = 0; i < 30 * 12; i++) g2.update(1 / 30);
+    assert(g2.player.z < 85 && (g2.gates.closing || g2.gates.lockedIn), 'walking in on the grass beside the drive still trips the gates (z ' + g2.player.z.toFixed(1) + ')'); }
   return 'storm, fog and moonlit nights; the help card; the bells; her room; the map';
 });
 

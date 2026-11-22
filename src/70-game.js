@@ -172,6 +172,7 @@ class UI {
     const active = this.mode === 'lights';
     const show = (this.lightsVisible || active) && this.mode !== 'map' && this.mode !== 'title' && this.mode !== 'ending' && !this.game.intro;
     el.style.display = show ? 'block' : 'none';
+    if (typeof document !== 'undefined' && document.body && document.body.classList) document.body.classList.toggle('panel-on', show);
     if (!show) return;
     if (el.classList) el.classList.toggle('active', active);
     const rows = this.game.lightPanelRows();
@@ -807,8 +808,9 @@ class Game {
       if (g.t > 0.45) g.wall.enabled = false;
       if (g.escaping && g.t >= 1 && !g.saidOpen) { g.saidOpen = true; this.ui.say('The motor stops. Out at the lane, the gates stand wide.', 5); }
     }
-    // the contact in the drive: once you are inside, the gates swing shut behind you and bolt
-    if (g.open && g.t >= 1 && !g.lockedIn && !g.closing && !g.escaping && !this.story.ended && p.z < 85 && p.z > 70 && Math.abs(p.x) < 3.5) {
+    // the contact: a line right across the estate just inside the gates. However you come in —
+    // up the drive or over the grass beside it — once you are past it the gates swing shut behind you and bolt
+    if (g.open && g.t >= 1 && !g.lockedIn && !g.closing && !g.escaping && !this.story.ended && p.z < 85 && p.z > 50 && p.y > -1 && !(p.x > -17.8 && p.x < -5.4 && p.z > 79.4)) {   // (not while you are still in the lodge)
       g.closing = true; g.closeT = 0; g.closeWait = 0;
       this.audio.click();
       this.audio.gateCreak(0.6, GATE.close, Math.max(0.4, 1 - Math.hypot(p.x, p.z - 88) / 40));

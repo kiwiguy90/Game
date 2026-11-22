@@ -12155,7 +12155,7 @@ class Game {
     if (gb) {
       gb.t += ((gb.open ? 1 : 0) - gb.t) * Math.min(1, dt * 6); gb.door.rotation.y = -gb.t * 1.9;
       const down = g.open || (g.closing && !g.lodgeLocked) || g.escaping;
-      gb.leverT += ((down ? 1 : 0) - gb.leverT) * Math.min(1, dt * 8); gb.lever.rotation.z = -gb.leverT * 2.6;
+      gb.leverT += ((down ? 1 : 0) - gb.leverT) * Math.min(1, dt * 8); gb.lever.rotation.z = 0; gb.lever.rotation.x = gb.leverT * 2.7;   // swings down across the face of the box, never back into the wall
     }
   }
   /* ---- the way out: you stop on the lane and look back, and the house goes dark one light at a time ---- */

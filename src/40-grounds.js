@@ -307,23 +307,7 @@ BM.buildGrounds = function (B, game) {
 
   /* (the pool garden is built in 49g) */
 
-  /* ---- the pond, with ducks ---- */
-  B.room = 'pond';
-  B.mesh(G.cyl, 'water', 34, 0.05, 62, 12, 0.06, 12).userData.dynamic = true;
-  for (let i = 0; i < 64; i++) {
-    const a = i / 64 * Math.PI * 2, x = 34 + Math.sin(a) * 6.2, z = 62 + Math.cos(a) * 6.2;
-    B.mesh(G.lowSphere, 'stone', x, 0.12, z, 0.7, 0.4, 0.7);
-    P.addWall(x - 0.3, x + 0.3, z - 0.3, z + 0.3, 0, 0.5, { kind: 'wall', occludes: false, structural: false });
-  }
-  game.ducks = [];
-  for (let i = 0; i < 4; i++) {
-    const d = new THREE.Group(); d.userData.dynamic = true; B.root.add(d);
-    B.mesh(G.sphere, 'flowersWhite', 0, 0.12, 0, 0.36, 0.22, 0.5, 0, d);
-    B.mesh(G.sphere, i ? 'fabricGreen' : 'flowersWhite', 0, 0.3, -0.24, 0.18, 0.18, 0.18, 0, d);
-    B.box('brass', 0, 0.28, -0.36, 0.06, 0.03, 0.1, 0, d);
-    d.traverse(o => { o.matrixAutoUpdate = true; o.userData.dynamic = true; });
-    game.ducks.push({ obj: d, r: 1.8 + i * 0.8, a: i * 1.7, w: 0.18 + i * 0.05, cx: 34, cz: 62 });
-  }
+  /* (the pond is built in 49s) */
 
   /* ---- cemetery (Eleanor lies outside the fence) ---- */
   B.room = 'cemetery';

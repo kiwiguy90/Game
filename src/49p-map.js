@@ -26,7 +26,7 @@ const PLACES = [
   { id: 'stables', name: 'Stables', rect: [-58, -40, -4, 2], lit: 'stables' },
   { id: 'maze', name: 'The maze', rect: [-60, -39, 28, 49], lit: 'garden', maze: true },
   { id: 'pool', name: 'Pool garden', rect: [-46, -24, 53, 71], lit: 'pool', pool: true },
-  { id: 'pond', name: 'Pond', circle: [34, 62, 6.2], lit: 'pond', water: true },
+  { id: 'pond', name: 'Pond', circle: [37, 63, 7.6], lit: 'pond', water: true },
   { id: 'cemetery', name: 'Cemetery', rect: [30, 46, 30, 44], lit: 'cemetery', outline: true, graves: true },
   { id: 'chapel', name: 'Chapel', rect: [53, 61, 31, 37], lit: 'cemetery' },
   { id: 'mausoleum', name: 'Mausoleum', rect: [35, 47, 14, 25], lit: 'cemetery' },

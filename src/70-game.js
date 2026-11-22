@@ -38,7 +38,7 @@ const ESTATE_SAY = {
   drive: 'Lamps come up along the drive, two by two, all the way to the turning circle.',
   garden: 'Small lights wake round the fountain, and all round the maze the uplights come on one by one, washing the yew walls a pale, cold green.',
   pool: 'Down in the pool garden the pumps knock and start, the upper pool begins to spill over its weir, and both pools light from underneath, blue and green, the light swimming on the water.',
-  pond: 'Lamps come on at the edge of the pond. The ducks complain.',
+  pond: 'Round the pond the lights come up: the water glows gold from underneath, the cascade shines white, the willow and the red maple stand lit against the dark. The ducks complain.',
   garage: 'In the coach house the garage tubes strobe and catch, and lanterns light over the doors.',
   shed: 'The shed bulb comes on, and the lantern by its door.',
   glasshouse: 'Out past the house the glass house lights up from inside like a lantern, the palms and the orange trees standing black against the misted panes.',
@@ -266,6 +266,7 @@ class Game {
     BM.buildHouseTouches(this.B, this);
     BM.buildPolish(this.B, this);
     BM.buildSideGate(this.B, this);
+    BM.buildPond(this.B, this);
     this.map = new BM.EstateMap(this);
     BM.buildGlimpses(this.B, this);
     this.interactables = this.B.interactables;
@@ -851,6 +852,7 @@ class Game {
     BM.updateMap(this, dt);
     BM.updateSideGate(this);
     BM.updateFans(this, dt);
+    BM.updatePond(this, dt, this.time);
     BM.updateSave(this, dt);
     BM.updateGlimpses(this, dt);
     BM.updateChapel(this, dt, this.time);
@@ -1017,6 +1019,7 @@ class Game {
     for (const s of this.swings || []) s.pivot.rotation.x = Math.sin(this.time * 1.15 + s.phase) * 0.22 * (0.6 + 0.4 * Math.sin(this.time * 0.13));
     for (const r of this.rockers || []) r.obj.rotation.x = Math.sin(this.time * 1.6) * 0.09;
     for (const d of this.ducks || []) {
+      if (d.own) continue;   // the pond's mallards swim themselves (49s)
       d.a += d.w * dt;
       d.obj.position.set(d.cx + Math.sin(d.a) * d.r, 0.05 + Math.sin(this.time * 2 + d.r) * 0.02, d.cz + Math.cos(d.a) * d.r);
       d.obj.rotation.y = d.a + Math.PI / 2;

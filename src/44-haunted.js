@@ -117,7 +117,7 @@ BM.buildHauntedGarden = function (B, game) {
     [-64, 64, 85, 101],        // the boundary wall and the lane
     [33, 43, 21, 29.5],        // the mausoleum
   ];
-  const circles = [[0, 24, 12], [34, 62, 8.5], [48.7, 37, 2.5], [-13, 31, 3]];
+  const circles = [[0, 24, 12], [37, 63, 11.5], [48.7, 37, 2.5], [-13, 31, 3]];
   const paths = P.paths.filter(p => p.pts);
   const nearPath = (x, z, m) => paths.some(p => {
     for (let i = 0; i < p.pts.length - 1; i++) {

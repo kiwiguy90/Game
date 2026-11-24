@@ -4,9 +4,11 @@ Ideas for the next sessions. Tick them off (`[x]`) as they land.
 
 ## The goal of the game
 
-You get locked inside the grounds, and then inside the house. To get out you
-find objects to unlock the doors and the gates, and get the new tyre and car
-battery so you can drive away.
+1. Your car breaks down at the gates.
+2. You go inside, and get locked in — trapped in the grounds and the house.
+3. You explore and find out the story.
+4. You unlock areas as you go.
+5. You get out, and drive away.
 
 Already in: the gates shut and bolt behind you on the drive; the gate motor
 switch in the cellar lets you out; the spare wheel and the battery come from

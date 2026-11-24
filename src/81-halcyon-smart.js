@@ -126,7 +126,7 @@ BM.halcyonScene = function (game, name, quiet) {
   HC.frostTarget = S.glass ? 1 : 0; HC.blindTarget = S.blinds ? 1 : 0;
   if (S.lock && HC.gate) { HC.gate.held = 'closed'; HC.gate.target = 0; }
   else if (HC.gate && HC.gate.held === 'closed' && name !== 'night') HC.gate.held = null;
-  if (game.halcyonShow) game.halcyonShow(name);
+  if (BM.halcyonShowForScene) BM.halcyonShowForScene(game, name);
   applyLights(game);
   game.audio.click && game.audio.click();
   if (!quiet) BM.halcyonSay(game, S.say, 5);
@@ -162,11 +162,12 @@ BM.halcyonPanelRows = function (game) {
     Object.assign(row('glass', 'Privacy glass'), { value: undefined, key: 'X', on: HC.frostTarget > 0, onText: 'FROSTED', offText: 'CLEAR', lit: HC.frostTarget > 0 }),
     Object.assign(row('blinds', 'Blinds'), { value: undefined, key: 'Z', on: HC.blindTarget > 0, onText: 'DOWN', offText: 'UP', lit: HC.blindTarget > 0 }),
     Object.assign(row('voice', 'House voice'), { value: undefined, on: HC.voice !== false, onText: 'ON', offText: 'OFF', lit: HC.voice !== false }),
-  ];
+  ].concat(BM.halcyonOutsideRows ? BM.halcyonOutsideRows(game) : []);
 };
 BM.halcyonPanelToggle = function (game, k) {
   if (k.indexOf('smart:') !== 0) return false;
   const id = k.slice(6), HC = game.halcyon;
+  if (BM.halcyonOutsideToggle && BM.halcyonOutsideToggle(game, id)) return true;
   if (id === 'scene') BM.halcyonScene(game, SCENE_ORDER[(SCENE_ORDER.indexOf(HC.scene) + 1) % SCENE_ORDER.length]);
   else if (id === 'colour') BM.halcyonColour(game);
   else if (id === 'bright') BM.halcyonBright(game);

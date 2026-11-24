@@ -1106,6 +1106,14 @@ suite('halcyon', () => {
   game.keyDown('KeyX'); assert(HC.frostTarget === 1, 'X frosts the glass'); game.keyDown('KeyZ'); assert(HC.blindTarget === 1, 'Z brings the blinds down');
   game.keyDown('KeyV'); run(1); assert(HC.sliders.every(d => d.t === 1), 'V holds every sliding door open'); game.keyDown('KeyV');
   assert(game.lightPanelRows().some(r => r.k === 'smart:scene') && /HALCYON/.test(game.ui.el.msg.textContent), 'the panel has the smart home, and the house talks');
+  // outside: the pool's colours, the hot tub, the fire pit, the helicopter, the fountain show
+  const pc = HC.poolLights[0].colour; game.lightPanelToggle('smart:pool'); assert(HC.poolLights[0].colour !== pc, 'the pool lights change colour');
+  game.lightPanelToggle('smart:tub'); assert(HC.tub, 'the hot tub jets');
+  game.lightPanelToggle('smart:fire'); assert(!HC.fire && !HC.fireLight.on, 'the fire pit goes out'); game.lightPanelToggle('smart:fire');
+  game.lightPanelToggle('smart:heli'); run(20); assert(HC.heli.spin > 0.9, 'the helicopter rotors spool up'); game.lightPanelToggle('smart:heli');
+  BM.halcyonScene(game, 'party', true); run(4); assert(HC.show && HC.jets.some(J => J.h > 2), 'party: the fountain show plays');
+  BM.halcyonScene(game, 'evening', true); assert(!HC.show, 'and stops for the evening');
+  game.teleport(0, 0, -22, 0); game.keys.KeyW = true; run(3); game.keys.KeyW = false; assert(p.z > -24.2, 'you cannot walk into the pool');
   for (let i = 0; i < 200; i++) { const it = game.interactables[i % game.interactables.length]; game.standAt && game.standAt(it); if (it.act) it.act(game); game.update(1 / 10); }
   assert(game.frameErrors === 0, 'no errors');
   return 'gates, drive, glass house over three floors, ' + g.lights.length + ' lights in ten groups and ' + rows.filter(r => r.section === 'ROOMS').length + ' rooms';

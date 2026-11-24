@@ -124,7 +124,9 @@ BM.buildHalcyon = function (B, game) {
   B.zone = 'exterior'; B.levelName = 'ground'; B.room = 'grounds';
   // the section and the road outside it: one walkable plane; the lawn, the road and the verge laid over it
   B.floor(null, -150, 150, SECTION.z0, 130, 0, 0.3);
-  { const lawn = B.mesh(G.plane, 'grass', 0, 0.001, (SECTION.z0 + SECTION.z1) / 2, SECTION.x1 - SECTION.x0 + 60, SECTION.z1 - SECTION.z0, 1); lawn.rotation.x = -Math.PI / 2; lawn.updateMatrix(); }
+  // (the lawn stops at the back of the house: the terrace behind it is all stone, with the pool cut into it; and either side of the terrace)
+  { const lawn = B.mesh(G.plane, 'grass', 0, 0.001, (H.z0 + SECTION.z1) / 2, SECTION.x1 - SECTION.x0 + 60, SECTION.z1 - H.z0, 1); lawn.rotation.x = -Math.PI / 2; lawn.updateMatrix(); }
+  for (const s of [-1, 1]) { const x0 = s < 0 ? SECTION.x0 - 30 : H.x1 + 4, x1 = s < 0 ? H.x0 - 4 : SECTION.x1 + 30, l2 = B.mesh(G.plane, 'grass', (x0 + x1) / 2, 0.001, (SECTION.z0 + H.z0) / 2, x1 - x0, H.z0 - SECTION.z0, 1); l2.rotation.x = -Math.PI / 2; l2.updateMatrix(); }
   { const v = B.mesh(G.plane, 'grass', 0, 0.001, 118, 300, 30, 1); v.rotation.x = -Math.PI / 2; v.updateMatrix(); }
   B.boxE(M.asphalt, -150, 150, -0.02, 0.012, 103.5, 112.5);                     // the road
   for (let x = -146; x < 150; x += 6) B.boxE(M.line, x, x + 3, 0.012, 0.016, 107.9, 108.1);
@@ -336,8 +338,11 @@ BM.buildHalcyon = function (B, game) {
   for (const x of [-40, -31]) led(B, game, { group: 'hfacade', id: 'garage-wash-' + x, name: 'Garage wash', pos: [x, GA.h - 0.2, GA.z1 + 0.4], colour: 0xfff0dc, target: 0.7, range: 7, corona: 0.2, glow: [x, GA.h - 0.15, GA.z1 + 0.35, 2.5, 0.03, 0.06] });
 
   /* ---- the pool terrace: stone from the house to the lake edge ---- */
-  B.boxE(M.paver, H.x0 - 4, H.x1 + 4, 0, 0.02, -40, H.z0);
-  for (let x = -24; x <= 24; x += 8) for (const z of [-24, -36]) led(B, game, { group: 'hpool', id: 'terrace-' + x + '-' + z, name: 'Terrace light', pos: [x, 0.05, z], colour: 0xfff0dc, target: 0.35, range: 4, corona: 0.3, glow: [x, 0.025, z, 0.16, 0.01, 0.16] });
+  // (laid round the infinity pool, which is cut into it: see 82-halcyon-outside.js)
+  const PL = BM.HALCYON_POOL = { x0: -16, x1: 16, z0: -34, z1: -24, trough: -35.4 };
+  B.boxE(M.paver, H.x0 - 4, H.x1 + 4, 0, 0.02, PL.z1, H.z0); B.boxE(M.paver, H.x0 - 4, H.x1 + 4, 0, 0.02, -40, PL.trough);
+  B.boxE(M.paver, H.x0 - 4, PL.x0, 0, 0.02, PL.trough, PL.z1); B.boxE(M.paver, PL.x1, H.x1 + 4, 0, 0.02, PL.trough, PL.z1);
+  for (let x = -24; x <= 24; x += 8) for (const z of [-21, -38]) led(B, game, { group: 'hpool', id: 'terrace-' + x + '-' + z, name: 'Terrace light', pos: [x, 0.05, z], colour: 0xfff0dc, target: 0.35, range: 4, corona: 0.3, glow: [x, 0.025, z, 0.16, 0.01, 0.16] });
 
   /* ================= INSIDE: THE SMART LIGHTS ================= */
   B.zone = 'mansion';
@@ -387,8 +392,10 @@ BM.buildHalcyon = function (B, game) {
   B.furniture(M.white, -18, -10, F1, 1.9, 0.55, 2.2, 'bed');
   B.levelName = 'ground'; B.room = 'house';
   BM.buildHalcyonSmart(B, game);
+  BM.buildHalcyonOutside(B, game);
 };
 BM.halcyonMats = mats;
+BM.halcyonLed = (B, game, o) => led(B, game, o);
 
 /* ---- once the game is up: the power on, the lights steady, you at the gate ---- */
 BM.afterHalcyonInit = function (game) {
@@ -474,5 +481,6 @@ BM.updateHalcyon = function (game, dt) {
   // the fountain's water shimmers
   if (HC.fountainWater) HC.fountainWater.position.y = 0.46 + Math.sin(HC.t * 2) * 0.004;
   BM.updateHalcyonSmart(game, dt);
+  BM.updateHalcyonOutside(game, dt);
 };
 })();

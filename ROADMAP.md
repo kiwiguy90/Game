@@ -39,20 +39,18 @@ The game should not get too hard. For anything we add:
       slowly, until you can walk down there. Things the water carried are
       left on the floor as it goes down (letters, a doll, a chair), and some
       can be picked up and read.
-- [ ] **The house floods on the storm night.** Only on the storm night, while
-      you are inside: water comes in under the doors and up from the cellar
-      and rises slowly across the ground floor to waist height. You can still
-      wade through it, slowly; furniture floats and papers drift. You can
-      still go in and out of the house while it floods (water pours out of
-      the doors as you open them). As the water
-      climbs, it gets into the wiring and the fittings: the lights flicker,
-      fizz, crackle and zap, some pop with a bang and a flash, and they go out
-      — the lowest first (floor lamps, table lamps, sockets), then the wall
-      lights, until the ground floor is dark. Upstairs stays dry and lit. No
-      timer and no way to lose: it is an event, not a race. The cellar pumps
-      drain it away again afterwards.
-      *Test run built: press F9 inside the house to start the flood, F9 again
-      to pump it out. Still to do: start it by itself on the storm night.*
+- [ ] **The house floods on the storm night.** Only on the storm night: water
+      comes up from the cellar, then across the floors and the grounds alike,
+      slowly to the waist and then faster, floor by floor, until it stands at
+      the top of the mansion's roof. Only the towers and the clock stand above
+      it. As it climbs it gets into the wiring: every light, inside and out,
+      flickers, crackles and zaps, then sparks and goes out — some with a bang
+      — lowest first on every floor. Fires hiss out. You wade, then swim (on
+      the surface or under it; you cannot drown), and you can go in and out of
+      the house. When the pumps run, the water goes down and each light dries
+      out, comes back on and is sound again.
+      *Test run built: F9 starts the flood, F9 again runs the pumps. Still to
+      do: start it by itself on the storm night.*
 - [ ] **Dimmer switches.** Turn the lights up and down in the main rooms,
       not only on and off.
 - [ ] **The storm cuts one part of the house at a time — rarely.** Not every

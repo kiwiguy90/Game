@@ -925,28 +925,40 @@ suite('nights', () => {
 });
 
 suite('flood', () => {
-  // the storm-night flood, as a test run on F9: the water rises, the ground floor's lights fail as it reaches them
+  // the flood, as a test run on F9: up from the cellar, over the whole estate, to the top of the roof
   const env = H.load({ quiet: true });
   const { game, BM } = env, g = game.grid, F = game.flood;
-  game.ui.mode = null; game.intro = null;
+  game.ui.mode = null; game.intro = null; game.teleport(0, 0, 8.5, 0);
   game.keyDown('F9');
-  assert(F.rising && F.lights.length > 15 && g.live('main'), 'F9 starts it, with the power on and the ground floor lit');
+  assert(F.rising && F.lights.length > 150 && g.live('main'), 'F9 starts it, with the power on and the house and grounds lit');
+  assert(F.lights.some(e => e.l.zone !== 'mansion') && F.lights.some(e => e.l.level === 'upper'), 'inside and out, every floor');
   F.speed = 4; for (let i = 0; i < 60; i++) game.update(1 / 30);
-  const fit = e => e.l.id, count = F.lights.length;
-  let n = 0; while (F.depth < 0.999 && n++ < 6000) game.update(1 / 10);
-  for (let i = 0; i < 20; i++) game.update(1 / 10);
-  assert(F.lights.every(e => e.state === 2 && e.l.dead), 'every fitting on the ground floor is drowned: ' + F.lights.filter(e => e.state !== 2).map(fit).join(' '));
-  const lamp = F.lights.find(e => e.l.pos.y < 1.7), ceil = F.lights.find(e => e.l.pos.y > 2.8);
+  const count = F.lights.length, ground = F.lights.filter(e => e.l.level === 'ground' && e.l.zone === 'mansion' && e.at < 1);
+  let n = 0; while (F.depth < 1 && n++ < 6000) game.update(1 / 10);
+  F.speed = 0; for (let i = 0; i < 20; i++) game.update(1 / 10); F.speed = 4;
+  assert(ground.every(e => e.state === 2 && e.l.dead), 'waist-deep: every fitting on the ground floor is drowned: ' + ground.filter(e => e.state !== 2).map(e => e.l.id).join(' '));
+  const lamp = ground.find(e => e.l.pos.y < 1.7), ceil = ground.find(e => e.l.pos.y > 2.8);
   assert(lamp && ceil && lamp.at < ceil.at, 'lowest first: the lamps before the ceiling lights');
-  assert(g.lights.filter(l => l.zone === 'mansion' && l.level === 'upper' && l.intensity > 0.01).length > 5, 'upstairs stays lit');
-  assert(F.fires.every(e => !e.f.lit), 'the fires are out');
-  assert(F.wade > 0.9 && BM.floodDrag(game) < 0.6, 'waist-deep, and it holds you back');
-  // you can still go out
-  game.teleport(0, 0, 15, Math.PI); game.update(1 / 30); assert(F.wade === 0 && BM.floodDrag(game) === 1, 'outside the house, no water');
-  game.keyDown('F9'); n = 0; while (F.depth > 0 && n++ < 6000) game.update(1 / 10);
+  assert(g.lights.filter(l => l.zone === 'mansion' && l.level === 'upper' && l.intensity > 0.01).length > 5, 'upstairs is still lit');
+  assert(F.wade > 0.9 && BM.floodDrag(game) < 0.6, 'and it holds you back');
+  while (F.depth < 11.19 && n++ < 12000) game.update(1 / 10);
+  for (let i = 0; i < 20; i++) game.update(1 / 10);
+  assert(F.lights.every(e => e.state === 2), 'at the roof, everything under it is out');
+  assert(g.lights.some(l => l.level === 'clock' && l.intensity > 0.01), 'the clock tower stands above it, lit');
+  assert(F.fires.every(e => !e.f.lit) && F.swim && game.frameErrors === 0, 'the fires are out, and you are swimming');
+  // swimming: up through the open hall, out of the front doors, and you float at the surface
+  game.teleport(0, 6, 18, 0); F.swim = true; for (let i = 0; i < 60; i++) game.update(1 / 10);
+  assert(Math.abs(game.player.y - (F.depth - 1.42)) < 0.1, 'outside, you float with your head above the water');
+  game.keys.KeyC = true; for (let i = 0; i < 20; i++) game.update(1 / 10); game.keys.KeyC = false;
+  assert(F.under && game.player.y < F.depth - 3, 'C dives under it');
   for (let i = 0; i < 80; i++) game.update(1 / 10);
-  assert(!g.lights.some(l => l.drowned) && !F.water.visible && game.frameErrors === 0, 'F9 again pumps it out, and the lights come back');
-  return 'the water rises to the waist; ' + count + ' fittings fail as it reaches them; F9 drains it';
+  assert(!F.under, 'and you float back up');
+  // the pumps: the lights come back as it falls below them, sound
+  game.keyDown('F9'); n = 0; while (F.depth > -3.2 && n++ < 8000) game.update(1 / 10);
+  for (let i = 0; i < 80; i++) game.update(1 / 10);
+  assert(!g.lights.some(l => l.drowned) && !F.water.visible && !F.swim && game.frameErrors === 0, 'F9 again pumps it out');
+  assert(ground.every(e => !e.l.dead && e.l.flicker === 0 && e.l.intensity > 0.01), 'and every light is back on, steady: ' + ground.filter(e => e.l.dead || e.l.intensity <= 0.01).map(e => e.l.id).join(' '));
+  return count + ' fittings, inside and out, fail as the water reaches them on its way to the roof; you swim; F9 drains it and they mend';
 });
 
 suite('eleanor', () => {

@@ -731,6 +731,7 @@ class Game {
     else if (this.outro) this.updateOutro(dt);
     else if (this.climbing) this.updateClimb(dt);
     else if (!frozen && !this.busy) this.updatePlayer(dt);
+    if (this.ui.mode !== 'title' && !this.intro) BM.updateFlood(this, dt);   // the water does not wait while you read
     this.updateDoors(dt);
     this.updateStorm(dt);
     if (this.clock_) { this.clock_.update(dt); this.clock_.tickHammers(); }
@@ -744,6 +745,7 @@ class Game {
     for (const z in this.B.zones) this.B.zones[z].visible = ctx.visibleZones[z];
     this.fx.update(dt, ctx);
     BM.updateWild(this, dt, this.time);   // after the effects: weather and time of day add their light on top
+    BM.floodAfterFx(this, dt);            // and under the flood, murk
     this.audio.update(dt, ctx);
     this.ui.update(dt);
     this.updateCamera();
@@ -776,11 +778,12 @@ class Game {
       mx = mx / ml * amt; mz = mz / ml * amt;
       const hit = phys.move(p, mx * speed * dt, mz * speed * dt);
       p.bob += dt * (running ? 12 : 8); p.stepAcc += amt * speed * dt;
-      if (p.stepAcc > (running ? 1.1 : 0.75) && p.grounded) { p.stepAcc = 0; if (this.flood && this.flood.wade) BM.floodSlosh(this); else this.audio.step(this.surfaceAt(p)); }
+      if (p.stepAcc > (running ? 1.1 : 0.75) && (p.grounded || (this.flood && this.flood.swim))) { p.stepAcc = 0; if (this.flood && (this.flood.wade || this.flood.swim)) BM.floodSlosh(this); else this.audio.step(this.surfaceAt(p)); }
     }
     // vertical
     const sup = phys.support(p.x, p.z, Math.max(p.y, y0));
-    if (p.grounded && p.vy <= 0 && sup <= p.y + 0.01 && sup >= p.y - 0.55) { p.y = sup; p.vy = 0; }
+    if (BM.floodSwim(this, dt)) { /* swimming */ }
+    else if (p.grounded && p.vy <= 0 && sup <= p.y + 0.01 && sup >= p.y - 0.55) { p.y = sup; p.vy = 0; }
     else {
       p.vy -= 18 * dt;
       const prevY = p.y;
@@ -863,7 +866,6 @@ class Game {
     BM.updatePond(this, dt, this.time);
     BM.updateDoorbells(this, dt);
     BM.updateHaunt(this, dt);
-    BM.updateFlood(this, dt);
     BM.updateSave(this, dt);
     BM.updateGlimpses(this, dt);
     BM.updateChapel(this, dt, this.time);

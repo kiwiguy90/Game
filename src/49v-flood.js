@@ -1,23 +1,29 @@
 /* ==========================================================================
-   BLACKTHORN MANOR — 6zd. THE FLOOD (a test run)
-   On the storm night the house floods. This is the test of it, started and
-   drained by hand (F9): black water comes in under the doors and up from the
-   cellar and rises slowly across the ground floor to waist height. As it
-   climbs it gets into the wiring and the fittings, lowest first — the plugs,
-   the lamps, the wall lights, the ceiling roses, at last the chandelier — and
-   each one flickers, crackles and fizzes, then sparks and goes out, some with
-   a bang. The fires hiss out. Upstairs stays dry and lit. No timer, no way to
-   lose: you can wade through it, slowly, and go in and out of the house.
-   F9 again starts the pumps; the water drains and the lights come back.
+   BLACKTHORN MANOR — 6zd. THE FLOOD (a test run, F9)
+   Black water comes up across the whole estate — inside the house and out —
+   slowly at first, to the waist, then faster, floor by floor, until it stands
+   at the top of the mansion's roof. Only the towers and the clock tower stand
+   above it. As it climbs it gets into the wiring and the fittings, lowest
+   first on every floor and in the grounds: the plugs and lamps, the wall
+   lights, the ceilings, the lamp posts. Each one flickers, crackles and
+   fizzes, then sparks and goes out, some with a bang. The fires hiss out.
+   You wade, and when it is over your chest you swim: on the surface or under
+   it (Space up, C down). You cannot drown.
+   F9 again runs the pumps: the water goes down, and as it falls below each
+   fitting that fitting dries out, comes back on and is sound again.
    ========================================================================== */
 (function () {
 'use strict';
 const BM = window.BM;
 const G = BM.G;
 
-const TOP = 1.0;           // waist height on you
-const RISE = 1 / 95;       // metres a second: about a minute and a half to the waist
-const DRAIN = 1 / 45;
+const BASE = -3.2;            // the cellar floor: it comes up from there first
+const WAIST = 1.0;
+const TOP = 11.2;             // the ridge of the main roof
+const SLOW = 1 / 95;          // m/s to the waist: about a minute and a half
+const FAST = 1 / 13;          // m/s from there to the roof: about two and a half minutes
+const DRAIN = 1 / 9;          // m/s: the pumps, about a minute and a half from the roof
+const FLOAT = 1.42;           // swimming, your feet hang this far under the surface (eyes just above it)
 const HOUSE = { x0: -17.9, x1: 17.9, z0: -11.9, z1: 11.9 };
 const inHouse = (x, z) => x > HOUSE.x0 && x < HOUSE.x1 && z > HOUSE.z0 && z < HOUSE.z1;
 
@@ -37,29 +43,30 @@ function rippleNormals() {
     img.data[i] = (nx / l * 0.5 + 0.5) * 255; img.data[i + 1] = (ny / l * 0.5 + 0.5) * 255; img.data[i + 2] = (1 / l * 0.5 + 0.5) * 255; img.data[i + 3] = 255;
   }
   g.putImageData(img, 0, 0);
-  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(9, 6);
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping;
   return t;
 }
 
 BM.buildFlood = function (B, game) {
-  const root = B.zones.mansion;
-  const F = game.flood = { depth: 0, target: 0, rising: false, draining: false, said: {}, lights: [], fires: [], appliances: [], sparks: [], t: 0 };
-  /* the water: one sheet over the whole ground floor; the walls hide it outside the rooms */
-  const mat = new THREE.MeshPhongMaterial({ color: 0x0d0c08, specular: 0xc8c4b4, shininess: 140, transparent: true, opacity: 0.8, normalMap: rippleNormals(), normalScale: new THREE.Vector2(0.7, 0.7) });
+  const scene = B.zones.mansion.parent, root = B.zones.mansion;
+  const F = game.flood = { depth: BASE, rising: false, draining: false, said: {}, lights: [], fires: [], appliances: [], sparks: [], t: 0, swim: false, wade: 0, under: false };
+  /* the water: one sheet over the whole estate, inside the house and out; the walls hide it where it should not be */
+  const SIZE = 900, nm = rippleNormals(); nm.repeat.set(SIZE / 4, SIZE / 4);
+  const mat = new THREE.MeshPhongMaterial({ color: 0x0d0c08, specular: 0xc8c4b4, shininess: 140, transparent: true, opacity: 0.8, normalMap: nm, normalScale: new THREE.Vector2(0.7, 0.7), side: THREE.DoubleSide });
   const w = F.water = new THREE.Mesh(G.plane, mat);
-  w.rotation.x = -Math.PI / 2; w.scale.set(HOUSE.x1 - HOUSE.x0, HOUSE.z1 - HOUSE.z0, 1); w.position.set(0, -5, 0);
-  w.visible = false; w.userData.dynamic = true; w.userData.noInstance = true; w.renderOrder = 2;
-  root.add(w);
+  w.rotation.x = -Math.PI / 2; w.scale.set(SIZE, SIZE, 1); w.position.set(0, -5, 0);
+  w.visible = false; w.userData.dynamic = true; w.userData.noInstance = true; w.renderOrder = 2; w.frustumCulled = false;
+  scene.add(w);
   /* sparks: a pool of tiny hot cubes, additive, one draw */
   const N = 160, sm = new THREE.MeshBasicMaterial({ color: 0xfff0b0, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
   const sp = F.sparkMesh = new THREE.InstancedMesh(G.box, sm, N);
   sp.instanceMatrix.setUsage(THREE.DynamicDrawUsage); sp.frustumCulled = false; sp.count = 0; sp.userData.dynamic = true;
-  root.add(sp);
-  /* what the water carries: loose papers, letters, a few books */
+  scene.add(sp);
+  /* what the water carries out of the house: loose papers, letters, a few books */
   const NP = 46, pm = new THREE.MeshPhongMaterial({ color: 0x8f8670, specular: 0x111111, shininess: 4 });
   const pp = F.papers = new THREE.InstancedMesh(G.box, pm, NP);
-  pp.instanceMatrix.setUsage(THREE.DynamicDrawUsage); pp.userData.dynamic = true; pp.visible = false;
-  root.add(pp);
+  pp.instanceMatrix.setUsage(THREE.DynamicDrawUsage); pp.userData.dynamic = true; pp.visible = false; pp.frustumCulled = false;
+  scene.add(pp);
   F.float = [];
   const phys = B.phys, rnd = (a, b) => a + Math.random() * (b - a);
   for (let i = 0, tries = 0; i < NP && tries < 3000; tries++) {
@@ -98,128 +105,146 @@ function sparkBurst(F, pos, n, hot) {
     F.sparks.push({ x: pos.x, y: pos.y - 0.05, z: pos.z, vx: Math.cos(a) * s * 0.6, vy: Math.random() * s * 0.6 - 0.3, vz: Math.sin(a) * s * 0.6, life: 0.4 + Math.random() * (hot ? 0.9 : 0.5) });
   }
 }
-
 BM.floodSparks = (game, pos, n, hot) => sparkBurst(game.flood, pos, n, hot);   // for the screenshots
 
 /* ---- starting and draining (F9) ---- */
 BM.floodToggle = function (game) {
   const F = game.flood; if (!F) return;
-  if (F.rising || (F.depth > 0.01 && !F.draining)) BM.floodDrain(game); else BM.floodStart(game);
+  if (F.rising || (F.depth > BASE + 0.01 && !F.draining)) BM.floodDrain(game); else BM.floodStart(game);
 };
 
+/* where a fitting's wiring is: the floor under it, and how high above that floor it hangs */
+function failHeight(game, l) {
+  const floor = game.B.phys.support(l.pos.x, l.pos.z, l.pos.y - 0.05, 0);
+  const fl = isFinite(floor) && floor > BASE - 0.3 ? floor : 0, rel = l.pos.y - fl;   // over open water: count from the ground
+  if (l.id === 'hall-chandelier') return 0.97;                      // the last to go downstairs
+  if (rel < 1.7) return fl + 0.1 + Math.random() * 0.25;            // plugged into the skirting sockets, or low in the ground
+  if (rel < 2.8) return fl + 0.38 + Math.random() * 0.3;            // wall lights and lamp posts: the wiring drops to the switch, the post's base
+  return fl + 0.62 + Math.random() * 0.3;                           // ceilings: the water gets into the junction boxes
+}
+
 BM.floodStart = function (game) {
-  const F = game.flood, g = game.grid, p = game.player;
+  const F = game.flood, g = game.grid;
   if (F.rising) return;
-  // a test run: the house has power, and every light on the ground floor is on, so you can watch them go
-  if (!g.lodge) g.setLodge(true);
-  if (!g.live('main')) g.throwMain();
-  const ground = l => l.zone === 'mansion' && l.level === 'ground' && inHouse(l.pos.x, l.pos.z) && l.pos.y > -0.5 && l.pos.y < 7;
-  const A = game.audio, ui = game.ui, click = A.click, say = ui.say; A.click = () => {}; ui.say = () => {};
+  // a test run: the power is on, and every light in the house and the grounds is on, so you can watch them go
+  const A = game.audio, ui = game.ui, click = A.click, say = ui.say, lever = A.lever, clunk = A.clunk;
+  A.click = A.lever = A.clunk = () => {}; ui.say = () => {};
   try {
-    for (const it of game.interactables) {
-      if (!it.switchVisual || it.leverOn || it.zone !== 'mansion') continue;
-      if ((it.controls || []).some(id => { const l = g.light(id); return l && ground(l); })) it.act(game);
-    }
-  } finally { A.click = click; ui.say = say; }
-  // each fitting fails when the water reaches it: the plugs and lamps first, then the wall lights, then the ceiling
+    if (!g.lodge) g.setLodge(true);
+    if (!g.live('main')) g.throwMain();
+    for (const it of game.interactables) if (it.switchVisual && !it.leverOn && it.zone === 'mansion' && (it.controls || []).length) it.act(game);
+    if (game.setEstateAll) game.setEstateAll(true);
+  } finally { A.click = click; A.lever = lever; A.clunk = clunk; ui.say = say; }
+  // every fitting fails when the water reaches its wiring; the ones built for water, and the towers above the roof, do not
   F.lights = [];
   for (const l of g.lights) {
-    if (!ground(l) || l.kind === 'fire' || l.drowned || l.dead) continue;
-    l.on = true;
-    let at;
-    if (l.pos.y < 1.7) at = 0.1 + Math.random() * 0.25;              // plugged into the skirting sockets
-    else if (l.pos.y < 2.8) at = 0.38 + Math.random() * 0.3;          // wall lights: the wiring drops to the switches
-    else at = 0.62 + Math.random() * 0.3;                             // the ceilings: the water gets into the junction boxes
-    if (l.id === 'hall-chandelier') at = 0.97;                        // the last to go
-    F.lights.push({ l, at, state: 0, next: 0, bang: Math.random() < 0.45 || l.id === 'hall-chandelier' });
+    if (l.kind === 'fire' || l.circuit === 'car' || l.drowned || /under/i.test(l.id)) continue;
+    if (l.level === 'clock' || l.level === 'belfry' || (l.zone === 'mansion' && l.pos.y > TOP + 0.5)) continue;   // the towers stand above it; a mast's wiring is at its foot
+    if (!l.dead) l.on = true;
+    F.lights.push({ l, at: failHeight(game, l), state: 0, next: 0, bang: Math.random() < 0.45 || l.id === 'hall-chandelier' });
   }
-  F.fires = (game.fires || []).filter(f => f.pos && inHouse(f.pos.x, f.pos.z) && f.pos.y > -0.5 && f.pos.y < 1.5).map(f => ({ f, at: Math.max(0.12, f.pos.y - 0.15), out: false }));
-  F.appliances = g.appliances.filter(a => inHouse(a.pos.x, a.pos.z) && a.pos.y > -0.5 && a.pos.y < 2.5).map(a => ({ a, at: 0.25 + Math.random() * 0.2, was: a.switchedOn, out: false }));
-  // if you are not in the house, you are put in the hall to watch
-  if (!(inHouse(p.x, p.z) && p.y > -0.5 && p.y < 2)) game.teleport(0, 0, 8.5, 0);
-  F.rising = true; F.draining = false; F.target = TOP; F.said = {};
+  F.fires = (game.fires || []).filter(f => f.pos && f.pos.y < TOP).map(f => ({ f, at: f.pos.y - 0.12, out: false }));
+  F.appliances = g.appliances.filter(a => a.pos.y < TOP).map(a => {
+    const fl = game.B.phys.support(a.pos.x, a.pos.z, a.pos.y, 0);
+    return { a, at: (isFinite(fl) ? fl : 0) + 0.25 + Math.random() * 0.2, was: a.switchedOn, out: false };
+  });
+  if (F.depth <= BASE) F.depth = BASE;
+  F.rising = true; F.draining = false; F.said = {};
   F.water.visible = true; F.papers.visible = true;
-  game.ui.say('Water. It is coming in under the front doors and up the cellar steps — black, cold, spreading across the boards — and it is not stopping.', 6);
+  game.ui.say('Under your feet, somewhere below, a rush of water. The cellar is filling — and then it is coming up the cellar steps, under the doors and out of the ground, across the floors and the lawns alike. It is not stopping.', 7);
 };
 
 BM.floodDrain = function (game) {
   const F = game.flood;
-  F.rising = false; F.draining = true; F.target = 0;
+  F.rising = false; F.draining = true;
   game.audio.clunk && game.audio.clunk(0.6);
-  game.ui.say('Somewhere below, the pumps thump into life. Slowly — very slowly — the water begins to go down.', 6);
+  game.ui.say('Somewhere, deep down, the pumps thump into life. Slowly the water begins to go down.', 6);
 };
 
-function restore(game) {
+/* a fitting dries out and is sound again: it comes back on, steady, and will not fail */
+function mend(e) {
+  const l = e.l; e.state = 3;
+  if (!l.drowned) return;
+  l.drowned = false; l.dead = false; l.flicker = 0; if (l.kind === 'bang') l.kind = 'incandescent'; l.lightType = 'steady'; l.noFail = true; l.failed = null; l.scorched = false;
+  if (l.scorch) l.scorch.visible = false;
+}
+
+function finish(game) {
   const F = game.flood;
-  for (const e of F.lights) { const l = e.l; if (l.drowned) { l.drowned = false; l.dead = false; l.flicker = e.flicker0 || 0; l.lightType = e.type0 || 'steady'; if (l.scorch) l.scorch.visible = false; } }
+  for (const e of F.lights) mend(e);
   for (const e of F.appliances) if (e.out) { e.a.switchedOn = e.was; e.out = false; }
   F.lights = []; F.fires = []; F.appliances = [];
-  F.water.visible = false; F.papers.visible = false; F.draining = false;
-  game.ui.say('The last of the water slides away down the cellar steps. The boards are black and soaked. One by one the lights stutter back on.', 6);
+  F.water.visible = false; F.papers.visible = false; F.draining = false; F.swim = false; F.wade = 0;
+  game.ui.say('The last of the water drains away. Everything is black and soaked and dripping — and every light is back on, steady, as if nothing had happened.', 6);
 }
 
 /* ---- every frame ---- */
 BM.updateFlood = function (game, dt) {
   const F = game.flood; if (!F) return;
   const A = game.audio;
-  if (!F.rising && !F.draining && F.depth <= 0) { if (F.loop && A.ctx) F.loop.g.gain.setTargetAtTime(0, A.ctx.currentTime, 0.3); return; }
+  if (!F.rising && !F.draining && F.depth <= BASE) { if (F.loop && A.ctx) F.loop.g.gain.setTargetAtTime(0, A.ctx.currentTime, 0.3); return; }
   F.t += dt;
-  const was = F.depth;
-  if (F.rising) F.depth = Math.min(F.target, F.depth + RISE * dt * (F.speed || 1));
-  if (F.draining) F.depth = Math.max(0, F.depth - DRAIN * dt * (F.speed || 1));
-  const d = F.depth, p = game.player, inside = inHouse(p.x, p.z) && p.y > -0.5 && p.y < 2.2;
+  const rate = F.rising ? (F.depth < 0 || F.depth >= WAIST ? FAST : SLOW) : DRAIN;
+  if (F.rising) F.depth = Math.min(TOP, F.depth + rate * dt * (F.speed || 1));
+  if (F.draining) F.depth = Math.max(BASE, F.depth - rate * dt * (F.speed || 1));
+  const d = F.depth, p = game.player;
   // the water sheet, its ripples drifting
-  F.water.position.y = Math.max(0.005, d);
+  F.water.position.y = d + 0.005;
   F.water.material.normalMap.offset.set(F.t * 0.011, F.t * 0.007);
   // the sound of it pouring in, or draining away
   if (A.ctx) {
     if (!F.loop) F.loop = A.noiseLoop(A.brown, 'lowpass', 650, 0.8);
-    const lvl = (F.rising && d < TOP ? 0.22 : F.draining ? 0.16 : 0.03) * (inside ? 1 : 0.35);
+    const lvl = F.rising && d < TOP ? 0.2 : F.draining ? 0.16 : 0.03;
     F.loop.g.gain.setTargetAtTime(lvl, A.ctx.currentTime, 0.5);
   }
   // the lines as it climbs
   const line = (k, at, text) => { if (!F.said[k] && F.rising && d >= at) { F.said[k] = true; game.ui.say(text, 6); } };
-  line('ankle', 0.18, 'It is over your ankles now, and the plugs along the skirting are going under. Something in the walls begins to spit and crackle.');
-  line('knee', 0.5, 'Knee-deep. Papers and letters turn slowly on the surface. The lights are fighting it — flickering, buzzing, fizzing.');
-  line('thigh', 0.8, 'It is up past your thighs and still rising. Every light on this floor is crackling. Upstairs, the landing light is steady and dry.');
-  line('waist', TOP - 0.005, 'Waist-deep, and it has stopped rising. The ground floor is dark. The only sound is the water, moving.');
+  line('cellar', -1.6, 'The cellar is half full already, and it is still coming up the steps.');
+  line('ankle', 0.18, 'It is over your ankles, and the plugs along the skirting are going under. Something in the walls begins to spit and crackle.');
+  line('knee', 0.5, 'Knee-deep, inside and out. Papers turn slowly on the surface. The lights are fighting it — flickering, buzzing, fizzing.');
+  line('waist', WAIST, 'Waist-deep across the whole estate, and now it is rising faster. Every light down here is out.');
+  line('first', 4.4, 'It is over the first floor. The bedroom lights are going, one by one, as it climbs the walls.');
+  line('attic', 8.4, 'The attic is going under. Only the roof is left above it.');
+  line('top', TOP - 0.01, 'It has stopped at the roof. The house is gone under the water. Only the towers and the clock stand above it, the clock face still lit.');
   // the fittings
+  const band = Math.min(0.7, Math.max(0.09, rate * 9));             // about nine seconds of fighting it before it goes
   for (const e of F.lights) {
     const l = e.l;
-    if (e.state === 0 && d >= e.at - 0.09 && F.rising) {
-      // it reaches the wiring: the light starts to fight it
-      e.state = 1; e.flicker0 = l.flicker; e.type0 = l.lightType;
-      l.flicker = 0.75 + Math.random() * 0.2; l.lightType = 'flicker'; e.next = 0;
-    }
-    if (e.state === 1) {
-      e.next -= dt;
-      if (e.next <= 0) {
-        e.next = 0.15 + Math.random() * 0.55;
-        if (l.powered) { crackle(A, vol(game, l.pos)); if (Math.random() < 0.35) sparkBurst(F, l.pos, 3 + Math.floor(Math.random() * 4), false); }
-      }
-      if (d >= e.at) {
-        e.state = 2; l.drowned = true;
-        if (l.powered && e.bang) {
-          // it flares, arcs and blows
-          l.seq = [{ d: 0.05, v: 1.6 }, { d: 0.04, v: 0.2 }, { d: 0.14, v: 3.4, ramp: true }, { d: 0.01, v: 0, bang: true }]; l.seqIndex = 0; l.seqT = 0;
-          zap(A, vol(game, l.pos, 30)); sparkBurst(F, l.pos, 26, true);
-        } else {
-          // it sputters out with a sizzle
-          if (l.powered) { zap(A, 0.55 * vol(game, l.pos)); sparkBurst(F, l.pos, 10, false); }
-          l.dead = true;
+    if (F.rising) {
+      if (e.state === 0 && d >= e.at - band) { e.state = 1; l.flicker = 0.75 + Math.random() * 0.2; l.lightType = 'flicker'; e.next = 0; }
+      if (e.state === 1) {
+        e.next -= dt;
+        if (e.next <= 0) {
+          e.next = 0.15 + Math.random() * 0.55;
+          if (l.powered) { crackle(A, vol(game, l.pos)); if (Math.random() < 0.35) sparkBurst(F, l.pos, 3 + Math.floor(Math.random() * 4), false); }
+        }
+        if (d >= e.at) {
+          e.state = 2; l.drowned = true;
+          if (l.powered && e.bang) {
+            // it flares, arcs and blows
+            l.seq = [{ d: 0.05, v: 1.6 }, { d: 0.04, v: 0.2 }, { d: 0.14, v: 3.4, ramp: true }, { d: 0.01, v: 0, bang: true }]; l.seqIndex = 0; l.seqT = 0;
+            zap(A, vol(game, l.pos, 30)); sparkBurst(F, l.pos, 26, true);
+          } else {
+            // it sputters out with a sizzle
+            if (l.powered) { zap(A, 0.55 * vol(game, l.pos)); sparkBurst(F, l.pos, 10, false); }
+            l.dead = true;
+          }
         }
       }
-    }
+    } else if (F.draining && e.state > 0 && e.state < 3 && d < e.at - 0.05) mend(e);   // dried out: back on, and sound
   }
-  for (const e of F.fires) if (!e.out && d >= e.at && F.rising) { e.out = true; if (e.f.lit) { e.f.lit = false; e.f.light.on = false; hiss(A, vol(game, e.f.pos, 18)); if (vol(game, e.f.pos, 14) > 0) game.ui.say('The water reaches the hearth. The fire goes out in a long hiss of steam.', 4); } }
-  for (const e of F.appliances) if (!e.out && d >= e.at && F.rising) { e.out = true; if (e.a.switchedOn) { e.a.switchedOn = false; if (e.a.running) { zap(A, 0.7 * vol(game, e.a.pos)); sparkBurst(F, e.a.pos, 8, false); } } }
+  for (const e of F.fires) if (!e.out && d >= e.at && F.rising) { e.out = true; if (e.f.lit) { e.f.lit = false; e.f.light.on = false; hiss(A, vol(game, e.f.pos, 18)); } }
+  for (const e of F.appliances) {
+    if (!e.out && d >= e.at && F.rising) { e.out = true; if (e.a.switchedOn) { e.a.switchedOn = false; if (e.a.running) { zap(A, 0.7 * vol(game, e.a.pos)); sparkBurst(F, e.a.pos, 8, false); } } }
+    else if (e.out && F.draining && d < e.at - 0.05) { e.out = false; e.a.switchedOn = e.was; }
+  }
   // sparks: fall, and die on the water
   const sm = F.sparkMesh, m4 = BM._m4 || (BM._m4 = new THREE.Matrix4());
   let n = 0;
   for (let i = F.sparks.length - 1; i >= 0; i--) {
     const s = F.sparks[i];
     s.life -= dt; s.vy -= 9.8 * dt; s.x += s.vx * dt; s.y += s.vy * dt; s.z += s.vz * dt;
-    if (s.life <= 0 || s.y < d) { F.sparks.splice(i, 1); continue; }
+    if (s.life <= 0 || s.y < d) F.sparks.splice(i, 1);
   }
   for (const s of F.sparks) { if (n >= 160) break; const k = 0.012 + 0.02 * Math.min(1, s.life); m4.makeScale(k, k, k); m4.setPosition(s.x, s.y, s.z); sm.setMatrixAt(n++, m4); }
   sm.count = n; sm.instanceMatrix.needsUpdate = true;
@@ -237,17 +262,75 @@ BM.updateFlood = function (game, dt) {
     }
     pm.instanceMatrix.needsUpdate = true;
   }
-  if (F.draining && d <= 0) restore(game);
-  // wading
-  F.wade = inside && d > 0.05 && p.y < d ? Math.min(1, (d - p.y) / TOP) : 0;
+  if (F.draining && d <= BASE) finish(game);
+  // in it: wading, or over your chest and swimming
+  const over = d - p.y;
+  if (!F.swim && over > 1.3) { F.swim = true; p.vy = 0; }
+  F.wade = !F.swim && over > 0.05 ? Math.min(1, over / WAIST) : 0;
 };
+
+/* how much the water holds you back, as a fraction of your speed */
+BM.floodDrag = function (game) { const F = game.flood; return !F ? 1 : F.swim ? 0.72 : F.wade ? 1 - 0.55 * F.wade : 1; };
 
 /* a step through the water: a heavy slosh, deeper the deeper it is */
 BM.floodSlosh = function (game) {
-  const A = game.audio, w = game.flood.wade; if (!A.ctx) return;
+  const A = game.audio, F = game.flood; if (!A.ctx) return;
+  if (F.swim) {                                   // a stroke: a soft wash at the surface, or a muffled rush under it
+    A.burst(A.brown, 'lowpass', F.under ? 260 : 600, 0.8, F.under ? 0.12 : 0.1, 0.08, 0.6);
+    if (!F.under) A.burst(A.white, 'bandpass', 1300, 0.9, 0.04, 0.05, 0.4, 0.1);
+    return;
+  }
+  const w = F.wade;
   A.burst(A.brown, 'lowpass', 380 + 300 * (1 - w), 0.9, 0.16 + 0.14 * w, 0.03, 0.45 + 0.4 * w);
   A.burst(A.white, 'bandpass', 900 + Math.random() * 500, 1.2, 0.05 + 0.04 * w, 0.02, 0.35, 0.08);
 };
-/* how much the water holds you back, 0..1 of your speed */
-BM.floodDrag = function (game) { const F = game.flood; return F && F.wade ? 1 - 0.55 * F.wade : 1; };
+
+/* Swimming: the vertical part of moving, when the water is over your chest. Returns true when it has
+   handled it. Space swims up, C (or Ctrl) dives; let go and you float back up to the surface. Floors
+   are solid both ways: you come up through the stairwells, the hall, the open doors — not the ceilings. */
+BM.floodSwim = function (game, dt) {
+  const F = game.flood; if (!F || !F.swim) return false;
+  const p = game.player, k = game.keys, phys = game.B.phys, d = F.depth, surface = d - FLOAT;
+  let vy;
+  if (k.Space) vy = 1.8;
+  else if (k.KeyC || k.ControlLeft || k.ControlRight) vy = -1.8;
+  else vy = Math.max(-1.2, Math.min(0.8, (surface - p.y) * 1.5));     // buoyancy: drift up to float at the surface
+  let y = p.y + vy * dt;
+  if (y > surface + 0.03 && vy > 0) y = Math.max(p.y, surface + 0.03);  // you cannot swim up out of the water
+  const floor = phys.support(p.x, p.z, p.y + 0.05, 0);
+  if (y < floor) y = floor;
+  const head = phys.support(p.x, p.z, y + BM.PLAYER.height, 0);          // a floor between your feet and the top of your head?
+  if (head > p.y + 0.2) y = Math.min(y, head - BM.PLAYER.height - 0.02);
+  p.y = Math.max(y, floor); p.vy = 0;
+  p.grounded = p.y <= floor + 0.02;
+  // out of it again: the water is down below your chest and there is a floor under you
+  if (d - p.y < 1.15 && phys.support(p.x, p.z, p.y + 0.3) >= p.y - 0.6) { F.swim = false; p.grounded = true; }
+  return true;
+};
+
+/* After the weather and the light have had their say: under the water it is murky green and muffled. */
+BM.floodAfterFx = function (game, dt) {
+  const F = game.flood; if (!F) return;
+  const p = game.player, eye = p.y + BM.PLAYER.eye, under = F.water.visible && eye < F.depth - 0.02;
+  const A = game.audio;
+  if (A.ctx && A.comp && !F.lp) {
+    // a low-pass between the mix and the speakers, wide open until you go under
+    F.lp = A.ctx.createBiquadFilter(); F.lp.type = 'lowpass'; F.lp.frequency.value = 20000;
+    A.master.disconnect(); A.master.connect(F.lp); F.lp.connect(A.comp);
+  }
+  if (F.lp) F.lp.frequency.setTargetAtTime(under ? 520 : 20000, A.ctx.currentTime, 0.08);
+  if (under && !F.veil && game.renderer && game.renderer.domElement && game.renderer.domElement.parentNode) {
+    // a murky tint over the view, just above the picture and under the words
+    const veil = F.veil = document.createElement('div'), cv = game.renderer.domElement;
+    veil.style.cssText = 'position:fixed;inset:0;pointer-events:none;display:none;background:radial-gradient(ellipse at 50% 40%, rgba(24,52,40,0.28), rgba(4,14,10,0.78));';
+    cv.parentNode.insertBefore(veil, cv.nextSibling);
+  }
+  if (under !== F.under) { F.under = under; if (F.veil) F.veil.style.display = under ? 'block' : 'none'; if (A.ctx && !under && F.swim) A.burst(A.white, 'bandpass', 900, 0.7, 0.12, 0.01, 0.5); }
+  if (under) {
+    const fog = game.scene.fog, deep = Math.min(1, (F.depth - eye) / 6);
+    fog.color.setRGB(0.04 - 0.025 * deep, 0.085 - 0.05 * deep, 0.065 - 0.04 * deep);
+    fog.density = 0.16 + 0.12 * deep;
+    game.scene.background = fog.color;
+  }
+};
 })();

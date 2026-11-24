@@ -32,7 +32,7 @@ class Synth {
     if (!AC) return;
     const ctx = this.ctx = new AC();
     this.master = ctx.createGain(); this.master.gain.value = 0.8;
-    const comp = ctx.createDynamicsCompressor();
+    const comp = this.comp = ctx.createDynamicsCompressor();
     this.master.connect(comp); comp.connect(ctx.destination);
     // shared noise buffers
     const len = ctx.sampleRate * 2;

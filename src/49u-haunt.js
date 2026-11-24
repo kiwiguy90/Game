@@ -27,7 +27,7 @@ const label = it => (typeof it.label === 'function' ? it.label() : it.label || '
 BM.updateHaunt = function (game, dt) {
   const H = game.haunt; if (!H) return;
   if (game.headless && !game.hauntTest) return;
-  if (game.intro || game.outro || game.story.ended || game.ui.mode === 'title') return;
+  if (game.intro || game.outro || game.story.ended || game.ui.mode === 'title' || (game.flood && game.flood.water.visible)) return;
   const p = game.player, grid = game.grid;
   // finding what was undone
   for (let i = H.pending.length - 1; i >= 0; i--) {

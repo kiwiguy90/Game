@@ -15,9 +15,7 @@
 const BM = window.BM;
 const G = BM.G;
 const RATE = 4, QUARTER = 900;
-const NOTES = { gs: 830.6, fs: 740.0, e: 659.3, b: 493.9 };          // rods, an octave over the tower bells
-const PHRASES = [['gs', 'fs', 'e', 'b'], ['e', 'gs', 'fs', 'b'], ['e', 'fs', 'gs', 'e'], ['gs', 'e', 'fs', 'b'], ['b', 'fs', 'gs', 'e']];
-const QUARTERS = { 1: [0], 2: [1, 2], 3: [3, 4, 0], 0: [1, 2, 3, 4] };
+/* the tunes (Westminster by default) are in 12-chimes.js; the rods play them an octave over the tower */
 
 function dialMat() {
   const c = document.createElement('canvas'); c.width = 256; c.height = 320; const g = c.getContext('2d');
@@ -104,11 +102,11 @@ BM.updateLongcase = function (game, dt) {
       // a few minutes fast on the tower, as these clocks always are; and never over the top of it
       if (q !== c.quarter && !(game.chimeBusyUntil > game.time)) {
         c.quarter = q; const quarter = q % 4, hour = Math.floor(c.time / 3600) % 12 || 12;
-        let when = 0.2;
-        for (const ph of QUARTERS[quarter]) { for (const n of PHRASES[ph]) { A.bell && A.bell(NOTES[n], 0.22 * hear, when, 1.8); when += 0.6; } when += 0.35; }
-        if (quarter === 0) { when += 1.0; for (let i = 0; i < hour; i++) { A.bell && A.bell(NOTES.b / 2, 0.35 * hear, when, 3.0); when += 1.6; } }
-        c.chimes++; game.chimeBusyUntil = game.time + when + 2.5;
-        if (c.chimes === 1 && hear > 0.3) game.ui.say('In the hall the grandfather clock whirs, and chimes the quarter on its rods.', 4);
+        // on its rods, an octave over the tower; the tune is chosen on the side panel
+        const tune = (game.chimeTunes && game.chimeTunes.longcase) || 'westminster';
+        const when = BM.ringChime(A, tune, quarter, hour, { octave: 1, gain: 0.22 * hear, decay: 1.8, gapScale: 0.66, when: 0.2, hourGain: 0.35 * hear, hourDecay: 3.0, hourGap: 1.6, hourMul: 0.75 });
+        c.chimes++; if (when) game.chimeBusyUntil = game.time + when + 2.5;
+        if (c.chimes === 1 && hear > 0.3 && tune !== 'off' && tune !== 'hours') game.ui.say('In the hall the grandfather clock whirs, and chimes the quarter on its rods.', 4);
       }
       c.tickT += dt;
       if (c.tickT >= 1.0) { c.tickT -= 1.0; c.tock = !c.tock; if (d < 9 && A.tick) A.tick(Math.max(0, 1 - d / 9) * 0.25, c.tock); }

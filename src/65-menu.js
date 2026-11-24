@@ -10,7 +10,7 @@
 const BM = window.BM;
 
 const KEY = 'blackthorn-manor-settings';
-const DEFAULTS = { sens: 1.0, invert: false, volume: 0.8, quality: 'auto', fov: 70, showObjective: true, brightness: 1.0, night: 'storm', time: 'night' };
+const DEFAULTS = { sens: 1.0, invert: false, volume: 0.8, quality: 'auto', fov: 70, showObjective: true, brightness: 1.0, night: 'storm', time: 'night', chimeTower: 'westminster', chimeLongcase: 'westminster' };
 const QUALITY = ['auto', 'low', 'medium', 'high'];
 
 function load() {

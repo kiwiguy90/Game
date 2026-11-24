@@ -13,11 +13,7 @@ const BM = window.BM;
 
 const RATE = 4;               // clock seconds per real second
 const QUARTER = 900;
-/* the Westminster quarters: five phrases on four bells (G#, F#, E, B) */
-const NOTES = { gs: 415.3, fs: 370.0, e: 329.6, b: 246.9 };
-const PHRASES = [['gs', 'fs', 'e', 'b'], ['e', 'gs', 'fs', 'b'], ['e', 'fs', 'gs', 'e'], ['gs', 'e', 'fs', 'b'], ['b', 'fs', 'gs', 'e']];
-const QUARTERS = { 1: [0], 2: [1, 2], 3: [3, 4, 0], 0: [1, 2, 3, 4] };
-const HOUR_BELL = 164.8;      // the great bell: E, an octave down
+/* the tunes themselves (Westminster by default) are in 12-chimes.js */
 
 class TowerClock {
   constructor(game) {
@@ -72,19 +68,16 @@ class TowerClock {
   /* The quarter chime, then the hour on the great bell. */
   chime(quarter, hour) {
     const g = this.game, audio = g.audio, v = this.hearing(this.c.bellPos);
-    let when = 0.4;
-    for (const ph of QUARTERS[quarter]) {
-      for (const n of PHRASES[ph]) { audio.bell(NOTES[n], 0.5 * v, when, 2.6); when += 0.9; }
-      when += 0.5;
-    }
+    // the tune is chosen on the side panel; the tower can also be switched off there altogether
+    const tune = g.towerOff ? 'off' : (g.chimeTunes && g.chimeTunes.tower) || 'westminster';
+    const when = BM.ringChime(audio, tune, quarter, hour, { gain: 0.5 * v, decay: 2.6, hourGain: 0.9 * v, hourDecay: 5.5, hourGap: 2.4, onStrike: w => this.strikeAt(w) });
     this.chimes++;
     g.events.emit('clock:chime', { quarter, hour });
+    if (tune === 'off') { this.log.push({ quarter, hour }); return; }
     if (quarter === 0) {
-      when += 1.5;
-      for (let i = 0; i < hour; i++) { audio.bell(HOUR_BELL, 0.9 * v, when, 5.5); this.strikeAt(when); when += 2.4; }
       this.strikes += hour;
       g.ui.say(hour === 12 ? 'Midnight. Above the house, the great bell begins to strike twelve.' : `The clock tower strikes ${['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'][hour - 1]}.`, 6);
-    } else if (this.chimes === 1) g.ui.say('From the tower over the hall, four notes carry across the grounds: the clock chimes the quarter.', 5);
+    } else if (this.chimes === 1 && tune !== 'hours') g.ui.say('From the tower over the hall, the bells carry across the grounds: the clock chimes the quarter.', 5);
     this.log.push({ quarter, hour });
     g.chimeBusyUntil = g.time + when + 3; // let the last bell ring out before anything else chimes
   }

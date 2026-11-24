@@ -36,6 +36,9 @@
   #lights .dot { width: 9px; height: 9px; border-radius: 50%; background: #2a1a10; border: 1px solid #5a4a34; }
   #lights .dot.lit { background: #ffcf6a; border-color: #ffe0a0; box-shadow: 0 0 6px #ffb040; }
   #lights .dot.warm { background: #a8641c; border-color: #d08a3a; }
+  #lights .status { color: #c8b890; font-size: 11px; padding: 2px 3px 6px; margin-bottom: 4px; border-bottom: 1px solid #3a3020; }
+  #lights .r.v { grid-template-columns: 14px 16px auto 1fr; }
+  #lights .st.val { color: #e0c080; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #lights .hint { margin-top: 6px; font-size: 10.5px; color: #8a7a5a; }
   #phone { display: none; position: fixed; right: 6vw; bottom: 6vh; width: 270px; height: 520px; border-radius: 28px; background: #0b0d10; border: 2px solid #333; box-shadow: 0 0 40px rgba(120,160,220,.25); padding: 16px; box-sizing: border-box; font-family: -apple-system, 'Segoe UI', sans-serif; font-size: 13px; color: #cfd8e4; overflow: auto; }
   #phone .ph-top { display: flex; justify-content: space-between; font-size: 11px; opacity: .7; margin-bottom: 14px; }
@@ -445,6 +448,79 @@ class PowerGrid {
   }
 }
 BM.PowerGrid = PowerGrid;
+})();
+</script>
+<script id="bm-12-chimes">
+/* ==========================================================================
+   BLACKTHORN MANOR — 1b. CHIME TUNES
+   The tunes the clock tower and the grandfather clock can play, chosen from
+   the side panel. Each is a set of bells and a few "changes" (rows of bells);
+   the quarter plays one change, the half two, the three-quarter three, and
+   the hour four before the hour bell strikes.
+   - Westminster: four bells, five changes (the tune of the great clock at
+     Westminster, and of most English house clocks).
+   - Whittington: eight bells down a major scale, five changes (the tune
+     named for St Mary-le-Bow; the house-clock form on eight rods).
+   - St Michael's: eight bells, four changes (the house-clock form of the
+     chimes of St Michael's, Charleston).
+   - Hours only: no quarters, the hour bell alone.
+   - Silent.
+   ========================================================================== */
+(function () {
+'use strict';
+const BM = window.BM;
+
+const hz = n => 440 * Math.pow(2, (n - 69) / 12);          // a MIDI note number to its pitch
+const scale = (root, steps) => steps.map(s => hz(root + s));
+const MAJOR = [0, 2, 4, 5, 7, 9, 11, 12];
+
+const TUNES = {
+  westminster: {
+    name: 'Westminster',
+    bells: [hz(59), hz(64), hz(66), hz(68)],               // B, E, F#, G#
+    rows: [[4, 3, 2, 1], [2, 4, 3, 1], [2, 3, 4, 2], [4, 2, 3, 1], [1, 3, 4, 2]],
+    quarters: { 1: [0], 2: [1, 2], 3: [3, 4, 0], 0: [1, 2, 3, 4] },
+    hour: hz(52), gap: 0.9,
+  },
+  whittington: {
+    name: 'Whittington',
+    bells: scale(62, MAJOR),                               // D major, eight bells
+    rows: [[8, 7, 6, 5, 4, 3, 2, 1], [8, 2, 7, 3, 6, 4, 5, 1], [8, 6, 4, 2, 7, 5, 3, 1], [8, 7, 4, 3, 6, 5, 2, 1], [2, 4, 6, 8, 5, 2, 3, 1]],
+    quarters: { 1: [0], 2: [1, 2], 3: [3, 4, 0], 0: [1, 2, 3, 4] },
+    hour: hz(50), gap: 0.5,
+  },
+  stmichael: {
+    name: "St Michael's",
+    bells: scale(53, MAJOR),                               // F major, eight bells
+    rows: [[8, 2, 3, 4, 7, 5, 6, 1], [5, 4, 3, 6, 2, 7, 8, 1], [7, 8, 3, 4, 2, 5, 6, 1], [5, 7, 3, 8, 4, 2, 6, 1]],
+    quarters: { 1: [0], 2: [1, 2], 3: [3, 0, 1], 0: [0, 1, 2, 3] },
+    hour: hz(48), gap: 0.5,
+  },
+  hours: { name: 'Hours only', bells: [], rows: [], quarters: { 1: [], 2: [], 3: [], 0: [] }, hour: hz(52), gap: 0.9 },
+  off: { name: 'Silent', bells: [], rows: [], quarters: { 1: [], 2: [], 3: [], 0: [] }, hour: 0, gap: 0.9 },
+};
+BM.CHIMES = TUNES;
+BM.CHIME_ORDER = ['westminster', 'whittington', 'stmichael', 'hours', 'off'];
+
+/* Ring a quarter (0 = the hour) on a clock's voice. Returns how long it takes, in seconds.
+   voice: { octave (x2 per step), gain, decay, gapScale, hourGain, hourDecay, hourGap, hourMul, when } */
+BM.ringChime = function (audio, key, quarter, hour, voice) {
+  const T = TUNES[key] || TUNES.westminster, v = voice || {};
+  if (!audio || !audio.bell || key === 'off') return 0;
+  const oct = Math.pow(2, v.octave || 0), gap = T.gap * (v.gapScale || 1);
+  let when = v.when || 0.4;
+  for (const r of T.quarters[quarter] || []) {
+    for (const b of T.rows[r]) { audio.bell(T.bells[b - 1] * oct, v.gain || 0.5, when, v.decay || 2.6); when += gap; }
+    when += gap * 0.55;
+  }
+  if (quarter === 0 && hour > 0 && T.hour) {
+    when += 1.2 * (v.gapScale || 1);
+    const strikes = [];
+    for (let i = 0; i < hour; i++) { audio.bell(T.hour * oct * (v.hourMul || 1), v.hourGain || 0.9, when, v.hourDecay || 5.5); strikes.push(when); when += v.hourGap || 2.4; }
+    v.onStrike && strikes.forEach(v.onStrike);
+  }
+  return when;
+};
 })();
 </script>
 <script id="bm-20-physics">
@@ -5041,9 +5117,7 @@ BM.updateGateMonitor = function (game, dt) {
 const BM = window.BM;
 const G = BM.G;
 const RATE = 4, QUARTER = 900;
-const NOTES = { gs: 830.6, fs: 740.0, e: 659.3, b: 493.9 };          // rods, an octave over the tower bells
-const PHRASES = [['gs', 'fs', 'e', 'b'], ['e', 'gs', 'fs', 'b'], ['e', 'fs', 'gs', 'e'], ['gs', 'e', 'fs', 'b'], ['b', 'fs', 'gs', 'e']];
-const QUARTERS = { 1: [0], 2: [1, 2], 3: [3, 4, 0], 0: [1, 2, 3, 4] };
+/* the tunes (Westminster by default) are in 12-chimes.js; the rods play them an octave over the tower */
 
 function dialMat() {
   const c = document.createElement('canvas'); c.width = 256; c.height = 320; const g = c.getContext('2d');
@@ -5130,11 +5204,11 @@ BM.updateLongcase = function (game, dt) {
       // a few minutes fast on the tower, as these clocks always are; and never over the top of it
       if (q !== c.quarter && !(game.chimeBusyUntil > game.time)) {
         c.quarter = q; const quarter = q % 4, hour = Math.floor(c.time / 3600) % 12 || 12;
-        let when = 0.2;
-        for (const ph of QUARTERS[quarter]) { for (const n of PHRASES[ph]) { A.bell && A.bell(NOTES[n], 0.22 * hear, when, 1.8); when += 0.6; } when += 0.35; }
-        if (quarter === 0) { when += 1.0; for (let i = 0; i < hour; i++) { A.bell && A.bell(NOTES.b / 2, 0.35 * hear, when, 3.0); when += 1.6; } }
-        c.chimes++; game.chimeBusyUntil = game.time + when + 2.5;
-        if (c.chimes === 1 && hear > 0.3) game.ui.say('In the hall the grandfather clock whirs, and chimes the quarter on its rods.', 4);
+        // on its rods, an octave over the tower; the tune is chosen on the side panel
+        const tune = (game.chimeTunes && game.chimeTunes.longcase) || 'westminster';
+        const when = BM.ringChime(A, tune, quarter, hour, { octave: 1, gain: 0.22 * hear, decay: 1.8, gapScale: 0.66, when: 0.2, hourGain: 0.35 * hear, hourDecay: 3.0, hourGap: 1.6, hourMul: 0.75 });
+        c.chimes++; if (when) game.chimeBusyUntil = game.time + when + 2.5;
+        if (c.chimes === 1 && hear > 0.3 && tune !== 'off' && tune !== 'hours') game.ui.say('In the hall the grandfather clock whirs, and chimes the quarter on its rods.', 4);
       }
       c.tickT += dt;
       if (c.tickT >= 1.0) { c.tickT -= 1.0; c.tock = !c.tock; if (d < 9 && A.tick) A.tick(Math.max(0, 1 - d / 9) * 0.25, c.tock); }
@@ -10316,6 +10390,151 @@ BM.floodAfterFx = function (game, dt) {
 };
 })();
 </script>
+<script id="bm-49w-panel">
+/* ==========================================================================
+   BLACKTHORN MANOR — 6ze. MORE ON THE SIDE PANEL
+   Everything else in the house you might want from anywhere, on the
+   lighting panel beside the lights, the gates, the doors and the windows:
+   - a status line: the time, the weather, how many lights are on;
+   - every fire and candle; every fan; the radios, the television and the
+     radiogram; the cellar storm doors; the garage doors; the lift;
+   - the clock tower on or off, and the tune each clock chimes;
+   - the weather, the time of day, and the flood.
+   Click a row (Tab frees the mouse), or ↑ ↓ and Enter.
+   ========================================================================== */
+(function () {
+'use strict';
+const BM = window.BM;
+
+const SETTINGS = game => (game.menu && game.menu.settings) || null;
+function tunes(game) {
+  if (!game.chimeTunes) { const s = SETTINGS(game) || {}; game.chimeTunes = { tower: s.chimeTower || 'westminster', longcase: s.chimeLongcase || 'westminster' }; }
+  return game.chimeTunes;
+}
+const remember = (game, k, v) => { const s = SETTINGS(game); if (s) { s[k] = v; game.menu.save && game.menu.save(); } };
+const next = (list, cur) => list[(list.indexOf(cur) + 1) % list.length];
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+function quietly(game, fn) {
+  const A = game.audio, ui = game.ui, say = ui.say, click = A.click, rattle = A.rattle; ui.say = () => {}; A.click = () => {}; A.rattle = () => {};
+  try { fn(); } finally { ui.say = say; A.click = click; A.rattle = rattle; }
+}
+
+const fires = game => game.fires || [];
+const fans = game => game.grid.appliances.filter(a => a.kind === 'fan');
+const music = game => game.grid.appliances.filter(a => a.kind === 'radio' || a.kind === 'tv' || a.kind === 'record');
+const dialSwitch = game => game.interactables.find(it => it.switchVisual && (it.controls || []).indexOf('clock-dial-1') >= 0);
+
+/* the line at the top of the panel */
+BM.panelStatus = function (game) {
+  const mins = Math.floor(game.clock / 60) % 60, hrs = (23 + Math.floor(game.clock / 3600)) % 24;
+  let n = 0, lit = 0;
+  for (const l of game.grid.lights) { if (l.kind === 'fire' || l.circuit === 'car') continue; n++; if (l.intensity > 0.02) lit++; }
+  const w = (BM.WEATHERS || {})[game.night] || cap(game.night || 'storm'), t = BM.TIMES && BM.TIMES[game.timeOfDay] ? BM.TIMES[game.timeOfDay].name : cap(game.timeOfDay || 'night');
+  return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')} · ${w} · ${t} · ${lit} / ${n} lights on`;
+};
+
+BM.panelRows = function (game) {
+  const g = game.grid, rows = [], T = tunes(game);
+  const house = (k, name, on, onText, offText, extra) => rows.push(Object.assign({ section: 'HOUSE', supply: '', k: 'more:' + k, name, on, onText, offText, lit: on, warming: false, live: true }, extra || {}));
+  const fl = fires(game).filter(f => f.lit).length;
+  house('fires', 'Fires & candles', fl > 0, 'LIT', 'OUT');
+  const fa = fans(game);
+  house('fans', 'Fans', fa.some(a => a.switchedOn), 'ON', 'OFF', { live: fa.some(a => g.live(a.circuit)) });
+  const mu = music(game);
+  house('music', 'Radios & music', mu.some(a => a.switchedOn), 'ON', 'OFF', { live: mu.some(a => g.live(a.circuit)) });
+  const sd = game.stormDoors;
+  if (sd) house('storm', 'Cellar storm doors', sd.open || (sd.moving && sd.target), 'OPEN', sd.bolted ? 'BOLTED' : 'CLOSED', { warming: !!sd.moving });
+  const gds = game.garageDoors || [];
+  if (gds.length) house('garage', 'Garage doors', gds.some(d => d.open), 'OPEN', 'CLOSED', { warming: gds.some(d => d.moving) });
+  const L = game.lift, F = BM.LIFT_FLOORS;
+  if (L && F) rows.push({ section: 'HOUSE', supply: '', k: 'more:lift', name: 'Lift', value: L.phase !== 'idle' ? 'MOVING' : F[L.at].name.toUpperCase(), on: true, lit: L.phase === 'idle', warming: L.phase !== 'idle', live: g.live('main') });
+  // the clocks
+  const ck = game.clock_;
+  rows.push({ section: 'CLOCKS', supply: '', k: 'more:tower', name: 'Clock tower', on: !game.towerOff, onText: 'ON', offText: 'OFF', lit: !game.towerOff && !!(ck && ck.powered), warming: false, live: !!(ck && ck.powered) });
+  rows.push({ section: 'CLOCKS', supply: '', k: 'more:towerTune', name: 'Tower chimes', value: BM.CHIMES[T.tower].name.toUpperCase(), on: true, lit: false, live: !game.towerOff });
+  if (game.longcase) rows.push({ section: 'CLOCKS', supply: '', k: 'more:longcaseTune', name: 'Grandfather clock', value: BM.CHIMES[T.longcase].name.toUpperCase(), on: true, lit: false, live: true });
+  // the world
+  const W = BM.WEATHERS || {}, TI = BM.TIMES || {}, F9 = game.flood;
+  rows.push({ section: 'WEATHER & TIME', supply: '', k: 'more:weather', name: 'Weather', value: (W[game.night] || cap(game.night || 'storm')).toUpperCase(), on: true, lit: false, live: true });
+  rows.push({ section: 'WEATHER & TIME', supply: '', k: 'more:time', name: 'Time of day', value: (TI[game.timeOfDay] ? TI[game.timeOfDay].name : cap(game.timeOfDay || 'night')).toUpperCase(), on: true, lit: false, live: true });
+  if (F9) {
+    const up = F9.water && F9.water.visible, h = Math.max(0, F9.depth).toFixed(1) + ' M';
+    rows.push({ section: 'WEATHER & TIME', supply: '', k: 'more:flood', key: 'F9', name: 'Flood', value: !up ? 'DRY' : F9.rising ? 'RISING ' + h : F9.draining ? 'DRAINING ' + h : 'STANDING ' + h, on: true, lit: !!up, warming: !!(F9.rising || F9.draining), live: true });
+  }
+  return rows;
+};
+
+BM.panelToggle = function (game, k) {
+  if (k.indexOf('more:') !== 0) return false;
+  const id = k.slice(5), A = game.audio, ui = game.ui, g = game.grid;
+  if (id === 'fires') {
+    const fs = fires(game), light = !fs.some(f => f.lit);
+    for (const f of fs) { f.lit = light; f.light.on = light; }
+    A.burst && A.burst(A.white, light ? 'lowpass' : 'highpass', light ? 1200 : 2500, 1, 0.3, 0.01, 0.6);
+    ui.say(light ? 'In every hearth the fire catches, and every candle in the house takes a flame. The whole place glows orange.' : 'Every fire sinks to embers and every candle goes out in a thread of smoke.', 4);
+  } else if (id === 'fans' || id === 'music') {
+    const as = id === 'fans' ? fans(game) : music(game), on = !as.some(a => a.switchedOn);
+    for (const a of as) a.switchedOn = on;
+    A.click && A.click();
+    const live = as.some(a => g.live(a.circuit));
+    ui.say(id === 'fans' ? (on ? (live ? 'All over the house the fans whirr up to speed.' : 'Every fan is switched on — but there is no power to turn them.') : 'Every fan winds down and stops.')
+      : (on ? (live ? 'The radios warm up and find their stations, the television hisses into life, the radiogram drops its needle: music through the empty house.' : 'Everything is switched on — but nothing plays without power.') : 'The radios, the television and the radiogram go quiet.'), 4);
+  } else if (id === 'storm') {
+    const sd = game.stormDoors;
+    if (sd.moving) return true;
+    if (sd.open) { quietly(game, () => game.stormDoorsToggle()); sd.boltAfter = true; ui.say('Out in the courtyard the storm doors come down with a clang, and the bolt goes home.', 4); }
+    else if (sd.bolted) { sd.bolted = false; A.stormBolt && A.stormBolt(false); quietly(game, () => game.stormDoorsToggle()); ui.say('In the courtyard the bolt shrieks back, and the storm doors go up and fall open on the setts.', 4); }
+    else { sd.bolted = true; A.stormBolt && A.stormBolt(true); ui.say('The storm doors are bolted.', 3); }
+  } else if (id === 'garage') {
+    const gds = game.garageDoors || [], open = !gds.some(d => d.open);
+    quietly(game, () => { for (const d of gds) if (d.open !== open && !d.moving) game.toggleGarageDoor(d); });
+    A.rattle && A.rattle();
+    ui.say(open ? 'At the coach house both doors swing up into the roof with a shriek of runners.' : 'At the coach house both doors come down on their springs and shut with a bang.', 4);
+  } else if (id === 'lift') {
+    const L = game.lift, F = BM.LIFT_FLOORS;
+    game.liftCall((L.at + 1) % F.length);
+  } else if (id === 'tower') {
+    game.towerOff = !game.towerOff;
+    const sw = dialSwitch(game);
+    if (sw && !!sw.leverOn === game.towerOff) quietly(game, () => sw.act(game));
+    A.clunk && A.clunk(0.5);
+    ui.say(game.towerOff ? 'The clock tower goes quiet, and its face goes dark. The hands still turn.' : 'The clock tower comes back: its face lights, and it will chime again on the quarter.', 4);
+  } else if (id === 'towerTune' || id === 'longcaseTune') {
+    const T = tunes(game), which = id === 'towerTune' ? 'tower' : 'longcase';
+    T[which] = next(BM.CHIME_ORDER, T[which]);
+    remember(game, which === 'tower' ? 'chimeTower' : 'chimeLongcase', T[which]);
+    const name = BM.CHIMES[T[which]].name;
+    // play it, so you can hear it
+    const ck = game.clock_, lc = game.longcase;
+    if (which === 'tower') {
+      if (game.towerOff) ui.say(`The tower will chime ${name} — once it is switched back on.`, 4);
+      else if (ck && ck.powered) { const w = BM.ringChime(A, T.tower, 2, 0, { gain: 0.5 * ck.hearing(ck.c.bellPos), decay: 2.6 }); game.chimeBusyUntil = game.time + w + 2; ui.say(T.tower === 'off' ? 'The clock tower will be silent.' : T.tower === 'hours' ? 'The clock tower will strike the hours only.' : `The clock tower will chime ${name}.`, 4); }
+      else ui.say(`The clock tower is set to ${name}. It has no power to chime yet: it runs on the attic circuit.`, 4);
+    } else {
+      if (lc && lc.running) { const p = game.player, d = Math.hypot(lc.pos.x - p.x, lc.pos.y - p.y - 1.6, lc.pos.z - p.z), hear = Math.max(0.12, 1 - d / 30); const w = BM.ringChime(A, T.longcase, 2, 0, { octave: 1, gain: 0.22 * hear, decay: 1.8, gapScale: 0.66, when: 0.2 }); game.chimeBusyUntil = game.time + w + 2; }
+      ui.say(T.longcase === 'off' ? 'The grandfather clock will be silent.' : T.longcase === 'hours' ? 'The grandfather clock will strike the hours only.' : `The grandfather clock will chime ${name}.` + (lc && lc.running ? '' : ' It has no power yet: it runs on the hall circuit.'), 4);
+    }
+  } else if (id === 'weather') {
+    const n = next(Object.keys(BM.WEATHERS), game.night || 'storm');
+    BM.applyNight(game, n); remember(game, 'night', n);
+    ui.say({ storm: 'The storm comes in: wind, rain, and lightning over the house.', rain: 'Steady rain now, and no thunder.', fog: 'The rain stops, and the fog comes up off the lake.', clear: 'The sky clears. The moon is up.' }[n] || n, 4);
+  } else if (id === 'time') {
+    const n = next(Object.keys(BM.TIMES), game.timeOfDay || 'night');
+    BM.setTimeOfDay(game, n); remember(game, 'time', n);
+    ui.say({ night: 'Night.', dusk: 'Dusk: the last of the light going.', dawn: 'Dawn: grey light in the east.', day: 'Day.' }[n] || n, 3);
+  } else if (id === 'flood') BM.floodToggle(game);
+  return true;
+};
+
+/* the storm doors bolt themselves once they are down */
+BM.updatePanel = function (game) {
+  if (!game.chimeTunes && game.menu) tunes(game);   // the tunes you chose last time
+  const sd = game.stormDoors;
+  if (sd && sd.boltAfter && !sd.moving && !sd.open) { sd.boltAfter = false; sd.bolted = true; game.audio.stormBolt && game.audio.stormBolt(true); }
+};
+})();
+</script>
 <script id="bm-50-fx">
 /* ==========================================================================
    BLACKTHORN MANOR — 7. ATMOSPHERE
@@ -10995,11 +11214,7 @@ const BM = window.BM;
 
 const RATE = 4;               // clock seconds per real second
 const QUARTER = 900;
-/* the Westminster quarters: five phrases on four bells (G#, F#, E, B) */
-const NOTES = { gs: 415.3, fs: 370.0, e: 329.6, b: 246.9 };
-const PHRASES = [['gs', 'fs', 'e', 'b'], ['e', 'gs', 'fs', 'b'], ['e', 'fs', 'gs', 'e'], ['gs', 'e', 'fs', 'b'], ['b', 'fs', 'gs', 'e']];
-const QUARTERS = { 1: [0], 2: [1, 2], 3: [3, 4, 0], 0: [1, 2, 3, 4] };
-const HOUR_BELL = 164.8;      // the great bell: E, an octave down
+/* the tunes themselves (Westminster by default) are in 12-chimes.js */
 
 class TowerClock {
   constructor(game) {
@@ -11054,19 +11269,16 @@ class TowerClock {
   /* The quarter chime, then the hour on the great bell. */
   chime(quarter, hour) {
     const g = this.game, audio = g.audio, v = this.hearing(this.c.bellPos);
-    let when = 0.4;
-    for (const ph of QUARTERS[quarter]) {
-      for (const n of PHRASES[ph]) { audio.bell(NOTES[n], 0.5 * v, when, 2.6); when += 0.9; }
-      when += 0.5;
-    }
+    // the tune is chosen on the side panel; the tower can also be switched off there altogether
+    const tune = g.towerOff ? 'off' : (g.chimeTunes && g.chimeTunes.tower) || 'westminster';
+    const when = BM.ringChime(audio, tune, quarter, hour, { gain: 0.5 * v, decay: 2.6, hourGain: 0.9 * v, hourDecay: 5.5, hourGap: 2.4, onStrike: w => this.strikeAt(w) });
     this.chimes++;
     g.events.emit('clock:chime', { quarter, hour });
+    if (tune === 'off') { this.log.push({ quarter, hour }); return; }
     if (quarter === 0) {
-      when += 1.5;
-      for (let i = 0; i < hour; i++) { audio.bell(HOUR_BELL, 0.9 * v, when, 5.5); this.strikeAt(when); when += 2.4; }
       this.strikes += hour;
       g.ui.say(hour === 12 ? 'Midnight. Above the house, the great bell begins to strike twelve.' : `The clock tower strikes ${['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'][hour - 1]}.`, 6);
-    } else if (this.chimes === 1) g.ui.say('From the tower over the hall, four notes carry across the grounds: the clock chimes the quarter.', 5);
+    } else if (this.chimes === 1 && tune !== 'hours') g.ui.say('From the tower over the hall, the bells carry across the grounds: the clock chimes the quarter.', 5);
     this.log.push({ quarter, hour });
     g.chimeBusyUntil = g.time + when + 3; // let the last bell ring out before anything else chimes
   }
@@ -12015,7 +12227,7 @@ BM.Synth = Synth;
 const BM = window.BM;
 
 const KEY = 'blackthorn-manor-settings';
-const DEFAULTS = { sens: 1.0, invert: false, volume: 0.8, quality: 'auto', fov: 70, showObjective: true, brightness: 1.0, night: 'storm', time: 'night' };
+const DEFAULTS = { sens: 1.0, invert: false, volume: 0.8, quality: 'auto', fov: 70, showObjective: true, brightness: 1.0, night: 'storm', time: 'night', chimeTower: 'westminster', chimeLongcase: 'westminster' };
 const QUALITY = ['auto', 'low', 'medium', 'high'];
 
 function load() {
@@ -12462,7 +12674,7 @@ class UI {
     if (!show) return;
     if (el.classList) el.classList.toggle('active', active);
     const rows = this.game.lightPanelRows();
-    let html = '', section = '', i = -1;
+    let html = `<div class="status">${BM.panelStatus(this.game)}</div>`, section = '', i = -1;
     for (const r of rows) {
       i++;
       if (r.section !== section) {
@@ -12470,7 +12682,8 @@ class UI {
         html += `<div class="hd"><span>${section}</span><span class="sup">${r.supply}</span></div>`;
       }
       const dot = r.lit ? 'lit' : r.warming ? 'warm' : '';
-      html += `<div class="r${r.live ? '' : ' dead'}${active && i === this.lightsSel ? ' sel' : ''}" data-k="${r.k}"><span class="dot ${dot}"></span><span class="k">${r.key || ''}</span><span>${r.name}</span><span class="st ${r.on ? 'on' : 'off'}">${r.on ? r.onText || 'ON' : r.offText || 'OFF'}</span></div>`;
+      const st = r.value !== undefined ? `<span class="st val">${r.value}</span>` : `<span class="st ${r.on ? 'on' : 'off'}">${r.on ? r.onText || 'ON' : r.offText || 'OFF'}</span>`;
+      html += `<div class="r${r.value !== undefined ? ' v' : ''}${r.live ? '' : ' dead'}${active && i === this.lightsSel ? ' sel' : ''}" data-k="${r.k}"><span class="dot ${dot}"></span><span class="k">${r.key || ''}</span><span>${r.name}</span>${st}</div>`;
     }
     html += active ? '<div class="hint">Click a row to switch it · ↑ ↓ and Enter · Tab or Esc to look around again</div>'
       : '<div class="hint">Tab to use the mouse here · O / I masters · 1–0 - = [ ] estate · G gates · K side gate · V doors · X windows · Z curtains · L hide</div>';
@@ -12699,6 +12912,7 @@ class Game {
       rows.push({ section: 'HOUSE', supply: '', k: 'house:windows', key: 'X', name: 'All windows', on: wOpen > 0, onText: 'OPEN', offText: 'CLOSED', lit: wOpen > 0, warming: false, live: true });
       rows.push({ section: 'HOUSE', supply: '', k: 'house:curtains', key: 'Z', name: 'All curtains', on: cDrawn === 0, onText: 'OPEN', offText: 'CLOSED', lit: cDrawn === 0, warming: false, live: true });
     }
+    for (const r of BM.panelRows(this)) rows.push(r);   // fires, fans, music, doors, the lift, the clocks, the weather (49w-panel.js)
     const houseSupply = g.live('main') ? 'house supply ●' : 'no supply ○';
     for (const it of this.interactables) {
       if (!it.switchVisual) continue;
@@ -12708,6 +12922,7 @@ class Game {
     return rows;
   }
   lightPanelToggle(k) {
+    if (BM.panelToggle(this, k)) return;
     if (k === 'estate-all') return this.setEstateAll(!this.estateGroups.every(([g]) => this.estateGroupOn(g)));
     const [kind, id] = k.split(':');
     if (kind === 'master') return id === 'outside' ? this.masterOutside() : this.masterInside();
@@ -13066,6 +13281,7 @@ class Game {
     else if (this.climbing) this.updateClimb(dt);
     else if (!frozen && !this.busy) this.updatePlayer(dt);
     if (this.ui.mode !== 'title' && !this.intro) BM.updateFlood(this, dt);   // the water does not wait while you read
+    BM.updatePanel(this);
     this.updateDoors(dt);
     this.updateStorm(dt);
     if (this.clock_) { this.clock_.update(dt); this.clock_.tickHammers(); }

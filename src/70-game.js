@@ -176,7 +176,7 @@ class UI {
     if (!show) return;
     if (el.classList) el.classList.toggle('active', active);
     const rows = this.game.lightPanelRows();
-    let html = '', section = '', i = -1;
+    let html = `<div class="status">${BM.panelStatus(this.game)}</div>`, section = '', i = -1;
     for (const r of rows) {
       i++;
       if (r.section !== section) {
@@ -184,7 +184,8 @@ class UI {
         html += `<div class="hd"><span>${section}</span><span class="sup">${r.supply}</span></div>`;
       }
       const dot = r.lit ? 'lit' : r.warming ? 'warm' : '';
-      html += `<div class="r${r.live ? '' : ' dead'}${active && i === this.lightsSel ? ' sel' : ''}" data-k="${r.k}"><span class="dot ${dot}"></span><span class="k">${r.key || ''}</span><span>${r.name}</span><span class="st ${r.on ? 'on' : 'off'}">${r.on ? r.onText || 'ON' : r.offText || 'OFF'}</span></div>`;
+      const st = r.value !== undefined ? `<span class="st val">${r.value}</span>` : `<span class="st ${r.on ? 'on' : 'off'}">${r.on ? r.onText || 'ON' : r.offText || 'OFF'}</span>`;
+      html += `<div class="r${r.value !== undefined ? ' v' : ''}${r.live ? '' : ' dead'}${active && i === this.lightsSel ? ' sel' : ''}" data-k="${r.k}"><span class="dot ${dot}"></span><span class="k">${r.key || ''}</span><span>${r.name}</span>${st}</div>`;
     }
     html += active ? '<div class="hint">Click a row to switch it · ↑ ↓ and Enter · Tab or Esc to look around again</div>'
       : '<div class="hint">Tab to use the mouse here · O / I masters · 1–0 - = [ ] estate · G gates · K side gate · V doors · X windows · Z curtains · L hide</div>';
@@ -413,6 +414,7 @@ class Game {
       rows.push({ section: 'HOUSE', supply: '', k: 'house:windows', key: 'X', name: 'All windows', on: wOpen > 0, onText: 'OPEN', offText: 'CLOSED', lit: wOpen > 0, warming: false, live: true });
       rows.push({ section: 'HOUSE', supply: '', k: 'house:curtains', key: 'Z', name: 'All curtains', on: cDrawn === 0, onText: 'OPEN', offText: 'CLOSED', lit: cDrawn === 0, warming: false, live: true });
     }
+    for (const r of BM.panelRows(this)) rows.push(r);   // fires, fans, music, doors, the lift, the clocks, the weather (49w-panel.js)
     const houseSupply = g.live('main') ? 'house supply ●' : 'no supply ○';
     for (const it of this.interactables) {
       if (!it.switchVisual) continue;
@@ -422,6 +424,7 @@ class Game {
     return rows;
   }
   lightPanelToggle(k) {
+    if (BM.panelToggle(this, k)) return;
     if (k === 'estate-all') return this.setEstateAll(!this.estateGroups.every(([g]) => this.estateGroupOn(g)));
     const [kind, id] = k.split(':');
     if (kind === 'master') return id === 'outside' ? this.masterOutside() : this.masterInside();
@@ -780,6 +783,7 @@ class Game {
     else if (this.climbing) this.updateClimb(dt);
     else if (!frozen && !this.busy) this.updatePlayer(dt);
     if (this.ui.mode !== 'title' && !this.intro) BM.updateFlood(this, dt);   // the water does not wait while you read
+    BM.updatePanel(this);
     this.updateDoors(dt);
     this.updateStorm(dt);
     if (this.clock_) { this.clock_.update(dt); this.clock_.tickHammers(); }

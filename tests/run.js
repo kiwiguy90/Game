@@ -965,6 +965,62 @@ suite('gate keys', () => {
   return 'G gates, K side gate (not once you are bolted in); V every door, X every window, Z every pair of curtains; from anywhere and from the panel';
 });
 
+suite('panel', () => {
+  // the rest of the side panel: status, fires, fans, music, storm doors, garage, lift, clocks and tunes, weather, time, flood
+  const env = H.load({ quiet: true });
+  const { game, BM } = env, g = game.grid;
+  game.ui.mode = null; game.intro = null; game.teleport(0, 0, 8.5, 0);
+  const run = s => { for (let i = 0; i < s * 10; i++) game.update(1 / 10); };
+  g.setLodge(true); g.throwMain(); for (const b of ['hall', 'ground', 'east', 'west', 'attic', 'cellar']) if (!g.breakers[b]) g.setBreaker(b, true); run(3);
+  const rows = () => game.lightPanelRows(), row = k => rows().find(r => r.k === k), tog = k => { game.lightPanelToggle(k); run(0.3); };
+  assert(/\d\d:\d\d · .* · .* · \d+ \/ \d+ lights on/.test(BM.panelStatus(game)), 'the status line: ' + BM.panelStatus(game));
+  for (const k of ['fires', 'fans', 'music', 'storm', 'garage', 'lift', 'tower', 'towerTune', 'longcaseTune', 'weather', 'time', 'flood']) assert(row('more:' + k), 'a row for ' + k);
+  // fires and candles
+  if (row('more:fires').on) tog('more:fires');
+  tog('more:fires'); assert(game.fires.every(f => f.lit && f.light.on) && row('more:fires').on, 'every fire and candle lit');
+  tog('more:fires'); assert(game.fires.every(f => !f.lit), 'and all out');
+  // fans, music
+  const fans = g.appliances.filter(a => a.kind === 'fan'), mus = g.appliances.filter(a => /radio|tv|record/.test(a.kind));
+  if (row('more:fans').on) tog('more:fans');
+  tog('more:fans'); run(2); assert(fans.every(a => a.switchedOn) && fans.some(a => a.running), 'every fan on');
+  tog('more:fans'); assert(fans.every(a => !a.switchedOn), 'and off');
+  if (row('more:music').on) tog('more:music');
+  tog('more:music'); assert(mus.every(a => a.switchedOn), 'every radio, the television and the radiogram on');
+  tog('more:music'); assert(mus.every(a => !a.switchedOn), 'and off');
+  // the storm doors: bolted -> open -> shut and bolted
+  const sd = game.stormDoors; assert(sd.bolted && !sd.open, 'the storm doors start bolted');
+  tog('more:storm'); run(4); assert(!sd.bolted && sd.open, 'unbolted and open');
+  tog('more:storm'); run(4); assert(!sd.open && sd.bolted, 'shut and bolted again');
+  // the garage doors
+  const gds = game.garageDoors, gOpen = gds.some(d => d.open);
+  tog('more:garage'); run(4); assert(gds.every(d => d.open === !gOpen), 'both garage doors');
+  // the lift goes to the next floor
+  const L = game.lift, at = L.at; tog('more:lift'); run(30); assert(L.at === (at + 1) % BM.LIFT_FLOORS.length && L.phase === 'idle', 'the lift comes to the next floor');
+  // the clocks: off and on, and the tunes
+  tog('more:tower'); assert(game.towerOff && !row('more:tower').on, 'the clock tower off');
+  const ck = game.clock_, c0 = ck.chimes; ck.c.time = Math.ceil(ck.c.time / 900) * 900 - 1; run(3);
+  assert(ck.chimes === c0 + 1 && !(game.chimeBusyUntil > game.time + 1), 'off: the quarter passes in silence');
+  tog('more:tower'); assert(!game.towerOff, 'and on');
+  const seen = new Set(); for (let i = 0; i < 5; i++) { tog('more:towerTune'); seen.add(game.chimeTunes.tower); }
+  assert(seen.size === 5 && game.chimeTunes.tower === 'westminster', 'the tower cycles through all five tunes');
+  tog('more:towerTune'); assert(game.chimeTunes.tower === 'whittington' && row('more:towerTune').value === 'WHITTINGTON', 'Whittington');
+  const bells = []; const bell = game.audio.bell; game.audio.bell = (f, gn, w, d) => bells.push(f);
+  BM.ringChime(game.audio, 'whittington', 1, 0, {}); assert(bells.length === 8, 'Whittington: eight bells to the quarter');
+  bells.length = 0; BM.ringChime(game.audio, 'westminster', 0, 3, {}); assert(bells.length === 16 + 3, 'Westminster: sixteen notes and three strokes at three');
+  bells.length = 0; BM.ringChime(game.audio, 'stmichael', 2, 0, {}); assert(bells.length === 16, "St Michael's: two changes at the half");
+  bells.length = 0; BM.ringChime(game.audio, 'hours', 2, 0, {}); BM.ringChime(game.audio, 'off', 0, 5, {}); assert(bells.length === 0, 'hours only and silent');
+  game.audio.bell = bell;
+  tog('more:longcaseTune'); assert(game.chimeTunes.longcase === 'whittington', 'the grandfather clock has its own tune');
+  // weather and time
+  const w0 = game.night; tog('more:weather'); assert(game.night !== w0 && row('more:weather').value === BM.WEATHERS[game.night].toUpperCase(), 'the weather changes');
+  const t0 = game.timeOfDay; tog('more:time'); assert(game.timeOfDay !== t0, 'the time of day changes');
+  // the flood
+  tog('more:flood'); assert(game.flood.rising && /RISING/.test(row('more:flood').value), 'the flood rises from the panel');
+  tog('more:flood'); assert(!game.flood.rising, 'and drains');
+  run(60); assert(game.frameErrors === 0, 'no errors');
+  return 'status line; fires, fans, music, storm doors, garage, lift; the tower on and off; 5 tunes on each clock; weather, time, flood';
+});
+
 suite('flood', () => {
   // the flood, as a test run on F9: up from the cellar, over the whole estate, to the top of the roof
   const env = H.load({ quiet: true });

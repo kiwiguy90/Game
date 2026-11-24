@@ -12,6 +12,17 @@ Already in: the gates shut and bolt behind you on the drive; the gate motor
 switch in the cellar lets you out; the spare wheel and the battery come from
 the garage.
 
+## Keep it easy
+
+The game should not get too hard. For anything we add:
+
+- Only a few things are needed to get out. Everything else is optional,
+  for players who want to explore.
+- Things you need are kept close to where you need them, or in places the
+  game points you to (the phone's objective, a note, the house plan).
+- Hints: if you are stuck for a while, the objective gives a clearer clue.
+- No running out of anything you need to finish the game.
+
 ## To do
 
 - [ ] **The house traps you.** Once you are inside, the front doors shut and

@@ -1219,7 +1219,7 @@ const MAT_DEFS = {
 function M(name) {
   if (MATS[name]) return MATS[name];
   if (name === 'cobweb') { const m = new THREE.MeshBasicMaterial({ map: tex('cobweb'), transparent: true, depthWrite: false, side: THREE.DoubleSide, color: 0xb8b8b0 }); m.name = name; return MATS[name] = m; }
-  const d = MAT_DEFS[name] || [0xff00ff, null, 0, 10];
+  const d = MAT_DEFS[name] || (BM.MAT_EXTRA && BM.MAT_EXTRA[name]) || [0xff00ff, null, 0, 10];
   const extra = Object.assign({}, d[4] || {}), sway = extra.sway, weather = extra.weather, bump = extra.bump;
   delete extra.sway; delete extra.weather; delete extra.bump;
   const o = Object.assign({ color: d[0], shininess: d[3], specular: 0x222222 }, extra);
@@ -14352,6 +14352,452 @@ BM.boot = function (opts) {
 if (!window.__BM_NO_AUTOSTART__) window.addEventListener('load', () => BM.boot({}));
 })();
 </script>
+<script id="bm-79-halcyon-kit">
+/* ==========================================================================
+   HALCYON HOUSE — THE KIT: MATERIALS AND FURNITURE
+   Real surfaces (oak planks, stacked stone, veined marble, polished
+   concrete, walnut, timber battens, bouclé, leather, travertine, soapstone)
+   drawn once as textures and laid in world space, and a library of modern
+   furniture built from many small parts: sofas with arms, seat and back
+   cushions and throw pillows; curved sofas; lounge chairs; dining chairs;
+   bar stools; tables; beds with headboards, pillows, duvets and throws;
+   bedside lamps; rugs with borders; potted olive trees and fig trees;
+   abstract paintings; shelves with books and vases; pendants.
+   Everything uses shared materials and the shared primitive shapes, so the
+   optimiser can batch it.
+   ========================================================================== */
+(function () {
+'use strict';
+const BM = window.BM;
+const G = BM.G;
+
+/* ---------------- textures ---------------- */
+const lerpHex = (a, b, k) => { const A = parseInt(a.slice(1), 16), Bv = parseInt(b.slice(1), 16); const c = i => Math.round(((A >> i) & 255) * (1 - k) + ((Bv >> i) & 255) * k); return 'rgb(' + c(16) + ',' + c(8) + ',' + c(0) + ')'; };
+function grain(g, x0, y0, w, h, base, dark, r, vertical, n) {
+  g.fillStyle = base; g.fillRect(x0, y0, w, h);
+  for (let i = 0; i < (n || 26); i++) {
+    g.strokeStyle = 'rgba(' + dark + ',' + (0.08 + r() * 0.18) + ')'; g.lineWidth = 0.5 + r() * 1.5;
+    g.beginPath();
+    const off = r() * (vertical ? w : h), amp = 1 + r() * 3, f = 0.02 + r() * 0.05;
+    if (vertical) { for (let y = y0; y <= y0 + h; y += 4) g.lineTo(x0 + off + Math.sin(y * f + i) * amp, y); }
+    else { for (let x = x0; x <= x0 + w; x += 4) g.lineTo(x, y0 + off + Math.sin(x * f + i) * amp); }
+    g.stroke();
+  }
+}
+BM.TEX_EXTRA = BM.TEX_EXTRA || {};
+Object.assign(BM.TEX_EXTRA, {
+  // pale European oak planks, staggered, with grain and soft joints
+  oakPlank: { size: 256, draw: (g, s, r) => {
+    const rows = 8, rh = s / rows;
+    for (let i = 0; i < rows; i++) {
+      let x = -r() * s;
+      while (x < s) {
+        const L = s * (0.45 + r() * 0.6), tone = lerpHex('#c49a6a', '#a87c4e', r());
+        grain(g, x, i * rh, L, rh, tone, '90,60,30', r, false, 10);
+        g.fillStyle = 'rgba(60,40,20,0.35)'; g.fillRect(x, i * rh, 1, rh);
+        x += L;
+      }
+      g.fillStyle = 'rgba(60,40,20,0.4)'; g.fillRect(0, i * rh, s, 1);
+    }
+  } },
+  walnutGrain: { size: 256, draw: (g, s, r) => { grain(g, 0, 0, s, s, '#5a3a24', '25,12,6', r, true, 60); for (let i = 0; i < 4; i++) { g.fillStyle = 'rgba(30,16,8,0.12)'; g.fillRect(r() * s, 0, 8 + r() * 20, s); } } },
+  // stacked natural stone: long thin courses of limestone, each stone a little different
+  stoneStack: { size: 256, draw: (g, s, r) => {
+    g.fillStyle = '#5a554c'; g.fillRect(0, 0, s, s);
+    let y = 0;
+    while (y < s) {
+      const h = 10 + Math.floor(r() * 22); let x = -r() * 60;
+      while (x < s) {
+        const w = 40 + r() * 110, tone = lerpHex('#b8ae9c', '#d6cdbb', r());
+        g.fillStyle = tone; g.fillRect(x + 1.5, y + 1.5, w - 3, h - 3);
+        for (let k = 0; k < 14; k++) { g.fillStyle = 'rgba(' + (r() < 0.5 ? '255,255,255' : '60,50,40') + ',' + (0.06 + r() * 0.1) + ')'; g.fillRect(x + r() * w, y + r() * h, 2 + r() * 8, 1 + r() * 3); }
+        g.fillStyle = 'rgba(0,0,0,0.18)'; g.fillRect(x + 1.5, y + h - 4, w - 3, 2.5);
+        x += w;
+      }
+      y += h;
+    }
+  } },
+  // white marble with soft grey veins
+  marbleVein: { size: 256, draw: (g, s, r) => {
+    const gr = g.createLinearGradient(0, 0, s, s); gr.addColorStop(0, '#eeebe5'); gr.addColorStop(1, '#e4e0d8'); g.fillStyle = gr; g.fillRect(0, 0, s, s);
+    for (let i = 0; i < 9; i++) {
+      g.strokeStyle = 'rgba(110,108,104,' + (0.12 + r() * 0.3) + ')'; g.lineWidth = 0.6 + r() * 2.2;
+      g.beginPath(); let x = r() * s, y = 0; g.moveTo(x, y);
+      while (y < s) { x += (r() - 0.45) * 22; y += 6 + r() * 14; g.lineTo(x, y); }
+      g.stroke();
+    }
+    for (let i = 0; i < 300; i++) { g.fillStyle = 'rgba(150,145,140,' + r() * 0.08 + ')'; g.fillRect(r() * s, r() * s, 2, 2); }
+  } },
+  // polished concrete: mottled grey, a few specks of aggregate
+  concretePol: { size: 256, draw: (g, s, r) => {
+    g.fillStyle = '#9a9690'; g.fillRect(0, 0, s, s);
+    for (let i = 0; i < 60; i++) { const x = r() * s, y = r() * s, rad = 20 + r() * 60, gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, 'rgba(' + (r() < 0.5 ? '255,255,255' : '40,38,34') + ',0.07)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(x - rad, y - rad, rad * 2, rad * 2); }
+    for (let i = 0; i < 500; i++) { g.fillStyle = 'rgba(' + (r() < 0.5 ? '230,226,220' : '70,66,60') + ',0.5)'; g.fillRect(r() * s, r() * s, 1 + r() * 2, 1 + r() * 2); }
+  } },
+  // vertical timber battens with dark shadow gaps
+  battens: { size: 256, draw: (g, s, r) => {
+    g.fillStyle = '#1a120c'; g.fillRect(0, 0, s, s);
+    const n = 8, w = s / n;
+    for (let i = 0; i < n; i++) grain(g, i * w + 3, 0, w - 6, s, lerpHex('#9a6a42', '#b07a4c', r()), '60,36,18', r, true, 8);
+  } },
+  boucle: { size: 128, draw: (g, s, r) => { g.fillStyle = '#e8e2d6'; g.fillRect(0, 0, s, s); for (let i = 0; i < 2200; i++) { const v = r(); g.fillStyle = v < 0.5 ? 'rgba(255,255,255,0.5)' : 'rgba(150,140,120,0.35)'; g.beginPath(); g.arc(r() * s, r() * s, 0.8 + r() * 1.6, 0, 7); g.fill(); } } },
+  leatherGrain: { size: 128, draw: (g, s, r) => { g.fillStyle = '#ffffff'; g.fillRect(0, 0, s, s); for (let i = 0; i < 1600; i++) { g.fillStyle = 'rgba(0,0,0,' + r() * 0.12 + ')'; g.fillRect(r() * s, r() * s, 1 + r() * 3, 1); } } },
+  travertine: { size: 256, draw: (g, s, r) => { g.fillStyle = '#d9c9ad'; g.fillRect(0, 0, s, s); for (let i = 0; i < 90; i++) { g.fillStyle = 'rgba(' + (r() < 0.6 ? '160,140,110' : '240,230,210') + ',' + (0.15 + r() * 0.25) + ')'; g.fillRect(0, r() * s, s, 0.5 + r() * 2.5); } for (let i = 0; i < 120; i++) { g.fillStyle = 'rgba(120,100,70,0.35)'; g.fillRect(r() * s, r() * s, 2 + r() * 7, 1 + r() * 1.5); } } },
+  soapstone: { size: 256, draw: (g, s, r) => { g.fillStyle = '#2a2b2c'; g.fillRect(0, 0, s, s); for (let i = 0; i < 10; i++) { g.strokeStyle = 'rgba(160,165,165,' + (0.06 + r() * 0.12) + ')'; g.lineWidth = 0.5 + r(); g.beginPath(); let x = r() * s, y = 0; g.moveTo(x, y); while (y < s) { x += (r() - 0.5) * 30; y += 10 + r() * 20; g.lineTo(x, y); } g.stroke(); } } },
+  // granite setts, 100 mm, in staggered courses, each a little different in tone
+  hSetts: { size: 256, draw: (g, s, r) => { g.fillStyle = '#3a3a38'; g.fillRect(0, 0, s, s); const n = 16, w = s / n; for (let j = 0; j < n; j++) for (let i = -1; i < n; i++) { const x = i * w + (j % 2) * w / 2; g.fillStyle = lerpHex('#6a6a66', '#82827c', r()); g.fillRect(x + 1.5, j * w + 1.5, w - 3, w - 3); g.fillStyle = 'rgba(255,255,255,' + r() * 0.08 + ')'; g.fillRect(x + 3, j * w + 3, w - 8, 2); } } },
+  // big honed limestone slabs, 600 x 1200, hairline joints
+  hSlab: { size: 256, draw: (g, s, r) => { g.fillStyle = '#b8b0a0'; g.fillRect(0, 0, s, s); const sw = s / 2, sh = s / 4; for (let j = 0; j < 4; j++) for (let i = -1; i < 2; i++) { const x = i * sw + (j % 2) * sw / 2; g.fillStyle = lerpHex('#d8d0c0', '#cfc6b4', r()); g.fillRect(x + 1, j * sh + 1, sw - 2, sh - 2); for (let k = 0; k < 40; k++) { g.fillStyle = 'rgba(140,125,100,' + r() * 0.12 + ')'; g.fillRect(x + r() * sw, j * sh + r() * sh, 1 + r() * 4, 1); } } } },
+  // limewash plaster: soft cloudy movement
+  hPlaster: { size: 256, draw: (g, s, r) => { g.fillStyle = '#dcd5ca'; g.fillRect(0, 0, s, s); for (let i = 0; i < 70; i++) { const x = r() * s, y = r() * s, rad = 20 + r() * 70, gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, 'rgba(' + (r() < 0.5 ? '255,255,255' : '150,135,115') + ',0.08)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(x - rad, y - rad, rad * 2, rad * 2); } } },
+  // fluted timber: rounded reeds, 25 mm (the shading makes the bump)
+  fluted: { size: 128, draw: (g, s, r) => { const n = 16, w = s / n; for (let i = 0; i < n; i++) { const gr = g.createLinearGradient(i * w, 0, (i + 1) * w, 0); gr.addColorStop(0, '#5a3e28'); gr.addColorStop(0.5, '#a07a54'); gr.addColorStop(1, '#4a3220'); g.fillStyle = gr; g.fillRect(i * w, 0, w, s); } for (let i = 0; i < 30; i++) { g.fillStyle = 'rgba(40,24,12,' + r() * 0.12 + ')'; g.fillRect(0, r() * s, s, 1); } } },
+  // acoustic fabric panels, 600 x 1200, crisp joints
+  acoustic: { size: 128, draw: (g, s, r) => { g.fillStyle = '#0a0a0c'; g.fillRect(0, 0, s, s); for (const [x, y, w, h] of [[0, 0, s / 2, s], [s / 2, 0, s / 2, s]]) { g.fillStyle = '#ffffff'; g.fillRect(x + 1.5, y + 1.5, w - 3, h - 3); for (let i = 0; i < 600; i++) { g.fillStyle = 'rgba(0,0,0,' + r() * 0.1 + ')'; g.fillRect(x + r() * w, y + r() * h, 1, 1); } } } },
+  // gym rubber: tiles with a grey fleck
+  rubber: { size: 128, draw: (g, s, r) => { g.fillStyle = '#2e2f31'; g.fillRect(0, 0, s, s); for (let i = 0; i < 1400; i++) { g.fillStyle = 'rgba(' + (r() < 0.5 ? '150,150,150' : '20,20,20') + ',0.6)'; g.fillRect(r() * s, r() * s, 1, 1); } g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, s, 1); g.fillRect(0, 0, 1, s); } },
+  turf: { size: 128, draw: (g, s, r) => { g.fillStyle = '#3f7a3a'; g.fillRect(0, 0, s, s); for (let i = 0; i < 2500; i++) { g.fillStyle = 'rgba(' + (r() < 0.5 ? '90,150,70' : '30,70,30') + ',0.5)'; g.fillRect(r() * s, r() * s, 1, 2); } } },
+  linenWeave: { size: 128, draw: (g, s, r) => { g.fillStyle = '#ffffff'; g.fillRect(0, 0, s, s); for (let i = 0; i < s; i += 2) { g.fillStyle = 'rgba(0,0,0,' + (0.03 + r() * 0.04) + ')'; g.fillRect(i, 0, 1, s); g.fillRect(0, i, s, 1); } } },
+  rugPile: { size: 128, draw: (g, s, r) => { g.fillStyle = '#ffffff'; g.fillRect(0, 0, s, s); for (let i = 0; i < 3000; i++) { g.fillStyle = 'rgba(0,0,0,' + r() * 0.09 + ')'; g.fillRect(r() * s, r() * s, 1, 1); } } },
+});
+BM.MAT_EXTRA = BM.MAT_EXTRA || {};
+Object.assign(BM.MAT_EXTRA, {
+  // name: [tint, texture, metres-to-texture scale, shininess, extra]
+  hOak: [0xffffff, 'oakPlank', 0.42, 40, { bump: 1 }],
+  hOakLight: [0xf4ead8, 'oakPlank', 0.42, 30],
+  hWalnut: [0xffffff, 'walnutGrain', 0.9, 50],
+  hStone: [0xffffff, 'stoneStack', 0.32, 6, { bump: 3 }],
+  hMarble: [0xffffff, 'marbleVein', 0.4, 110],
+  hConcrete: [0xffffff, 'concretePol', 0.22, 70],
+  hBattens: [0xffffff, 'battens', 0.7, 14, { bump: 2 }],
+  hTravertine: [0xffffff, 'travertine', 0.45, 24],
+  hSoapstone: [0xffffff, 'soapstone', 0.45, 40],
+  hBoucle: [0xfff8ee, 'boucle', 2.2, 2, { bump: 0.6 }],
+  hFabricSand: [0xd6c8b0, 'linenWeave', 2.4, 3],
+  hFabricStone: [0x9a958c, 'linenWeave', 2.4, 3],
+  hFabricCharcoal: [0x4a4a4c, 'linenWeave', 2.4, 3],
+  hFabricRust: [0xb06a44, 'linenWeave', 2.4, 3],
+  hFabricOlive: [0x7a7e56, 'linenWeave', 2.4, 3],
+  hFabricWhite: [0xf2efe8, 'linenWeave', 2.4, 6],
+  hFabricBlue: [0x4a5a72, 'linenWeave', 2.4, 3],
+  hLeather: [0x8a4e2a, 'leatherGrain', 1.6, 45],
+  hLeatherBlack: [0x1c1a18, 'leatherGrain', 1.6, 55],
+  hRugCream: [0xe2d8c4, 'rugPile', 1.5, 1],
+  hRugGrey: [0x8e8a84, 'rugPile', 1.5, 1],
+  hRugRust: [0xa8705a, 'rugPile', 1.5, 1],
+  hSetts: [0xffffff, 'hSetts', 0.625, 8, { bump: 2 }],
+  hSlab: [0xffffff, 'hSlab', 0.4, 10],
+  hSlabIn: [0xbdb5a8, 'hSlab', 0.4, 40],
+  hPlaster: [0xffffff, 'hPlaster', 0.25, 4],
+  hFluted: [0xffffff, 'fluted', 2.5, 30, { bump: 3 }],
+  hAcoustic: [0x2b2b2e, 'acoustic', 0.42, 2],
+  hAcousticPlum: [0x3a2a35, 'acoustic', 0.42, 2],
+  hRubber: [0xffffff, 'rubber', 1.0, 4],
+  hTurf: [0xffffff, 'turf', 1.5, 2],
+  hDeck: [0x8a6a52, 'oakPlank', 0.5, 10, { bump: 1 }],
+  hTeak: [0xa0764a, 'walnutGrain', 1.2, 20],
+  hSmokedOak: [0x8a7058, 'oakPlank', 0.42, 30],
+  hAspen: [0xd0a070, 'battens', 1.4, 10],
+  hNero: [0xffffff, 'soapstone', 0.6, 90],
+  hBronze: [0x3b3128, null, 0, 60, { specular: 0x6a5a44 }],
+  hBronzeGlass: [0x6b5a48, null, 0, 140, { transparent: true, opacity: 0.45, specular: 0xffffff }],
+  hMirror: [0xcad6de, null, 0, 180, { specular: 0xffffff }],
+  hBlackGlass: [0x060708, null, 0, 160, { specular: 0x999999 }],
+  hRackPerf: [0x141416, null, 0, 30],
+  hCorten: [0x7a3e20, null, 0, 6],
+  hMaple: [0x8e2b20, null, 0, 6],
+  hTyre: [0x141414, null, 0, 8],
+  hBottleGreen: [0x1a2410, null, 0, 150, { specular: 0x888888 }],
+  hBottleRed: [0x2a0c10, null, 0, 150, { specular: 0x888888 }],
+  hBottleAmber: [0x3a2010, null, 0, 150, { specular: 0x888888 }],
+  hBottleClear: [0xc8d0c8, null, 0, 150, { specular: 0xffffff, transparent: true, opacity: 0.6 }],
+  hFoil: [0xb8a060, null, 0, 90],
+  hCloth: [0x2e5e8c, 'linenWeave', 3, 2],
+  hBrass: [0xc8a058, null, 0, 120, { specular: 0x9a7a3a }],
+  hBlackSteel: [0x161616, null, 0, 70, { specular: 0x444444 }],
+  hChrome: [0xd8dcdf, null, 0, 160, { specular: 0xffffff }],
+  hOpal: [0xfff4e4, null, 0, 20, { emissive: 0x3a3020 }],
+  hCeramic: [0xe8e4dc, null, 0, 60],
+  hCeramicDark: [0x2e2c2a, null, 0, 60],
+  hTerracotta: [0xb46a46, null, 0, 8],
+  hOliveLeaf: [0x8a9a72, null, 0, 6],
+  hFigLeaf: [0x2e5a2a, null, 0, 40],
+  hSoil: [0x2a1e14, null, 0, 2],
+  hBark: [0x6a5a48, null, 0, 4],
+  hPaper: [0xf0ece2, null, 0, 4],
+});
+
+/* ---------------- placing parts in a piece's own frame ---------------- */
+function frame(B, x, z, y0, ry) {
+  const c = Math.cos(ry || 0), s = Math.sin(ry || 0);
+  const at = (lx, lz) => [x + lx * c + lz * s, z - lx * s + lz * c];
+  return {
+    at,
+    box(mat, lx, ly, lz, sx, sy, sz, rx, rz) { const [wx, wz] = at(lx, lz); const m = B.box(mat, wx, y0 + ly, wz, sx, sy, sz, ry || 0); if (rx || rz) { m.rotation.set(rx || 0, ry || 0, rz || 0, 'YXZ'); m.updateMatrix(); } return m; },
+    mesh(geo, mat, lx, ly, lz, sx, sy, sz, rx, rz) { const [wx, wz] = at(lx, lz); const m = B.mesh(geo, mat, wx, y0 + ly, wz, sx, sy, sz, ry || 0); if (rx || rz) { m.rotation.set(rx || 0, ry || 0, rz || 0, 'YXZ'); m.updateMatrix(); } return m; },
+    collide(w, d, h, tag) { const sw = Math.abs(Math.cos(ry || 0)) > 0.7; const ex = sw ? w : d, ez = sw ? d : w; return B.phys.addWall(x - ex / 2, x + ex / 2, z - ez / 2, z + ez / 2, y0, y0 + h, { kind: 'furniture', tag: tag || 'furniture' }); },
+  };
+}
+const K = BM.KIT = {};
+
+/* A sofa: frame, arms, seat and back cushions, throw pillows. Seats face +z in its own frame. */
+K.sofa = (B, x, z, y0, w, ry, o) => {
+  o = o || {}; const f = frame(B, x, z, y0, ry), d = o.d || 1.0, mat = o.mat || 'hFabricSand', arm = o.arms === false ? 0 : 0.22;
+  for (const [lx, lz] of [[-w / 2 + 0.12, -d / 2 + 0.12], [w / 2 - 0.12, -d / 2 + 0.12], [-w / 2 + 0.12, d / 2 - 0.12], [w / 2 - 0.12, d / 2 - 0.12]]) f.box('hBlackSteel', lx, 0.05, lz, 0.05, 0.1, 0.05);
+  f.box(mat, 0, 0.22, 0, w, 0.24, d);                                                 // the base
+  f.box(mat, 0, 0.55, -d / 2 + 0.1, w, 0.66, 0.2);                                   // the back frame
+  if (arm) for (const s of [-1, 1]) f.box(mat, s * (w / 2 - arm / 2), 0.42, 0.02, arm, 0.44, d - 0.02);
+  const inner = w - arm * 2, n = Math.max(1, Math.round(inner / 0.85)), cw = inner / n;
+  for (let i = 0; i < n; i++) {
+    const lx = -inner / 2 + cw * (i + 0.5);
+    f.box(mat, lx, 0.42, 0.08, cw - 0.03, 0.17, d - 0.3);                             // seat cushion
+    f.box(mat, lx, 0.66, -d / 2 + 0.3, cw - 0.04, 0.46, 0.2, -0.2);                   // back cushion, leaning
+  }
+  const acc = o.accent || 'hFabricRust';
+  for (const s of [-1, 1]) f.mesh(G.sphere, s < 0 ? acc : 'hFabricWhite', s * (inner / 2 - 0.28), 0.68, -d / 2 + 0.48, 0.44, 0.4, 0.14, -0.35, s * 0.25);
+  f.collide(w, d, 0.85, 'sofa');
+};
+/* A curved sofa: a run of modules along an arc, all facing its centre. */
+K.curvedSofa = (B, cx, cz, y0, R, a0, a1, o) => {
+  o = o || {}; const mat = o.mat || 'hBoucle', d = 0.95, n = Math.max(3, Math.round(R * Math.abs(a1 - a0) / 0.8));
+  for (let i = 0; i < n; i++) {
+    const a = a0 + (a1 - a0) * (i + 0.5) / n, x = cx + Math.sin(a) * R, z = cz + Math.cos(a) * R, ry = a + Math.PI;
+    const f = frame(B, x, z, y0, ry), w = R * Math.abs(a1 - a0) / n + 0.04;
+    f.box(mat, 0, 0.2, 0, w, 0.26, d); f.box(mat, 0, 0.42, 0.08, w - 0.02, 0.16, d - 0.3); f.box(mat, 0, 0.6, -d / 2 + 0.12, w, 0.56, 0.24, -0.12);
+    f.collide(w, d, 0.8, 'curved sofa');
+  }
+  for (const a of [a0, a1]) { const f = frame(B, cx + Math.sin(a) * R, cz + Math.cos(a) * R, y0, a + Math.PI); f.mesh(G.cyl, mat, 0, 0.32, 0, 0.3, 0.56, 0.95); }
+  if (o.pillows !== false) for (let k = 0; k < 3; k++) { const a = a0 + (a1 - a0) * (0.2 + k * 0.3), f = frame(B, cx + Math.sin(a) * (R + 0.25), cz + Math.cos(a) * (R + 0.25), y0, a + Math.PI); f.mesh(G.sphere, ['hFabricRust', 'hFabricOlive', 'hFabricWhite'][k], 0, 0.68, 0, 0.44, 0.4, 0.14, -0.3); }
+};
+/* A lounge chair: a walnut shell, leather cushions, an ottoman. */
+K.loungeChair = (B, x, z, y0, ry, o) => {
+  o = o || {}; const f = frame(B, x, z, y0, ry), lm = o.mat || 'hLeather';
+  f.box('hBlackSteel', 0, 0.12, 0, 0.06, 0.24, 0.06); f.box('hBlackSteel', 0, 0.02, 0, 0.7, 0.03, 0.06); f.box('hBlackSteel', 0, 0.02, 0, 0.06, 0.03, 0.7);
+  f.box('hWalnut', 0, 0.36, 0.05, 0.8, 0.06, 0.8, -0.12); f.box(lm, 0, 0.45, 0.05, 0.72, 0.12, 0.72, -0.12);
+  f.box('hWalnut', 0, 0.8, -0.36, 0.8, 0.8, 0.06, -0.32); f.box(lm, 0, 0.82, -0.3, 0.72, 0.74, 0.12, -0.32);
+  for (const s of [-1, 1]) f.box(lm, s * 0.38, 0.6, -0.05, 0.12, 0.08, 0.6);
+  if (o.ottoman !== false) { f.box('hWalnut', 0, 0.3, 0.85, 0.6, 0.05, 0.5); f.box(lm, 0, 0.38, 0.85, 0.56, 0.12, 0.46); f.box('hBlackSteel', 0, 0.14, 0.85, 0.05, 0.28, 0.05); }
+  f.collide(0.9, 1.6, 1.0, 'lounge chair');
+};
+K.armchair = (B, x, z, y0, ry, o) => { o = o || {}; const f = frame(B, x, z, y0, ry), m = o.mat || 'hBoucle'; f.mesh(G.cyl, m, 0, 0.22, 0, 0.9, 0.3, 0.86); f.box(m, 0, 0.42, 0.05, 0.62, 0.14, 0.6); f.mesh(G.cyl, m, 0, 0.55, -0.12, 0.92, 0.5, 0.7); f.collide(0.9, 0.9, 0.8, 'armchair'); };
+/* A dining chair: oak frame, an upholstered seat, a curved back. */
+K.diningChair = (B, x, z, y0, ry, o) => {
+  o = o || {}; const f = frame(B, x, z, y0, ry), w = o.wood || 'hOak', m = o.mat || 'hFabricSand';
+  for (const [lx, lz] of [[-0.2, -0.2], [0.2, -0.2], [-0.2, 0.2], [0.2, 0.2]]) f.box(w, lx, 0.22, lz, 0.035, 0.44, 0.035);
+  f.box(w, 0, 0.45, 0, 0.46, 0.03, 0.46); f.box(m, 0, 0.49, 0.01, 0.44, 0.05, 0.42);
+  for (const s of [-1, 1]) f.box(w, s * 0.2, 0.68, -0.21, 0.035, 0.44, 0.035, -0.1);
+  f.box(m, 0, 0.78, -0.23, 0.44, 0.22, 0.05, -0.1);
+};
+K.barStool = (B, x, z, y0, ry, o) => {
+  o = o || {}; const f = frame(B, x, z, y0, ry), m = o.mat || 'hLeather', h = o.h || 0.76;
+  f.mesh(G.cyl, 'hBlackSteel', 0, 0.01, 0, 0.42, 0.02, 0.42); f.mesh(G.cyl, 'hBlackSteel', 0, h / 2, 0, 0.05, h - 0.02, 0.05);
+  f.mesh(G.ring, 'hBrass', 0, h * 0.4, 0, 0.36, 0.36, 0.36, -Math.PI / 2);
+  f.mesh(G.cyl, m, 0, h, 0, 0.42, 0.07, 0.42); f.box(m, 0, h + 0.19, -0.17, 0.36, 0.24, 0.05, -0.12);
+};
+/* Tables: a top and its legs (four, a slab pair, or a pedestal) */
+K.table = (B, x, z, y0, w, d, ry, o) => {
+  o = o || {}; const f = frame(B, x, z, y0, ry), h = o.h || 0.75, top = o.top || 'hOak', t = o.t || 0.05, legs = o.legs || 'four', lm = o.legMat || top;
+  f.box(top, 0, h - t / 2, 0, w, t, d);
+  if (legs === 'four') for (const [lx, lz] of [[-w / 2 + 0.08, -d / 2 + 0.08], [w / 2 - 0.08, -d / 2 + 0.08], [-w / 2 + 0.08, d / 2 - 0.08], [w / 2 - 0.08, d / 2 - 0.08]]) f.box(lm, lx, (h - t) / 2, lz, 0.06, h - t, 0.06);
+  else if (legs === 'slab') for (const s of [-1, 1]) f.box(lm, s * (w / 2 - 0.25), (h - t) / 2, 0, 0.08, h - t, d * 0.8);
+  else f.mesh(G.cyl, lm, 0, (h - t) / 2, 0, Math.min(w, d) * 0.3, h - t, Math.min(w, d) * 0.3);
+  if (o.collide !== false) f.collide(w, d, h, o.tag || 'table');
+};
+K.roundTable = (B, x, z, y0, r, h, o) => { o = o || {}; B.mesh(G.cyl, o.top || 'hTravertine', x, y0 + h - 0.03, z, r * 2, 0.06, r * 2); B.mesh(G.cyl, o.base || o.top || 'hTravertine', x, y0 + (h - 0.06) / 2, z, r * 0.9, h - 0.06, r * 0.9); B.phys.addWall(x - r, x + r, z - r, z + r, y0, y0 + h, { kind: 'furniture', tag: 'table' }); };
+/* A bed: a low walnut platform, mattress, duvet, a throw, pillows, a tall upholstered headboard, bedside tables and lamps */
+K.bed = (B, x, z, y0, ry, o) => {
+  o = o || {}; const f = frame(B, x, z, y0, ry), w = o.w || 1.95, l = o.l || 2.1, hb = o.headboard || 'hFabricStone';
+  f.box('hWalnut', 0, 0.14, 0, w + 0.2, 0.22, l + 0.1);
+  f.box('hFabricWhite', 0, 0.38, 0.02, w, 0.26, l - 0.02);                                   // mattress
+  f.box('hFabricWhite', 0, 0.53, 0.32, w + 0.08, 0.06, l * 0.72);                            // the duvet, folded back a little
+  f.box(o.throw || 'hFabricRust', 0, 0.57, l / 2 - 0.42, w + 0.12, 0.04, 0.5);                // a throw across the foot
+  for (const [lx, sz] of [[-w / 4, 1], [w / 4, 1]]) { f.mesh(G.sphere, 'hFabricWhite', lx, 0.72, -l / 2 + 0.22, w / 2 - 0.08, 0.5, 0.2, -0.5); f.mesh(G.sphere, 'hFabricWhite', lx, 0.62, -l / 2 + 0.42, w / 2 - 0.12, 0.3, 0.2, -0.2); }
+  f.mesh(G.sphere, o.accent || 'hFabricOlive', 0, 0.62, -l / 2 + 0.6, 0.5, 0.36, 0.14, -0.3);
+  f.box(hb, 0, 0.75, -l / 2 - 0.08, w + 0.7, 1.3, 0.12);                                    // the headboard
+  for (let i = -4; i <= 4; i++) f.box(hb, i * (w + 0.6) / 9, 0.75, -l / 2 - 0.015, 0.012, 1.2, 0.02);
+  const lamps = [];
+  for (const s of [-1, 1]) {
+    const bx = s * (w / 2 + 0.55);
+    f.box('hWalnut', bx, 0.25, -l / 2 + 0.25, 0.55, 0.5, 0.45); f.box('hBrass', bx, 0.505, -l / 2 + 0.25, 0.5, 0.01, 0.4);
+    f.mesh(G.cyl, 'hCeramicDark', bx, 0.66, -l / 2 + 0.25, 0.12, 0.3, 0.12); f.mesh(G.cyl, 'hOpal', bx, 0.93, -l / 2 + 0.25, 0.34, 0.26, 0.34);
+    lamps.push(f.at(bx, -l / 2 + 0.25));
+  }
+  f.collide(w + 0.2, l + 0.2, 0.6, 'bed');
+  return lamps;   // where the bedside lamps stand, for their lights
+};
+K.rug = (B, x, z, y, w, d, ry, o) => { o = o || {}; const f = frame(B, x, z, y, ry); f.box(o.mat || 'hRugCream', 0, 0.006, 0, w, 0.012, d); if (o.border !== false) { const b = o.border || 'hRugGrey'; for (const s of [-1, 1]) { f.box(b, 0, 0.007, s * (d / 2 - 0.12), w - 0.1, 0.012, 0.06); f.box(b, s * (w / 2 - 0.12), 0.007, 0, 0.06, 0.012, d - 0.1); } } };
+/* Plants: an olive tree or a fig in a big pot, or a tall grass */
+K.plant = (B, x, z, y0, kind, h, o) => {
+  o = o || {}; h = h || 2.2; const pot = o.pot || 'hCeramicDark', rnd = BM.mulberry32(Math.floor(x * 13 + z * 7));
+  B.mesh(G.cyl, pot, x, y0 + 0.3, z, 0.62, 0.6, 0.62); B.mesh(G.cyl, 'hSoil', x, y0 + 0.59, z, 0.55, 0.02, 0.55);
+  if (kind === 'olive') {
+    for (let i = 0; i < 3; i++) { const m = B.mesh(G.post, 'hBark', x + (i - 1) * 0.06, y0 + 0.6 + h * 0.25, z, 0.07, h * 0.5, 0.07); m.rotation.set((i - 1) * 0.15, 0, (i - 1) * 0.2); m.updateMatrix(); }
+    for (let i = 0; i < 16; i++) { const a = rnd() * 6.28, r = 0.2 + rnd() * 0.55; B.mesh(G.sphere, 'hOliveLeaf', x + Math.cos(a) * r, y0 + 0.6 + h * 0.55 + rnd() * h * 0.35, z + Math.sin(a) * r, 0.35 + rnd() * 0.25, 0.22 + rnd() * 0.12, 0.35 + rnd() * 0.25); }
+  } else if (kind === 'fig') {
+    B.mesh(G.post, 'hBark', x, y0 + 0.6 + h * 0.3, z, 0.05, h * 0.6, 0.05);
+    for (let i = 0; i < 18; i++) { const a = i * 2.4, yy = y0 + 0.9 + (i / 18) * h * 0.8, r = 0.15 + rnd() * 0.25; const m = B.mesh(G.sphere, 'hFigLeaf', x + Math.cos(a) * r, yy, z + Math.sin(a) * r, 0.34, 0.04, 0.26); m.rotation.set(0.4 + rnd() * 0.4, -a, 0, 'YXZ'); m.updateMatrix(); }
+  } else {
+    for (let i = 0; i < 14; i++) { const m = B.mesh(G.cone, 'longGrass', x + (rnd() - 0.5) * 0.3, y0 + 0.6 + h * 0.3, z + (rnd() - 0.5) * 0.3, 0.04, h * 0.6, 0.04); m.rotation.set((rnd() - 0.5) * 0.6, 0, (rnd() - 0.5) * 0.6); m.updateMatrix(); }
+  }
+  B.phys.addWall(x - 0.32, x + 0.32, z - 0.32, z + 0.32, y0, y0 + 1.0, { kind: 'furniture', tag: 'plant' });
+};
+/* A painting: a thin frame and a canvas of its own (colour fields, brushwork, circles or a horizon) */
+const ART = [['#c8b8a0', '#8a5a3a', '#2a2a30'], ['#1e2a3a', '#c86a3a', '#e8dcc8'], ['#d8d0c0', '#4a6a5a', '#b89a6a'], ['#2a2a2c', '#a8a49c', '#d8b070'], ['#e6e0d4', '#6a7a9a', '#c8a090']];
+K.art = (B, x, y, z, w, h, ry, seed) => {
+  const r = BM.mulberry32(seed || 1), pal = ART[(seed || 0) % ART.length], c = document.createElement('canvas'); c.width = 256; c.height = Math.round(256 * h / w);
+  const g = c.getContext && c.getContext('2d');
+  if (g) {
+    const H = c.height, style = (seed || 0) % 4;
+    g.fillStyle = pal[0]; g.fillRect(0, 0, 256, H);
+    if (style === 0) { g.fillStyle = pal[1]; g.fillRect(20, 20, 216, H * 0.45); g.fillStyle = pal[2]; g.fillRect(20, H * 0.55, 216, H * 0.38); }
+    else if (style === 1) { for (let i = 0; i < 40; i++) { g.strokeStyle = pal[1 + (i % 2)]; g.globalAlpha = 0.3 + r() * 0.5; g.lineWidth = 4 + r() * 16; g.beginPath(); g.moveTo(r() * 256, r() * H); g.quadraticCurveTo(r() * 256, r() * H, r() * 256, r() * H); g.stroke(); } g.globalAlpha = 1; }
+    else if (style === 2) { for (let i = 0; i < 6; i++) { g.fillStyle = pal[1 + (i % 2)]; g.globalAlpha = 0.5 + r() * 0.5; g.beginPath(); g.arc(40 + r() * 176, 30 + r() * (H - 60), 14 + r() * 50, 0, 7); g.fill(); } g.globalAlpha = 1; }
+    else { const gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, pal[0]); gr.addColorStop(0.62, pal[2]); gr.addColorStop(0.64, pal[1]); gr.addColorStop(1, pal[1]); g.fillStyle = gr; g.fillRect(0, 0, 256, H); }
+    for (let i = 0; i < 800; i++) { g.fillStyle = 'rgba(0,0,0,' + r() * 0.05 + ')'; g.fillRect(r() * 256, r() * H, 2, 2); }
+  }
+  const t = new THREE.CanvasTexture(c), f = frame(B, x, z, 0, ry);
+  f.box('hBlackSteel', 0, y, -0.02, w + 0.06, h + 0.06, 0.04);
+  f.mesh(G.plane, new THREE.MeshPhongMaterial({ map: t, shininess: 4 }), 0, y, 0.002, w, h, 1);
+};
+/* Shelves with books, vases and a few objects */
+const BOOKS = ['hFabricWhite', 'hFabricRust', 'hFabricCharcoal', 'hFabricOlive', 'hFabricBlue', 'hFabricSand'];
+K.shelves = (B, x, z, y0, w, h, ry, o) => {
+  o = o || {}; const f = frame(B, x, z, y0, ry), d = 0.36, m = o.mat || 'hWalnut', rows = Math.max(3, Math.round(h / 0.42)), rnd = BM.mulberry32(Math.floor(x * 31 + z * 17));
+  f.box(m, 0, h / 2, -d / 2 + 0.01, w, h, 0.02);
+  for (const s of [-1, 1]) f.box(m, s * w / 2, h / 2, 0, 0.03, h, d);
+  for (let i = 0; i <= rows; i++) f.box(m, 0, i * h / rows, 0, w, 0.03, d);
+  for (let i = 0; i < rows; i++) {
+    const y = i * h / rows + 0.015; let lx = -w / 2 + 0.06;
+    while (lx < w / 2 - 0.15) {
+      const k = rnd();
+      if (k < 0.6) { const n = 4 + Math.floor(rnd() * 8); for (let b = 0; b < n && lx < w / 2 - 0.06; b++) { const bh = 0.22 + rnd() * 0.1; f.box(BOOKS[Math.floor(rnd() * BOOKS.length)], lx + 0.016, y + bh / 2, 0.02, 0.03, bh, 0.22); lx += 0.034; } lx += 0.1; }
+      else if (k < 0.8) { f.mesh(G.sphere, rnd() < 0.5 ? 'hCeramic' : 'hCeramicDark', lx + 0.1, y + 0.12, 0.02, 0.16, 0.22, 0.16); lx += 0.3; }
+      else { f.box('hTravertine', lx + 0.08, y + 0.06, 0.02, 0.12, 0.12, 0.12); f.mesh(G.sphere, 'hBrass', lx + 0.08, y + 0.17, 0.02, 0.08, 0.08, 0.08); lx += 0.3; }
+    }
+  }
+  f.collide(w, d, h, 'shelves');
+};
+/* Pendants: a globe in opal glass, a brass drum, a long linear bar */
+K.pendant = (B, x, y, z, kind, o) => {
+  o = o || {}; const drop = o.drop || 1.0;
+  B.box('hBlackSteel', x, y + drop / 2, z, 0.01, drop, 0.01);
+  if (kind === 'globe') B.mesh(G.sphere, 'hOpal', x, y, z, o.size || 0.38);
+  else if (kind === 'drum') { B.mesh(G.cyl, 'hBrass', x, y, z, o.size || 0.5, 0.26, o.size || 0.5); B.mesh(G.cyl, 'hOpal', x, y - 0.13, z, (o.size || 0.5) * 0.9, 0.01, (o.size || 0.5) * 0.9); }
+  else { const len = o.len || 2.4; B.box('hBlackSteel', x, y, z, len, 0.06, 0.08, o.ry || 0); B.box('hOpal', x, y - 0.035, z, len - 0.04, 0.012, 0.05, o.ry || 0); }
+};
+K.floorLamp = (B, x, z, y0, o) => { o = o || {}; B.mesh(G.cyl, 'hTravertine', x, y0 + 0.03, z, 0.34, 0.06, 0.34); B.mesh(G.post, 'hBrass', x, y0 + 0.8, z, 0.025, 1.55, 0.025); B.mesh(G.cyl, 'hFabricWhite', x, y0 + 1.6, z, 0.42, 0.34, 0.42); };
+K.vase = (B, x, y, z, s) => { s = s || 1; B.mesh(G.sphere, 'hCeramic', x, y + 0.14 * s, z, 0.2 * s, 0.3 * s, 0.2 * s); for (let i = 0; i < 5; i++) { const m = B.mesh(G.post, 'hBark', x + (i - 2) * 0.02, y + 0.45 * s, z, 0.008, 0.5 * s, 0.008); m.rotation.z = (i - 2) * 0.12; m.updateMatrix(); } };
+K.books = (B, x, y, z, n, ry) => { const f = frame(B, x, z, y, ry), rnd = BM.mulberry32(Math.floor(x * 7 + z * 3)); for (let i = 0; i < n; i++) f.box(BOOKS[Math.floor(rnd() * BOOKS.length)], (rnd() - 0.5) * 0.04, 0.025 + i * 0.045, 0, 0.3, 0.04, 0.22, 0, 0); };
+
+/* A specimen tree: a trunk that forks into three or four limbs, a crown of clumped foliage (not one ball) */
+K.tree = (B, x, z, s, kind, o) => {
+  o = o || {}; const rnd = BM.mulberry32(Math.floor(x * 101 + z * 37)), h = 3.0 * s, leaf = o.leaf || 'leaves', leaf2 = o.leaf2 || 'leavesDark';
+  if (kind === 'pine') return K.pine(B, x, z, s, o);
+  B.mesh(G.post, 'bark', x, h * 0.3, z, 0.34 * s, h * 0.6, 0.34 * s);
+  const limbs = kind === 'multi' ? 5 : 3 + Math.floor(rnd() * 2), tops = [];
+  for (let i = 0; i < limbs; i++) {
+    const a = i / limbs * 6.28 + rnd() * 0.6, tilt = 0.35 + rnd() * 0.3, L = h * (0.55 + rnd() * 0.25), y0 = kind === 'multi' ? 0 : h * 0.55;
+    const cx = x + Math.cos(a) * Math.sin(tilt) * L / 2, cz = z + Math.sin(a) * Math.sin(tilt) * L / 2, cy = y0 + Math.cos(tilt) * L / 2;
+    const m = B.mesh(G.post, 'bark', cx, cy, cz, (kind === 'multi' ? 0.16 : 0.2) * s, L, (kind === 'multi' ? 0.16 : 0.2) * s);
+    m.rotation.set(Math.sin(a) * tilt, 0, -Math.cos(a) * tilt); m.updateMatrix();
+    tops.push([x + Math.cos(a) * Math.sin(tilt) * L, y0 + Math.cos(tilt) * L, z + Math.sin(a) * Math.sin(tilt) * L]);
+  }
+  const R = (kind === 'multi' ? 2.4 : 2.8) * s, cy = h * 1.25;
+  for (let i = 0; i < 16; i++) {
+    const t = tops[i % tops.length], a = rnd() * 6.28, r = rnd();
+    const px = i < tops.length ? t[0] : x + Math.cos(a) * R * 0.8 * Math.sqrt(r), pz = i < tops.length ? t[2] : z + Math.sin(a) * R * 0.8 * Math.sqrt(r);
+    const py = i < tops.length ? t[1] + 0.3 * s : cy + (rnd() - 0.4) * h * 0.5, sz = (1.3 + rnd() * 1.1) * s;
+    B.mesh(G.lowSphere, i % 3 ? leaf : leaf2, px, py, pz, sz * 1.15, sz * 0.8, sz);
+  }
+  B.phys.addWall(x - 0.2 * s, x + 0.2 * s, z - 0.2 * s, z + 0.2 * s, 0, h, { kind: 'tree', occludes: false, tag: 'tree' });
+  return h;
+};
+K.pine = (B, x, z, s, o) => {
+  o = o || {}; const h = 3.0 * s, mat = o.dark ? 'pineDark' : 'pine';
+  B.mesh(G.post, 'bark', x, h * 0.5, z, 0.3 * s, h, 0.3 * s);
+  for (let k = 0; k < 4; k++) { const w = (2.6 - k * 0.55) * s; B.mesh(G.cone, mat, x, h * 0.7 + k * 1.5 * s + 1.0 * s, z, w, 2.6 * s, w); }
+  if (!o.noCollide) B.phys.addWall(x - 0.2 * s, x + 0.2 * s, z - 0.2 * s, z + 0.2 * s, 0, h, { kind: 'tree', occludes: false, tag: 'tree' });
+  return h;
+};
+/* A home-cinema recliner: a leather seat, a padded back, wide arms with a console, a footrest */
+K.recliner = (B, x, z, y0, ry, o) => {
+  o = o || {}; const f = frame(B, x, z, y0, ry), m = o.mat || 'hLeather';
+  f.box(m, 0, 0.24, 0, 0.62, 0.36, 0.78); f.box(m, 0, 0.5, 0.05, 0.58, 0.12, 0.66);
+  f.box(m, 0, 0.72, -0.36, 0.6, 0.7, 0.2, -0.18); f.box(m, 0, 1.02, -0.43, 0.5, 0.2, 0.18, -0.18);
+  for (const sx of [-1, 1]) { f.box(o.arm || 'hLeatherBlack', sx * 0.4, 0.33, 0, 0.18, 0.62, 0.88); f.box('hWalnut', sx * 0.4, 0.645, 0.08, 0.18, 0.02, 0.5); f.mesh(G.cyl, 'hBlackSteel', sx * 0.4, 0.65, 0.25, 0.09, 0.02, 0.09); }
+  f.box(m, 0, 0.25, 0.48, 0.56, 0.1, 0.24, 0.35);
+  f.collide(0.98, 0.95, 0.9, 'recliner');
+};
+/* A sun lounger: a teak frame, a thick cushion, the back raised */
+K.lounger = (B, x, z, y0, ry, o) => {
+  o = o || {}; const f = frame(B, x, z, y0, ry), w = o.wood || 'hTeak';
+  for (const s of [-1, 1]) f.box(w, s * 0.33, 0.17, 0.1, 0.05, 0.08, 1.7);
+  for (const [lx, lz] of [[-0.33, -0.7], [0.33, -0.7], [-0.33, 0.85], [0.33, 0.85]]) f.box(w, lx, 0.07, lz, 0.05, 0.14, 0.05);
+  f.box(w, 0, 0.22, 0.25, 0.66, 0.03, 1.3); f.box(o.mat || 'hFabricWhite', 0, 0.28, 0.3, 0.64, 0.09, 1.22);
+  f.box(w, 0, 0.45, -0.68, 0.66, 0.03, 0.62, 0.9); f.box(o.mat || 'hFabricWhite', 0, 0.48, -0.64, 0.62, 0.08, 0.56, 0.9);
+  f.box(o.mat || 'hFabricWhite', 0, 0.68, -0.85, 0.5, 0.12, 0.18, 0.9);
+  f.collide(0.7, 2.0, 0.4, 'lounger');
+};
+/* Wine bottles lying label-out on pegs, against a dark wall: a face of x0..x1, y0..y1 at depth c, facing n */
+K.bottles = (B, axis, c, n, a0, a1, y0, y1, o) => {
+  o = o || {}; const rnd = BM.mulberry32(Math.floor(c * 91 + a0 * 13)), cols = ['hBottleGreen', 'hBottleRed', 'hBottleAmber', 'hBottleGreen', 'hBottleClear'], dx = o.dx || 0.095, dy = o.dy || 0.11;
+  for (let y = y0 + dy / 2; y < y1; y += dy) for (let a = a0 + dx / 2; a < a1; a += dx) {
+    if (rnd() < (o.gaps || 0.06)) continue;
+    const col = cols[Math.floor(rnd() * cols.length)], x = axis === 'x' ? a : c + n * 0.15, z = axis === 'x' ? c + n * 0.15 : a;
+    // the bottle points out of the wall: a body, a neck, a foil cap
+    const b = B.mesh(G.cyl, col, x, y, z, 0.075, 0.22, 0.075); b.rotation.set(axis === 'x' ? Math.PI / 2 : 0, 0, axis === 'x' ? 0 : Math.PI / 2); b.updateMatrix();
+    const nx = axis === 'x' ? x : x + n * 0.15, nz = axis === 'x' ? z + n * 0.15 : z;
+    const k = B.mesh(G.cyl, col, nx, y, nz, 0.03, 0.09, 0.03); k.rotation.copy(b.rotation); k.updateMatrix();
+    const cap = B.mesh(G.cyl, rnd() < 0.5 ? 'hFoil' : 'hBottleRed', axis === 'x' ? x : x + n * 0.2, y, axis === 'x' ? z + n * 0.2 : z, 0.032, 0.02, 0.032); cap.rotation.copy(b.rotation); cap.updateMatrix();
+  }
+  // the brushed-steel pegs as rails along each row
+  for (let y = y0 + dy / 2; y < y1; y += dy) { if (axis === 'x') B.boxE('hChrome', a0, a1, y - 0.045, y - 0.04, c + n * 0.02, c + n * 0.12); else B.boxE('hChrome', c + Math.min(0.02 * n, 0.12 * n), c + Math.max(0.02 * n, 0.12 * n), y - 0.045, y - 0.04, a0, a1); }
+};
+/* Clothes on a rail: a run of jackets, shirts and dresses in a closet */
+K.clothes = (B, axis, c, a0, a1, y, n, o) => {
+  o = o || {}; const rnd = BM.mulberry32(Math.floor(c * 17 + a0 * 29 + y * 5)), cols = o.cols || ['hFabricCharcoal', 'hFabricWhite', 'hFabricBlue', 'hFabricSand', 'hFabricStone', 'hFabricOlive', 'hFabricRust'];
+  if (axis === 'x') B.box('hBrass', (a0 + a1) / 2, y, c, a1 - a0, 0.02, 0.02); else B.box('hBrass', c, y, (a0 + a1) / 2, 0.02, 0.02, a1 - a0);
+  for (let a = a0 + 0.05; a < a1 - 0.03; a += 0.05 + rnd() * 0.04) {
+    const L = (o.long ? 1.2 : 0.7) + rnd() * 0.25, m = cols[Math.floor(rnd() * cols.length)];
+    if (axis === 'x') B.box(m, a, y - 0.04 - L / 2, c, 0.025, L, 0.48); else B.box(m, c, y - 0.04 - L / 2, a, 0.48, L, 0.025);
+  }
+};
+/* A floating stone vanity with its shadow gap lit, two basins, wall taps, two backlit mirrors */
+K.vanity = (B, x, z, y0, w, ry, o) => {
+  o = o || {}; const f = frame(B, x, z, y0, ry), d = 0.55, lamps = [];
+  f.box(o.wood || 'hOak', 0, 0.6, -0.02, w, 0.42, d - 0.04);                 // the cabinet, floating
+  for (let i = 1; i < 4; i++) f.box('hBlackSteel', -w / 2 + i * w / 4, 0.6, d / 2 - 0.035, 0.004, 0.38, 0.004);
+  f.box(o.top || 'hMarble', 0, 0.83, 0, w + 0.02, 0.04, d);
+  for (const s of [-1, 1]) {
+    const bx = s * 0.45;
+    f.mesh(G.cyl, 'hCeramic', bx, 0.9, 0.02, 0.46, 0.12, 0.36); f.mesh(G.cyl, 'hSoapstone', bx, 0.962, 0.02, 0.4, 0.004, 0.3);
+    f.box('hBrass', bx, 1.08, -d / 2 + 0.1, 0.02, 0.02, 0.2); f.mesh(G.cyl, 'hBrass', bx - 0.12, 1.12, -d / 2 + 0.02, 0.04, 0.04, 0.04); f.mesh(G.cyl, 'hBrass', bx + 0.12, 1.12, -d / 2 + 0.02, 0.04, 0.04, 0.04);
+    f.box('hMirror', bx, 1.75, -d / 2 + 0.03, 0.7, 0.95, 0.02);
+    lamps.push([f.at(bx, -d / 2 + 0.05), y0 + 1.75]);
+  }
+  f.collide(w, d, 0.9, 'vanity');
+  return lamps;
+};
+/* A pool table: walnut, blue cloth, six pockets, rails, a rack of balls */
+K.poolTable = (B, x, z, y0, ry) => {
+  const f = frame(B, x, z, y0, ry), L = 2.9, W = 1.63;
+  for (const [lx, lz] of [[-1.25, -0.6], [1.25, -0.6], [-1.25, 0.6], [1.25, 0.6]]) f.box('hWalnut', lx, 0.3, lz, 0.18, 0.6, 0.18);
+  f.box('hWalnut', 0, 0.68, 0, L - 0.1, 0.18, W - 0.1);
+  f.box('hCloth', 0, 0.78, 0, 2.54, 0.02, 1.27);
+  for (const s of [-1, 1]) { f.box('hWalnut', 0, 0.8, s * (W / 2 - 0.09), L, 0.06, 0.18); f.box('hWalnut', s * (L / 2 - 0.09), 0.8, 0, 0.18, 0.06, W); f.box('hCloth', 0, 0.8, s * 0.65, 2.5, 0.04, 0.04); f.box('hCloth', s * 1.29, 0.8, 0, 0.04, 0.04, 1.22); }
+  for (const [lx, lz] of [[-1.29, -0.65], [0, -0.66], [1.29, -0.65], [-1.29, 0.65], [0, 0.66], [1.29, 0.65]]) f.mesh(G.cyl, 'hBlackSteel', lx, 0.8, lz, 0.12, 0.065, 0.12);
+  const balls = [0xffffff, 0xf0c020, 0x2040c0, 0xd02020, 0x6020a0, 0xff7010, 0x208030, 0x801010, 0x101010, 0xf0c020, 0x2040c0, 0xd02020, 0x6020a0, 0xff7010, 0x208030, 0x801010];
+  let i = 0; for (let r = 0; r < 5; r++) for (let k = 0; k <= r; k++) { const c = balls[1 + (i++ % 15)]; f.mesh(G.sphere, BM.Ball ? BM.Ball(c) : new THREE.MeshPhongMaterial({ color: c, shininess: 120 }), 0.6 + r * 0.05, 0.818, (k - r / 2) * 0.058, 0.057, 0.057, 0.057); }
+  f.mesh(G.sphere, BM.Ball ? BM.Ball(0xffffff) : new THREE.MeshPhongMaterial({ color: 0xffffff, shininess: 120 }), -0.7, 0.818, 0, 0.057, 0.057, 0.057);
+  { const cue = f.box('hOak', 0.1, 0.83, 0.3, 1.45, 0.025, 0.025); }
+  f.collide(L, W, 0.85, 'pool table');
+};
+const BALLS = {}; BM.Ball = c => BALLS[c] || (BALLS[c] = new THREE.MeshPhongMaterial({ color: c, shininess: 120, specular: 0x888888 }));
+/* A low credenza: walnut, fluted doors, on a black plinth */
+K.credenza = (B, x, z, y0, w, ry, o) => { o = o || {}; const f = frame(B, x, z, y0, ry); f.box('hBlackSteel', 0, 0.06, 0, w - 0.1, 0.12, 0.4); f.box(o.mat || 'hWalnut', 0, 0.42, 0, w, 0.6, 0.46); f.box('hFluted', 0, 0.42, 0.232, w - 0.04, 0.56, 0.004); f.box(o.top || 'hTravertine', 0, 0.735, 0, w + 0.02, 0.03, 0.48); f.collide(w, 0.46, 0.75, 'credenza'); };
+K.sideTable = (B, x, z, y0, o) => { o = o || {}; B.mesh(G.cyl, o.mat || 'hTravertine', x, y0 + 0.5, z, 0.5, 0.04, 0.5); B.mesh(G.cyl, o.base || 'hBronze', x, y0 + 0.24, z, 0.12, 0.48, 0.12); B.mesh(G.cyl, o.base || 'hBronze', x, y0 + 0.01, z, 0.36, 0.02, 0.36); };
+})();
+</script>
 <script id="bm-80-halcyon">
 /* ==========================================================================
    HALCYON HOUSE — a second world, chosen on the title screen
@@ -14394,12 +14840,13 @@ function mats() {
   if (MAT.ready) return MAT;
   Object.assign(MAT, {
     ready: true,
-    concrete: phong(0xb9b5ac, 6), render: phong(0xe8e5de, 6), charcoal: phong(0x26282c, 30), timber: phong(0x8a5a36, 14),
-    oak: phong(0xa07a52, 30), floor: phong(0x8e8b86, 70, { specular: 0x555555 }), steel: phong(0x141618, 90, { specular: 0x666666 }),
+    // (the real surfaces come from the kit, 79-halcyon-kit.js: drawn textures laid in world space)
+    concrete: BM.M('hConcrete'), render: BM.M('hPlaster'), charcoal: phong(0x2a2a2a, 20), timber: BM.M('hBattens'),
+    oak: BM.M('hOak'), floor: BM.M('hSlabIn'), steel: phong(0x1c1c1c, 90, { specular: 0x666666 }),
     glass: phong(0x9cc0d0, 140, { transparent: true, opacity: 0.16, depthWrite: false, specular: 0xffffff }),
     glazing: phong(0x9cc0d0, 140, { transparent: true, opacity: 0.16, depthWrite: false, specular: 0xffffff }),   // the house's own windows: these can frost
-    paver: phong(0xc8c2b4, 6), deck: phong(0x5e4430, 12), white: phong(0xf2f0ec, 20), sofa: phong(0x5a5e66, 4), rug: phong(0xb0a690, 2),
-    black: phong(0x0c0c0e, 60), stone: phong(0x8c8780, 8), kitchen: phong(0x2e2a26, 50), marble: phong(0xe6e2da, 90, { specular: 0x888888 }),
+    paver: BM.M('hSlab'), deck: BM.M('hDeck'), white: phong(0xf2f0ec, 20), sofa: BM.M('hFabricStone'), rug: BM.M('hRugCream'),
+    black: phong(0x0c0c0e, 60), stone: BM.M('hStone'), kitchen: BM.M('hWalnut'), marble: BM.M('hMarble'), setts: BM.M('hSetts'), limestone: BM.M('hTravertine'), anthracite: phong(0x383e42, 24),
     asphalt: phong(0x2c2c2e, 4), line: phong(0xd8d4c8, 4), lawn: null,
   });
   return MAT;
@@ -14413,6 +14860,8 @@ function led(B, game, o) {
   if (o.glow) {
     const g = o.glow, m = B.box(new THREE.MeshBasicMaterial({ color: 0x111111 }), g[0], g[1], g[2], g[3], g[4], g[5], g[6] || 0);
     m.userData.dynamic = true; rec.bulbBox = m;
+    if (o.glowGeo) { m.geometry = G[o.glowGeo]; }
+    for (const e of o.glowMore || []) { const k = B.mesh(G[e[0]], m.material, e[1], e[2], e[3], e[4], e[5], e[6]); k.userData.dynamic = true; }
   }
   rec.base = { colour: rec.colour, target: rec.target };
   rec.smart = !grp;
@@ -14521,7 +14970,7 @@ BM.buildHalcyon = function (B, game) {
 
   /* ---- the gates: one wide sliding gate of black slats, on a motor, between two stone pillars ---- */
   for (const s of [-1, 1]) {
-    solid(B, M.stone, s * 7 - 0.6, s * 7 + 0.6, 0, 2.8, 99.4, 100.6, 'gate pillar');
+    solid(B, M.limestone, s * 7 - 0.6, s * 7 + 0.6, 0, 2.8, 99.4, 100.6, 'gate pillar');
     B.boxE(M.charcoal, s * 7 - 0.7, s * 7 + 0.7, 2.8, 2.9, 99.3, 100.7);
     led(B, game, { group: 'hgate', id: 'pillar-' + s, name: 'Pillar light', pos: [s * 7, 2.6, 100.7], colour: 0xfff0dc, target: 0.9, range: 7, corona: 0.6, glow: [s * 7, 2.55, 100.62, 1.0, 0.04, 0.02] });
     led(B, game, { group: 'hgate', id: 'pillar-in-' + s, name: 'Pillar light', pos: [s * 7, 2.6, 99.3], colour: 0xfff0dc, target: 0.7, range: 6, corona: 0.6, glow: [s * 7, 2.55, 99.38, 1.0, 0.04, 0.02] });
@@ -14531,8 +14980,10 @@ BM.buildHalcyon = function (B, game) {
   // the intercom and a camera on the east pillar
   B.box(M.steel, 6.55, 1.35, 100.62, 0.14, 0.22, 0.04);
   const gate = new THREE.Group(); gate.position.set(0, 0, 100); B.root.add(gate);
-  for (let x = -6.4; x <= 6.4; x += 0.16) B.box(M.charcoal, x, 1.1, 0, 0.1, 2.0, 0.06, 0, gate);
-  B.box(M.charcoal, 0, 2.12, 0, 13.6, 0.08, 0.1, 0, gate); B.box(M.charcoal, 0, 0.08, 0, 13.6, 0.08, 0.1, 0, gate);
+  // horizontal slats, 120 x 16 mm with 15 mm gaps, in a slim frame (as the real sliding gates are made)
+  for (let y = 0.2; y < 2.05; y += 0.135) B.box(M.anthracite, 0, y, 0, 13.4, 0.12, 0.03, 0, gate);
+  for (const x of [-6.7, 6.7]) B.box(M.anthracite, x, 1.1, 0, 0.08, 2.1, 0.08, 0, gate);
+  B.box(M.anthracite, 0, 2.12, 0, 13.6, 0.08, 0.08, 0, gate); B.box(M.anthracite, 0, 0.08, 0, 13.6, 0.08, 0.08, 0, gate);
   const strip = B.box(new THREE.MeshBasicMaterial({ color: 0x111111 }), 0, 2.18, 0.0, 13.4, 0.03, 0.03, 0, gate);
   gate.traverse(m => { m.userData.dynamic = true; m.matrixAutoUpdate = true; });
   const gateLed = led(B, game, { group: 'hgate', id: 'gate-strip', name: 'Gate light strip', pos: [0, 2.3, 100], colour: 0xffffff, target: 0.5, range: 5, corona: 0 }); gateLed.bulbBox = strip;
@@ -14546,32 +14997,31 @@ BM.buildHalcyon = function (B, game) {
   let bi = 0;
   for (let i = 0; i < DRIVE.length - 1; i++) {
     const [ax, az] = DRIVE[i], [bx, bz] = DRIVE[i + 1], len = Math.hypot(bx - ax, bz - az), ang = Math.atan2(bx - ax, bz - az);
-    const seg = B.box(M.paver, (ax + bx) / 2, 0.01, (az + bz) / 2, 6, 0.02, len + 3.2, ang);
-    for (const s of [-1, 1]) B.box(M.charcoal, (ax + bx) / 2 + Math.cos(ang) * s * 3.05, 0.015, (az + bz) / 2 - Math.sin(ang) * s * 3.05, 0.12, 0.03, len + 3.2, ang);
+    const seg = B.box(M.setts, (ax + bx) / 2, 0.01, (az + bz) / 2, 6, 0.02, len + 3.2, ang);
+    for (const s of [-1, 1]) { B.box('hSoapstone', (ax + bx) / 2 + Math.cos(ang) * s * 2.85, 0.016, (az + bz) / 2 - Math.sin(ang) * s * 2.85, 0.3, 0.02, len + 3.2, ang); B.box(M.limestone, (ax + bx) / 2 + Math.cos(ang) * s * 3.08, 0.05, (az + bz) / 2 - Math.sin(ang) * s * 3.08, 0.15, 0.1, len + 3.2, ang); }
     for (let d = 0; d < len; d += 6) for (const s of [-1, 1]) {
       const t = d / len, x = ax + (bx - ax) * t + Math.cos(ang) * s * 3.6, z = az + (bz - az) * t - Math.sin(ang) * s * 3.6;
-      B.box(M.charcoal, x, 0.45, z, 0.16, 0.9, 0.16);
-      led(B, game, { group: 'hdrive', id: 'bollard-' + (bi++), name: 'Drive bollard', pos: [x, 0.78, z], colour: 0xfff0dc, target: 0.55, range: 5, corona: 0.4, glow: [x, 0.78, z, 0.17, 0.12, 0.17] });
+      // a slim bronze bollard: the light comes out of a slot under its cap and only points down
+      B.mesh(G.cyl, M.anthracite, x, 0.4, z, 0.16, 0.8, 0.16); B.mesh(G.cyl, M.anthracite, x, 0.86, z, 0.2, 0.04, 0.2);
+      led(B, game, { group: 'hdrive', id: 'bollard-' + (bi++), name: 'Drive bollard', pos: [x, 0.7, z], colour: 0xffd2a0, target: 0.55, range: 5, corona: 0.2, glow: [x, 0.82, z, 0.17, 0.05, 0.17], glowGeo: 'cyl' });
     }
   }
   /* ---- the forecourt: a paved circle round a round fountain pool, and a side apron to the garage ---- */
-  { const fc = B.mesh(G.cyl, M.paver, 0, 0.005, 30, 28, 0.02, 28); fc.userData.ground = true; }
+  { const fc = B.mesh(G.cyl, M.setts, 0, 0.005, 30, 28, 0.02, 28); fc.userData.ground = true; const band = B.mesh(G.cyl, 'hSoapstone', 0, 0.004, 30, 28.6, 0.02, 28.6); band.userData.ground = true; }
   B.boxE(M.paver, -24, 24, 0, 0.02, 14, 22);
   B.boxE(M.paver, GA.x0, GA.x1, 0, 0.02, 14, 24);
   for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; solid(B, null, Math.sin(a) * 5 - 0.9, Math.sin(a) * 5 + 0.9, 0, 0.5, 30 + Math.cos(a) * 5 - 0.9, 30 + Math.cos(a) * 5 + 0.9, 'fountain basin'); }   // (a ring of stops round the round pool)
-  B.mesh(G.cyl, M.stone, 0, 0.25, 30, 10.4, 0.5, 10.4);
+  B.mesh(G.cyl, M.limestone, 0, 0.25, 30, 10.4, 0.5, 10.4); B.mesh(G.cyl, M.limestone, 0, 0.51, 30, 10.6, 0.04, 10.6);
+  { const lin = B.mesh(G.cyl, phong(0x0e1113, 160, { specular: 0xffffff }), 0, 0.44, 30, 9.7, 0.02, 9.7); }   // (a black lining: the basin reads as a mirror)
   { const fw = B.mesh(G.cyl, 'water', 0, 0.46, 30, 9.6, 0.02, 9.6); fw.userData.dynamic = true; HC.fountainWater = fw; }
   for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; led(B, game, { group: 'hcourt', id: 'fountain-' + i, name: 'Fountain light', pos: [Math.sin(a) * 3.6, 0.42, 30 + Math.cos(a) * 3.6], colour: 0x9fd8ff, target: 0.6, range: 4, corona: 0.3 }); }
   for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2; if (Math.abs(Math.sin(a)) < 0.2 && Math.cos(a) > 0) continue; const x = Math.sin(a) * 13.6, z = 30 + Math.cos(a) * 13.6; led(B, game, { group: 'hcourt', id: 'court-' + i, name: 'Forecourt light', pos: [x, 0.05, z], colour: 0xfff0dc, target: 0.4, range: 4, corona: 0.4, glow: [x, 0.025, z, 0.18, 0.01, 0.18] }); }
 
   /* ---- the lawns: specimen trees, each uplit; low hedges; paths with step lights ---- */
   const tree = (x, z, s, kind) => {
-    const h = 3.2 * s;
-    B.mesh(G.post, 'bark', x, h / 2, z, 0.28 * s, h, 0.28 * s);
-    if (kind === 'round') { B.mesh(G.sphere, 'leaves', x, h + 1.4 * s, z, 2.6 * s, 2.2 * s, 2.6 * s); B.mesh(G.sphere, 'leavesDark', x + 0.6 * s, h + 0.9 * s, z - 0.4 * s, 1.8 * s, 1.5 * s, 1.8 * s); }
-    else { B.mesh(G.cone, 'pine', x, h + 2.6 * s, z, 2.0 * s, 6 * s, 2.0 * s); }
-    P.addWall(x - 0.2 * s, x + 0.2 * s, z - 0.2 * s, z + 0.2 * s, 0, h, { kind: 'tree', occludes: false, tag: 'tree' });
-    led(B, game, { group: 'htrees', id: 'uplight-' + HC.trees.length, name: 'Tree uplight', pos: [x + 0.9, 0.1, z + 0.9], spot: true, dir: [-0.25, 1, -0.25], colour: 0xf0f4ff, target: 1.0, range: 9, corona: 0.2, glow: [x + 0.9, 0.04, z + 0.9, 0.16, 0.04, 0.16] });
+    BM.KIT.tree(B, x, z, s, kind === 'round' ? (HC.trees.length % 3 === 2 ? 'multi' : 'round') : 'pine', HC.trees.length % 5 === 4 ? { leaf: 'hMaple', leaf2: 'leavesDark' } : {});
+    // two uplights to a tree, either side of the trunk and aimed into the crown (3000K: warm, but not orange)
+    for (const [ox, oz, k] of [[0.9, 0.9, ''], [-0.8, 0.7, 'b']]) led(B, game, { group: 'htrees', id: 'uplight-' + HC.trees.length + k, name: 'Tree uplight', pos: [x + ox, 0.1, z + oz], spot: true, dir: [-ox * 0.3, 1, -oz * 0.3], colour: 0xffe2c0, target: k ? 0.6 : 1.0, range: 9, corona: 0.2, glow: [x + ox, 0.04, z + oz, 0.16, 0.04, 0.16] });
     HC.trees.push({ x, z });
   };
   const avoid = (x, z) => (x > 24 && x < 50 && z > -24 && z < 8) || (x > -68 && x < -46 && z > 26 && z < 70) || (x > -48 && x < -30 && z > -40 && z < -22) || (x > 37 && x < 57 && z > 62 && z < 82) || (x > 28 && x < 48 && z > 24 && z < 42) || (Math.abs(x) < 16 && z > 14 && z < 46) || (x > -10 && x < 16 && z > 40 && z < 104) || (x > GA.x0 - 3 && x < H.x1 + 3 && z > H.z0 - 22 && z < 26);
@@ -14579,9 +15029,11 @@ BM.buildHalcyon = function (B, game) {
     [-58, 60, 1.1, 'pine'], [58, 60, 1.2, 'pine'], [-58, 30, 1.0, 'round'], [58, 30, 1.0, 'round'], [-60, 2, 1.1, 'pine'], [60, 2, 1.0, 'pine'], [-18, 88, 0.9, 'round'], [22, 90, 0.9, 'round'],
     [44, 14, 1.0, 'round'], [-60, -26, 1.0, 'round'], [60, -28, 1.0, 'round'], [46, -20, 0.9, 'pine']]) if (!avoid(x, z)) tree(x, z, s, k);
   // a ring of pines outside the section, dark against the sky
-  for (let i = 0; i < 70; i++) { const a = rnd() * Math.PI * 2, r = 120 + rnd() * 50, x = Math.sin(a) * r, z = 30 + Math.cos(a) * r; if (z < -40) continue; B.mesh(G.cone, 'pineDark', x, 6, z, 4, 12 + rnd() * 6, 4); }
+  for (let i = 0; i < 70; i++) { const a = rnd() * Math.PI * 2, r = 120 + rnd() * 50, x = Math.sin(a) * r, z = 30 + Math.cos(a) * r; if (z < -40) continue; BM.KIT.pine(B, x, z, 1.6 + rnd() * 0.8, { dark: true, noCollide: true }); }
   // hedges along the drive and round the forecourt
   for (const [x, z, w, d] of [[-14, 40, 0.8, 10], [14, 40, 0.8, 10], [-14, 26, 6, 0.8], [14, 26, 6, 0.8]]) B.furniture('hedge', x, z, 0, w, 1.0, d, 'hedge');
+  // clipped box balls and olives in big pots either side of the door
+  for (const s of [-1, 1]) { BM.KIT.plant(B, s * 4.2, H.z1 + 3.4, 0, 'olive', 2.6, { pot: 'hConcrete' }); for (let k = 0; k < 3; k++) B.mesh(G.lowSphere, 'hedge', s * (9 + k * 1.3), 0.45, H.z1 + 1.2, 0.95, 0.85, 0.95); }
   // paths: from the forecourt round the east of the house to the lake, with step lights in the edge
   const PATH = [[16, 22], [30, 18], [50, 12], [52, -20], [48, -38]];   // (round the east of the wellness wing to the lake)
   for (let i = 0; i < PATH.length - 1; i++) {
@@ -14634,13 +15086,13 @@ BM.buildHalcyon = function (B, game) {
   // the floating stairs: oak treads cantilevered off the atrium wall, a light under each
   B.room = 'atrium';
   P.ramp(ST1.x0, ST1.x1, ST1.z0, ST1.z1, 'z', F1, 0, -0.3, 'floating stairs');
-  { const n = 23; for (let i = 0; i < n; i++) { const z = ST1.z1 - (i + 0.5) * (ST1.z1 - ST1.z0) / n, y = (i + 1) * F1 / n; B.boxE(M.oak, ST1.x0, ST1.x1, y - 0.06, y, z - 0.14, z + 0.14);
-    if (i % 3 === 1) led(B, game, { id: 'stair-' + i, name: 'Stair light', room: 'atrium', pos: [ST1.x1 - 0.7, y - 0.1, z], colour: 0xfff0dc, target: 0.25, range: 2.5, corona: 0, glow: [(ST1.x0 + ST1.x1) / 2, y - 0.065, z, ST1.x1 - ST1.x0 - 0.1, 0.008, 0.2] }); } }
+  { const n = 23; for (let i = 0; i < n; i++) { const z = ST1.z1 - (i + 0.5) * (ST1.z1 - ST1.z0) / n, y = (i + 1) * F1 / n; B.boxE(M.oak, ST1.x0, ST1.x1, y - 0.1, y, z - 0.14, z + 0.14);
+    if (i % 3 === 1) led(B, game, { id: 'stair-' + i, name: 'Stair light', room: 'atrium', pos: [ST1.x1 - 0.7, y - 0.1, z], colour: 0xfff0dc, target: 0.25, range: 2.5, corona: 0, glow: [(ST1.x0 + ST1.x1) / 2, y - 0.105, z + 0.1, ST1.x1 - ST1.x0 - 0.1, 0.008, 0.03] }); } }
   solid(B, M.glass, ST1.x1, ST1.x1 + 0.03, 0, F1 + 1.0, ST1.z0, ST1.z1, 'stair rail');
   // the second flight, to the roof
   B.levelName = 'upper'; B.room = 'landing';
   P.ramp(ST2.x0, ST2.x1, ST2.z0, ST2.z1, 'z', ROOF, F1, F1 - 0.3, 'roof stairs');
-  { const n = 23; for (let i = 0; i < n; i++) { const z = ST2.z1 - (i + 0.5) * (ST2.z1 - ST2.z0) / n, y = F1 + (i + 1) * (ROOF - F1) / n; B.boxE(M.oak, ST2.x0, ST2.x1, y - 0.06, y, z - 0.14, z + 0.14); } }
+  { const n = 23; for (let i = 0; i < n; i++) { const z = ST2.z1 - (i + 0.5) * (ST2.z1 - ST2.z0) / n, y = F1 + (i + 1) * (ROOF - F1) / n; B.boxE(M.oak, ST2.x0, ST2.x1, y - 0.1, y, z - 0.14, z + 0.14); } }
   solid(B, M.glass, ST2.x0 - 0.03, ST2.x0, F1, ROOF + 1.0, ST2.z0, ST2.z1, 'stair rail');
   B.levelName = 'ground';
 
@@ -14688,14 +15140,22 @@ BM.buildHalcyon = function (B, game) {
 
   /* ---- the facade lights: washers along the front, a glowing strip under the floating roof, and the canopy ---- */
   B.zone = 'exterior'; B.room = 'grounds';
-  for (let x = H.x0 + 2; x < H.x1; x += 4) {
+  // the upper floor clad in vertical cedar battens over the stacked stone; a timber soffit under the floating roof
+  for (const [x0, x1] of [[H.x0, VOID[0]], [VOID[1], H.x1]]) { B.boxE(M.timber, x0, x1, F1, ROOF - 0.3, H.z1, H.z1 + 0.05); B.boxE(M.charcoal, x0, x1, F1 - 0.06, F1, H.z1, H.z1 + 0.08); }
+  B.boxE(M.timber, H.x0 - 1.5, H.x1 + 1.5, ROOF - 0.32, ROOF - 0.3, H.z1, H.z1 + 1.5); B.boxE(M.timber, H.x0 - 1.5, H.x1 + 1.5, ROOF - 0.32, ROOF - 0.3, H.z0 - 1.5, H.z0);
+  // grazing lights: narrow beams set close to the stone and aimed straight up it, so every course throws a shadow
+  for (let x = H.x0 + 1; x < H.x1; x += 2) {
     if (Math.abs(x) < 6.5) continue;
-    led(B, game, { group: 'hfacade', id: 'washer-' + x, name: 'Facade washer', pos: [x, 0.1, H.z1 + 0.5], spot: true, dir: [0, 1, -0.12], colour: 0xffe8cc, target: 1.8, range: 12, corona: 0.3, glow: [x, 0.04, H.z1 + 0.5, 0.3, 0.05, 0.1] });
+    led(B, game, { group: 'hfacade', id: 'washer-' + x, name: 'Stone grazer', pos: [x, 0.1, H.z1 + 0.22], spot: true, dir: [0, 1, 0.04], colour: 0xffd8b0, target: 1.2, range: 9, corona: 0.2, glow: [x, 0.03, H.z1 + 0.22, 0.14, 0.04, 0.14], glowGeo: 'cyl' });
   }
   led(B, game, { group: 'hfacade', id: 'soffit-front', name: 'Roof soffit strip', pos: [0, ROOF - 0.8, H.z1 + 1.2], colour: 0xfff0dc, target: 0.8, range: 12, corona: 0, glow: [0, ROOF - 0.61, H.z1 + 1.4, H.x1 - H.x0 + 2.8, 0.02, 0.06] });
   led(B, game, { group: 'hfacade', id: 'soffit-back', name: 'Roof soffit strip', pos: [0, ROOF - 0.8, H.z0 - 1.2], colour: 0xfff0dc, target: 0.8, range: 12, corona: 0, glow: [0, ROOF - 0.61, H.z0 - 1.4, H.x1 - H.x0 + 2.8, 0.02, 0.06] });
   led(B, game, { group: 'hfacade', id: 'soffit-east', name: 'Roof soffit strip', pos: [H.x1 + 1.2, ROOF - 0.8, -2], colour: 0xfff0dc, target: 0.6, range: 10, corona: 0, glow: [H.x1 + 1.4, ROOF - 0.61, -2, 0.06, 0.02, H.z1 - H.z0 + 2.8] });
-  led(B, game, { group: 'hfacade', id: 'canopy', name: 'Canopy downlights', pos: [0, 3.1, H.z1 + 2.2], colour: 0xfff0dc, target: 1.1, range: 8, corona: 0.2, glow: [0, 3.19, H.z1 + 2.2, 9, 0.01, 0.12] });
+  { const more = []; for (let x = -4.2; x <= 4.21; x += 1.4) for (const z of [H.z1 + 1.4, H.z1 + 3.2]) if (x !== -4.2 || z !== H.z1 + 1.4) more.push(['disc', x, 3.195, z, 0.14, 0.14, 1]);
+    B.boxE(M.timber, -6, 6, 3.19, 3.2, H.z1, H.z1 + 4.5);   // a timber soffit to the canopy
+    const cl = led(B, game, { group: 'hfacade', id: 'canopy', name: 'Canopy downlights', pos: [0, 3.0, H.z1 + 2.2], colour: 0xffd8b0, target: 1.1, range: 8, corona: 0.2, glow: [-4.2, 3.19, H.z1 + 1.4, 0.14, 0.14, 1], glowGeo: 'disc', glowMore: more });
+    for (const k of [cl.bulbBox]) { k.rotation.x = Math.PI / 2; k.updateMatrix(); }
+    B.root.traverse(m => { if (m.material === cl.bulbBox.material && m !== cl.bulbBox) { m.rotation.x = Math.PI / 2; m.updateMatrix(); } }); }
   for (const x of [-40, -31]) led(B, game, { group: 'hfacade', id: 'garage-wash-' + x, name: 'Garage wash', pos: [x, GA.h - 0.2, GA.z1 + 0.4], colour: 0xfff0dc, target: 0.7, range: 7, corona: 0.2, glow: [x, GA.h - 0.15, GA.z1 + 0.35, 2.5, 0.03, 0.06] });
 
   /* ---- the pool terrace: stone from the house to the lake edge ---- */
@@ -14719,9 +15179,7 @@ BM.buildHalcyon = function (B, game) {
   sw('living room', 'ground', living.concat(cove.id), [H.x0 + 0.02, 1.3, -6], [1, 0]);
   const kitchen = room('kitchen', 'ground', 6, 26, -18, 2, F1 - 0.3, 0, 4);
   B.room = 'kitchen';
-  B.furniture(M.kitchen, 15, -8, 0, 7, 0.92, 1.6, 'kitchen island'); B.boxE(M.marble, 11.4, 18.6, 0.92, 0.96, -8.9, -7.1);
-  const pend = []; for (const x of [12.5, 15, 17.5]) { B.box(M.steel, x, F1 - 0.9, -8, 0.01, 1.2, 0.01); pend.push(led(B, game, { id: 'island-' + x, name: 'Island pendant', room: 'kitchen', pos: [x, F1 - 1.6, -8], colour: 0xffd8a8, target: 0.7, range: 5, corona: 0.4, glow: [x, F1 - 1.55, -8, 0.32, 0.18, 0.32] }).id); }
-  B.furniture(M.kitchen, 22, -0.5, 0, 7, 0.92, 0.7, 'kitchen bench'); B.boxE(M.marble, 18.5, 25.5, 0.92, 0.96, -0.85, -0.15);
+  const pend = []; for (const x of [13.5, 15, 16.5]) { B.box(M.steel, x, (F1 - 0.3 + 1.98) / 2, -8, 0.008, F1 - 0.3 - 1.98, 0.008); B.mesh(G.cyl, M.steel, x, F1 - 0.31, -8, 0.12, 0.02, 0.12); pend.push(led(B, game, { id: 'island-' + x, name: 'Island pendant', room: 'kitchen', pos: [x, 1.72, -8], colour: 0xffc890, target: 0.7, range: 5, corona: 0.4, glow: [x, 1.82, -8, 0.34, 0.34, 0.34], glowGeo: 'sphere' }).id); }
   sw('kitchen', 'ground', kitchen.concat(pend), [20, 1.3, 1.88], [0, -1]);
   const atrium = room('atrium', 'ground', -6, 6, 2, 14, ROOF - 0.35, 0, 4);
   sw('atrium', 'ground', atrium, [-8, 1.3, H.z1 - 0.32], [0, -1]);
@@ -14744,15 +15202,6 @@ BM.buildHalcyon = function (B, game) {
   sw('dressing room', 'upper', dress, [12, F1 + 1.3, 2.12], [0, 1]);
   B.levelName = 'ground'; B.room = 'house';
 
-  /* a few pieces of furniture, so the rooms read as rooms */
-  B.room = 'living room';
-  B.furniture(M.sofa, -12, -12, 0, 6, 0.75, 1.0, 'sofa'); B.furniture(M.sofa, -15.5, -9.5, 0, 1.0, 0.75, 4, 'sofa');
-  B.boxE(M.rug, -16, -8, 0.02, 0.03, -13.5, -6.5); B.furniture(M.black, -12, -9.5, 0, 2.2, 0.4, 1.1, 'coffee table');
-  B.furniture(M.oak, 2, -12, 0, 2.6, 0.76, 1.1, 'dining table');
-  B.room = 'master suite'; B.levelName = 'upper';
-  B.furniture(M.white, 13, -10, F1, 2.2, 0.55, 2.4, 'bed'); B.boxE(M.charcoal, 11.8, 14.2, F1, F1 + 1.2, -11.3, -11.15);
-  B.room = 'guest room';
-  B.furniture(M.white, -18, -10, F1, 1.9, 0.55, 2.2, 'bed');
   B.levelName = 'ground'; B.room = 'house';
   BM.buildHalcyonSmart(B, game);
   BM.buildHalcyonOutside(B, game);
@@ -14760,6 +15209,7 @@ BM.buildHalcyon = function (B, game) {
   BM.buildHalcyonTech(B, game);
   BM.buildHalcyonAmenities(B, game);
   BM.buildHalcyonGrounds(B, game);
+  BM.buildHalcyonRooms(B, game);
 };
 BM.halcyonMats = mats;
 BM.halcyonLed = (B, game, o) => led(B, game, o);
@@ -14796,6 +15246,7 @@ BM.halcyonAfterFx = function (game) {
   const p = game.player, inCinema = HC.cinema && p.x > 14 && p.z > 2 && p.y < 4 && inHouse;
   game.fx.hemi.intensity += (inHouse ? 0.55 : 0.08) * f * HC.bright * (inCinema ? 1 - 0.9 * HC.cinema.dim : 1);
   if (inHouse) game.fx.hemi.color.lerp(HC.tint || (HC.tint = new THREE.Color(0xffe2c0)), 0.5 * f);
+  if (HC.ceilMat) HC.ceilMat.emissive.setHex(0x3a3228).multiplyScalar(f * HC.bright * (inCinema ? 1 - HC.cinema.dim : 1));
   const gl = mats().glazing; gl.emissive.setHex(HC.glow || 0xffd9a8).multiplyScalar(0.11 * f * HC.bright * (1 + 2.5 * (HC.frost || 0)));
 };
 BM.halcyonZone = function (x, y, z) {
@@ -14858,6 +15309,7 @@ BM.updateHalcyon = function (game, dt) {
   BM.updateHalcyonTech(game, dt);
   BM.updateHalcyonAmenities(game, dt);
   BM.updateHalcyonGrounds(game, dt);
+  BM.updateHalcyonRooms(game, dt);
 };
 })();
 </script>
@@ -15156,8 +15608,17 @@ BM.buildHalcyonOutside = function (B, game) {
   for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2, f = new THREE.Mesh(G.cone, flameMat); f.position.set(FX + Math.cos(a) * 0.45, R + 0.75, FZ + Math.sin(a) * 0.45); f.scale.set(0.25, 0.6, 0.25); f.userData.dynamic = true; B.root.add(f); HC.flames.push(f); }
   HC.flameMat = flameMat;
   HC.fireLight = led({ group: 'hroof', id: 'fire-pit', name: 'Fire pit', pos: [FX, R + 1.0, FZ], colour: 0xff9a40, target: 1.4, range: 9, corona: 0.4 });
-  for (const [x, z, w, d] of [[FX, FZ - 3.2, 4.4, 1.0], [FX, FZ + 3.2, 4.4, 1.0], [FX - 3.2, FZ, 1.0, 4.4]]) B.furniture(M.sofa, x, z, R, w, 0.45, d, 'lounge');
-  for (const [x, z] of [[2, -10], [22, -10], [2, 8], [22, 8]]) { B.furniture(M.charcoal, x, z, R, 1.6, 0.7, 1.6, 'planter'); B.mesh(G.sphere, 'leaves', x, R + 1.2, z, 1.2, 0.9, 1.2); }
+  // outdoor sofas round the fire on three sides (all-weather fabric, teak frames), corten planters of grasses, lavender and an olive
+  BM.KIT.sofa(B, FX, FZ - 3.0, R, 4.2, 0, { mat: 'hFabricSand', accent: 'hFabricOlive', d: 0.95 });
+  BM.KIT.sofa(B, FX, FZ + 3.0, R, 4.2, Math.PI, { mat: 'hFabricSand', accent: 'hFabricRust', d: 0.95 });
+  BM.KIT.sofa(B, FX - 3.0, FZ, R, 4.2, Math.PI / 2, { mat: 'hFabricSand', accent: 'hFabricOlive', d: 0.95 });
+  for (const [x, z] of [[2, -10], [22, -10], [2, 8], [22, 8]]) {
+    B.furniture('hCorten', x, z, R, 1.6, 0.75, 1.6, 'planter'); B.boxE('hSoil', x - 0.74, x + 0.74, R + 0.7, R + 0.74, z - 0.74, z + 0.74);
+    const rnd = BM.mulberry32(Math.floor(x * 9 + z));
+    if (x === 22 && z === 8) BM.KIT.plant(B, x, z, R + 0.15, 'olive', 2.2, { pot: 'hSoil' });
+    else for (let i = 0; i < 18; i++) { const m = B.mesh(G.cone, i % 3 ? 'longGrass' : 'hOliveLeaf', x + (rnd() - 0.5) * 1.3, R + 1.05, z + (rnd() - 0.5) * 1.3, 0.12, 0.7 + rnd() * 0.3, 0.12); m.rotation.set((rnd() - 0.5) * 0.5, 0, (rnd() - 0.5) * 0.5); m.updateMatrix(); }
+    led({ group: 'hroof', id: 'planter-' + x + '-' + z, name: 'Planter grazer', pos: [x, R + 0.05, z + 0.95], spot: true, dir: [0, 1, -0.05], colour: 0xffd8b0, target: 0.35, range: 2.5, corona: 0, glow: [x, R + 0.02, z + 0.92, 0.12, 0.03, 0.06] });
+  }
   // the helipad: a white circle and an H on the west half of the roof, ringed with green lights
   const HX = -14, HZ = -2;
   { const ring = B.mesh(G.ring, M.white, HX, R + 0.01, HZ, 11, 11, 11); ring.rotation.x = -Math.PI / 2; ring.updateMatrix(); }
@@ -15389,7 +15850,7 @@ BM.buildHalcyonInside = function (B, game) {
 
   /* ================= THE CINEMA ================= */
   B.room = 'cinema';
-  const SX = 25.6, SZ = 8, SW = 6.8, SH = 3.2;
+  const SX = 25.6, SZ = 8, SW = 6.8, SH = 3.2, H_Z1 = HL.H.z1;
   B.boxE(M.black, SX - 0.05, SX + 0.25, 0.2, 3.7, SZ - SW / 2 - 0.3, SZ + SW / 2 + 0.3);          // the frame
   const cvs = document.createElement('canvas'); cvs.width = 256; cvs.height = 120;
   const tex = new THREE.CanvasTexture(cvs);
@@ -15398,10 +15859,18 @@ BM.buildHalcyonInside = function (B, game) {
   for (let r = 0; r < 3; r++) {
     const x = 22 - r * 2.6, y0 = r * 0.25;
     if (r) B.solid(M.charcoal, x - 1.2, x + 1.3, 0, y0, 3.5, 13.6, { kind: 'furniture', tag: 'riser' });
-    for (let s = 0; s < 4; s++) { const z = 5 + s * 1.9; B.furniture(M.sofa, x, z, y0, 1.0, 0.5, 0.9, 'recliner'); B.box(M.sofa, x - 0.45, y0 + 0.75, z, 0.18, 0.55, 0.9); B.box(M.black, x, y0 + 0.62, z - 0.5, 0.9, 0.1, 0.1); }
+    // leather recliners, five to a row with shared console arms, facing the screen
+    for (let s = 0; s < 5; s++) BM.KIT.recliner(B, x, 8 + (s - 2) * 0.98, y0, Math.PI / 2, { mat: 'hLeather' });
+    if (r) { B.boxE('hAcoustic', x + 1.3, x + 1.31, 0, y0, 3.5, 13.6);   // the riser's fascia, carpeted, with amber step lights along its nose
+      const more = []; for (let z = 4.1; z < 13.5; z += 0.6) more.push(['box', x + 1.312, y0 - 0.06, z, 0.004, 0.02, 0.05]);
+      const f = more.shift(); led({ id: 'cinema-step-' + r, name: 'Step lights', room: 'cinema', pos: [x + 1.5, 0.15 + y0 / 2, 8], colour: 0xffa040, target: 0.15, range: 2, corona: 0, glow: [f[1], f[2], f[3], f[4], f[5], f[6]], glowMore: more }); }
   }
-  const starMat = new THREE.MeshBasicMaterial({ color: 0x9aa8d0 });
-  for (let i = 0; i < 160; i++) { const s = B.box(starMat, 14.3 + Math.random() * 11.4, F1 - 0.31, 2.3 + Math.random() * 11.4, 0.025, 0.004, 0.025); s.userData.star = true; }
+  // the walls in dark fabric acoustic panels, the ceiling deep navy, and a field of fibre-optic stars in three sizes
+  B.boxE('hAcoustic', 14.2, 25.5, 0.3, F1 - 0.4, 2.1, 2.14); B.boxE('hAcoustic', 14.2, 25.5, 0.3, F1 - 0.4, H_Z1 - 0.34, H_Z1 - 0.3);
+  B.boxE('hAcoustic', 14.15, 14.19, 2.5, F1 - 0.4, 2.2, 13.6); B.boxE('hAcoustic', 25.9, 25.96, 0, F1 - 0.3, 2.1, H_Z1 - 0.3);
+  B.boxE(new THREE.MeshPhongMaterial({ color: 0x0e1424, shininess: 2 }), 14.15, 26, F1 - 0.305, F1 - 0.3, 2.1, H_Z1 - 0.3);
+  const starMat = new THREE.MeshBasicMaterial({ color: 0xdce6ff }), srnd = BM.mulberry32(9);
+  for (let i = 0; i < 600; i++) { const d = [0.012, 0.018, 0.028][Math.floor(srnd() * srnd() * 3)]; const s = B.box(starMat, 14.3 + srnd() * 11.4, F1 - 0.31, 2.3 + srnd() * 11.2, d, 0.004, d); s.userData.star = true; }
   HC.cinema = { tex, cvs, screen, playing: false, t: 0, dim: 0, screenLight: led({ id: 'cinema-screen', name: 'Screen glow', room: 'cinema', pos: [SX - 1.5, 2, SZ], colour: 0x000000, target: 0, range: 12, corona: 0 }), starMat };
   HC.cinema.screenLight.smart = false; HC.cinema.screenLight.base = null;
   B.interactable({ id: 'cinema-play', label: () => HC.cinema.playing ? 'Cinema: stop the film' : 'Cinema: play a film', pos: [14.4, 1.2, 5.6], n: [1, 0], act: g => BM.halcyonCinema(g) });
@@ -15421,7 +15890,18 @@ BM.buildHalcyonInside = function (B, game) {
     const nose = B.box(paint, 0, 0.48, -2.4, 1.9, 0.32, 0.8, 0, g); nose.rotation.x = 0.28;
     const deck = B.box(paint, 0, 0.92, 1.4, 1.9, 0.3, 1.6, 0, g); deck.rotation.x = -0.1;
     B.mesh(G.sphere, glass, 0, 0.92, -0.2, 0.9, 0.42, 1.6, 0, g);       // the canopy
-    for (const [wx, wz] of [[-0.95, -1.45], [0.95, -1.45], [-0.95, 1.45], [0.95, 1.45]]) { const wh = B.mesh(G.cyl, M.black, wx, 0.36, wz, 0.72, 0.3, 0.72, 0, g); wh.rotation.z = Math.PI / 2; const rim = B.mesh(G.cyl, M.steel, wx * 1.02, 0.36, wz, 0.46, 0.31, 0.46, 0, g); rim.rotation.z = Math.PI / 2; }
+    // the details that make it a car: sills, a splitter and diffuser, mirrors, a grille, door shut-lines, a rear light bar
+    for (const s of [-1, 1]) { B.box('hBlackGlass', s * 1.0, 0.34, 0, 0.06, 0.1, 3.0, 0, g); B.box(paint, s * 1.02, 0.92, -0.75, 0.16, 0.06, 0.1, 0, g); B.box('hBlackGlass', s * 1.08, 0.92, -0.75, 0.02, 0.05, 0.09, 0, g); B.box('hBlackSteel', s * 1.001, 0.62, -0.3, 0.002, 0.42, 0.004, 0, g); B.box('hBlackSteel', s * 1.001, 0.62, 0.9, 0.002, 0.42, 0.004, 0, g); B.box('hBlackSteel', s * 1.0, 0.55, 0.45, 0.01, 0.12, 0.5, 0, g); }
+    B.box('hBlackGlass', 0, 0.22, -2.72, 1.9, 0.05, 0.3, 0, g); B.box('hBlackGlass', 0, 0.42, -2.78, 1.1, 0.16, 0.04, 0, g); B.box('hBlackGlass', 0, 0.34, 2.22, 1.7, 0.16, 0.06, 0, g);
+    for (const s of [-1, 1]) B.mesh(G.cyl, 'hChrome', s * 0.35, 0.28, 2.24, 0.1, 0.04, 0.1, 0, g).rotation.x = Math.PI / 2;
+    B.box('hBlackGlass', 0, 1.06, 2.05, 1.5, 0.03, 0.25, 0, g);
+    for (const [wx, wz] of [[-0.95, -1.45], [0.95, -1.45], [-0.95, 1.45], [0.95, 1.45]]) {
+      const wh = B.mesh(G.cyl, 'hTyre', wx, 0.36, wz, 0.72, 0.3, 0.72, 0, g); wh.rotation.z = Math.PI / 2;
+      const rim = B.mesh(G.cyl, 'hChrome', wx * 1.02, 0.36, wz, 0.5, 0.31, 0.5, 0, g); rim.rotation.z = Math.PI / 2;
+      const hub = B.mesh(G.cyl, 'hBlackSteel', wx * 1.03, 0.36, wz, 0.4, 0.312, 0.4, 0, g); hub.rotation.z = Math.PI / 2;
+      for (let k = 0; k < 5; k++) { const sp = B.box('hChrome', wx * 1.03 + Math.sign(wx) * 0.157, 0.36, wz, 0.012, 0.38, 0.05, 0, g); sp.rotation.set(k * Math.PI * 2 / 5, 0, 0); }
+      const cal = B.box(new THREE.MeshPhongMaterial({ color: 0xd8a010, shininess: 60 }), wx * 0.97, 0.48, wz - 0.1, 0.06, 0.14, 0.18, 0, g);
+    }
     const lamp = new THREE.MeshBasicMaterial({ color: 0xe8f4ff });
     for (const s of [-1, 1]) { B.box(lamp, s * 0.72, 0.6, -2.62, 0.4, 0.04, 0.06, 0, g); B.box(new THREE.MeshBasicMaterial({ color: 0xff1a1a }), s * 0.6, 0.72, 2.21, 0.6, 0.05, 0.03, 0, g); }
     g.traverse(o => { o.userData.dynamic = true; o.matrixAutoUpdate = true; });
@@ -15446,7 +15926,7 @@ BM.buildHalcyonInside = function (B, game) {
   // the garage doors: two wide panels that lift up into the head
   HC.gdoors = HC.garageOpenings.map(([x0, x1]) => {
     const g = new THREE.Group(); g.position.set((x0 + x1) / 2, 0, GA.z1 - 0.15); B.root.add(g);
-    for (let k = 0; k < 4; k++) B.box(k % 2 ? M.charcoal : new THREE.MeshPhongMaterial({ color: 0x1a1c1e, shininess: 80 }), 0, 0.4 + k * 0.8, 0, x1 - x0, 0.78, 0.06, 0, g);
+    for (let k = 0; k < 4; k++) B.box(M.timber, 0, 0.4 + k * 0.8, 0, x1 - x0, 0.79, 0.06, 0, g);   // flush, clad in the same battens as the wall: they disappear
     g.traverse(o => { o.userData.dynamic = true; o.matrixAutoUpdate = true; });
     const wall = P.addWall(x0, x1, GA.z1 - 0.3, GA.z1, 0, 3.2, { kind: 'door', tag: 'garage door' });
     return { g, wall, t: 0 };
@@ -15626,9 +16106,23 @@ BM.buildHalcyonTech = function (B, game) {
     B.mesh(G.plane, BM.labelMat('CAM ' + (i + 1) + ' · ' + c.name, { w: 256, h: 32, size: 18, bg: '#000000', fg: '#7ad08a' }), x - 0.7, y - 0.3, wallZ + 0.065, 0.7, 0.088, 1);
     return s;
   });
-  B.furniture(M.charcoal, cx, 4.6, 0, 4.4, 0.76, 1.0, 'console desk');
-  B.boxE(M.black, cx - 1.6, cx + 1.6, 0.76, 0.8, 4.2, 4.9);
-  B.furniture(M.sofa, cx, 5.9, 0, 0.7, 0.5, 0.7, 'chair');
+  // a curved console in three angled sections (black top, an aluminium edge), three monitors on arms at eye height, a mesh chair
+  const K = BM.KIT;
+  for (const [ox, a] of [[-1.45, 0.32], [0, 0], [1.45, -0.32]]) {
+    const x = cx + ox, z = 4.6 + Math.abs(ox) * 0.22;
+    B.box('hBlackSteel', x, 0.36, z, 1.5, 0.7, 0.7, a); B.box(M.black, x, 0.73, z, 1.52, 0.04, 0.76, a); B.box('hChrome', x - Math.sin(a) * 0.38, 0.73, z + Math.cos(a) * 0.38, 1.52, 0.04, 0.012, a);
+    B.box('hBlackSteel', x, 0.95, z - 0.25, 0.04, 0.4, 0.04, a);
+    const mon = B.box('hBlackGlass', x, 1.18, z - 0.22, 0.71, 0.42, 0.03, a);
+    const scr = B.box(new THREE.MeshBasicMaterial({ color: [0x1a3a5a, 0x163020, 0x2a2a40][ox > 0 ? 2 : ox < 0 ? 0 : 1] }), x + Math.sin(a) * 0.017, 1.18, z - 0.22 + Math.cos(a) * 0.017, 0.68, 0.39, 0.002, a); scr.userData.dynamic = true;
+  }
+  B.phys.addWall(cx - 2.2, cx + 2.2, 4.2, 5.3, 0, 0.76, { kind: 'furniture', tag: 'console desk' });
+  B.box(M.black, cx, 0.75, 4.45, 0.5, 0.02, 0.18);   // the keyboard
+  { const f = cx, z = 5.9; B.mesh(G.cyl, 'hBlackSteel', f, 0.03, z, 0.6, 0.04, 0.6); B.mesh(G.cyl, 'hBlackSteel', f, 0.25, z, 0.05, 0.42, 0.05); B.box('hFabricCharcoal', f, 0.48, z, 0.5, 0.07, 0.48); B.box('hFabricCharcoal', f, 0.85, z + 0.25, 0.46, 0.6, 0.05, 0, undefined); B.box('hBlackSteel', f, 0.65, z + 0.27, 0.04, 0.3, 0.03); B.phys.addWall(f - 0.3, f + 0.3, z - 0.3, z + 0.3, 0, 0.5, { kind: 'furniture', tag: 'chair' }); }
+  // two equipment racks behind a glass screen, their lights blinking green and blue
+  B.solid(M.glass, -26, -22.6, 0, 2.6, 12.0, 12.04, { kind: 'wall', tag: 'glass' });
+  for (const x of [-25.4, -24.6, -23.8]) { B.solid('hRackPerf', x - 0.3, x + 0.3, 0, 2.0, 12.4, 13.6, { kind: 'furniture', tag: 'rack' }); B.boxE('hBlackSteel', x - 0.29, x + 0.29, 0.05, 1.95, 12.39, 12.4); }
+  HC.rackLeds = [];
+  for (let i = 0; i < 36; i++) { const m = new THREE.MeshBasicMaterial({ color: [0x2eff7a, 0x3e8bff, 0x2eff7a, 0xffb000][i % 4] }); const d = B.box(m, -25.6 + (i % 3) * 0.8 + ((i * 7) % 5) * 0.08, 0.3 + Math.floor(i / 3) * 0.14, 12.385, 0.015, 0.01, 0.004); d.userData.dynamic = true; HC.rackLeds.push(m); }
   B.interactable({ id: 'cctv-console', label: 'Security console: look through the cameras', pos: [cx, 1.0, 5.15], n: [0, 1], act: g => BM.cctvOpen(g) });
   HC.cctv = { on: false, i: 0, rr: 0, overlay: null };
 
@@ -15709,6 +16203,8 @@ BM.updateHalcyonTech = function (game, dt) {
     V.led.color.setHex(d > 0.05 ? 0xffb030 : 0x30ff60);
   }
   V.g.rotation.y = V.heading;
+  /* the racks blink */
+  if (HC.rackLeds) for (let i = 0; i < HC.rackLeds.length; i++) if (Math.random() < dt * 2) HC.rackLeds[i].color.setHex(Math.random() < 0.7 ? [0x2eff7a, 0x3e8bff, 0x2eff7a, 0xffb000][i % 4] : 0x050505);
   /* motion path lights */
   const ids = game.estateLights.hgarden;
   for (const id of ids) {
@@ -15769,7 +16265,7 @@ function canvasMat(w, h, draw, basic) {
 }
 
 BM.buildHalcyonAmenities = function (B, game) {
-  const HC = game.halcyon, M = BM.halcyonMats(), P = B.phys, HL = BM.HALCYON, F1 = HL.F1;
+  const HC = game.halcyon, M = BM.halcyonMats(), P = B.phys, HL = BM.HALCYON, F1 = HL.F1, K_ = BM.KIT;
   const led = o => BM.halcyonLed(B, game, o);
   const solid = (mat, x0, x1, y0, y1, z0, z1, tag) => B.solid(mat, x0, x1, y0, y1, z0, z1, { kind: 'wall', tag: tag || 'wall' });
   const keypadIds = [];
@@ -15800,29 +16296,56 @@ BM.buildHalcyonAmenities = function (B, game) {
   // the partition between the gym and the spa, with a door through it
   solid(M.timber, W.x0, 40, 0, W.h, W.split - 0.1, W.split + 0.1); solid(M.timber, 41.6, W.x1, 0, W.h, W.split - 0.1, W.split + 0.1); solid(M.timber, 40, 41.6, 2.4, W.h, W.split - 0.1, W.split + 0.1);
   // the gym: a rubber floor, a mirror wall, the machines, a screen
-  B.boxE(new THREE.MeshPhongMaterial({ color: 0x1c1d20, shininess: 4 }), W.x0, W.x1, 0.02, 0.03, W.z0, W.split);
+  B.boxE('hRubber', W.x0, W.x1, 0.02, 0.03, W.z0, W.split);
   B.boxE(new THREE.MeshPhongMaterial({ color: 0xcad6de, shininess: 160, specular: 0xffffff }), W.x0 + 1, 39.6, 0.3, 2.6, W.split - 0.14, W.split - 0.11);   // the mirror
+  // treadmills facing the lake (1.9 x 0.9 m): a deck and belt, side rails, uprights angled up to a console with a screen
+  const tilt = (m, rx) => { m.rotation.x = rx; m.updateMatrix(); return m; };
   for (const [x, z] of [[30, -15], [33, -15]]) {
-    B.furniture(M.charcoal, x, z, 0, 0.9, 0.25, 2.0, 'treadmill base');
-    B.box(M.black, x, 0.27, z + 0.1, 0.6, 0.02, 1.6);
-    for (const s of [-1, 1]) B.box(M.steel, x + s * 0.42, 0.75, z - 0.85, 0.05, 1.0, 0.05);
-    const scr = B.box(new THREE.MeshBasicMaterial({ color: 0x2a8cff }), x, 1.3, z - 0.92, 0.5, 0.3, 0.03); scr.userData.dynamic = true;
+    B.furniture('hBlackSteel', x, z, 0, 0.89, 0.2, 1.91, 'treadmill');
+    B.box('hTyre', x, 0.21, z + 0.1, 0.56, 0.012, 1.5);
+    for (const s of [-1, 1]) { B.box('hChrome', x + s * 0.38, 0.21, z + 0.1, 0.1, 0.02, 1.5); tilt(B.box('hBlackSteel', x + s * 0.4, 0.75, z - 0.72, 0.06, 1.1, 0.06), 0.25); B.box('hChrome', x + s * 0.38, 1.0, z - 0.45, 0.04, 0.04, 0.6); }
+    tilt(B.box('hBlackSteel', x, 1.32, z - 0.86, 0.75, 0.32, 0.1), -0.4);
+    const scr = tilt(B.box(new THREE.MeshBasicMaterial({ color: 0x2a8cff }), x, 1.33, z - 0.82, 0.5, 0.24, 0.02), -0.4); scr.userData.dynamic = true;
   }
-  B.furniture(M.black, 38, -15, 0, 2.2, 2.2, 0.7, 'weights rack'); for (let i = 0; i < 6; i++) B.mesh(G.cyl, M.steel, 37.2 + i * 0.32, 0.9 + (i % 2) * 0.6, -14.7, 0.16, 0.3, 0.16).rotation.x = Math.PI / 2;
-  B.furniture(M.charcoal, 38, -10, 0, 0.5, 0.45, 1.3, 'bench');
-  B.furniture(M.steel, 31.5, -8, 0, 0.6, 0.4, 2.2, 'rower');
+  // a power rack on an oak lifting platform: four uprights, J-hooks, safety arms, a loaded bar
+  B.boxE('hOak', 35.6, 38.4, 0.03, 0.05, -16.8, -14.0); B.boxE('hRubber', 35.6, 36.2, 0.05, 0.055, -16.8, -14.0); B.boxE('hRubber', 37.8, 38.4, 0.05, 0.055, -16.8, -14.0);
+  for (const [x, z] of [[36.4, -16.0], [37.6, -16.0], [36.4, -14.8], [37.6, -14.8]]) B.box('hBlackSteel', x, 1.17, z, 0.075, 2.34, 0.075);
+  for (const z of [-16.0, -14.8]) B.box('hBlackSteel', 37, 2.3, z, 1.28, 0.075, 0.075);
+  for (const x of [36.4, 37.6]) { B.box('hBlackSteel', x, 2.3, -15.4, 0.075, 0.075, 1.28); B.box('hBlackSteel', x, 0.05, -15.4, 0.075, 0.075, 1.28); B.box('hChrome', x, 0.8, -14.65, 0.05, 0.05, 0.4); }
+  { const bar = B.mesh(G.cyl, 'hChrome', 37, 1.4, -14.85, 0.03, 2.2, 0.03); bar.rotation.z = Math.PI / 2; bar.updateMatrix(); }
+  for (const s of [-1, 1]) for (let k = 0; k < 2; k++) { const pl = B.mesh(G.cyl, 'hBlackSteel', 37 + s * (0.78 + k * 0.06), 1.4, -14.85, 0.45 - k * 0.12, 0.05, 0.45 - k * 0.12); pl.rotation.z = Math.PI / 2; pl.updateMatrix(); }
+  P.addWall(36.3, 37.7, -16.1, -14.7, 0, 2.34, { kind: 'furniture', tag: 'power rack' });
+  // a two-tier rack of hex dumbbells, smallest to largest
+  for (const [y, t] of [[0.5, 0], [0.85, 1]]) {
+    tilt(B.box('hBlackSteel', 41.5, y, -16.9 + t * 0.12, 1.5, 0.03, 0.3), -0.2);
+    for (let i = 0; i < 5; i++) { const x = 40.9 + i * 0.3, r = 0.08 + i * 0.012 + t * 0.03; for (const dz of [-0.1, 0.1]) tilt(B.mesh(G.cyl, 'hBlackSteel', x, y + 0.08, -16.9 + t * 0.12 + dz, r * 2, 0.06, r * 2), Math.PI / 2); tilt(B.mesh(G.cyl, 'hChrome', x, y + 0.08, -16.9 + t * 0.12, 0.03, 0.14, 0.03), Math.PI / 2); }
+  }
+  for (const [x, z] of [[40.8, -17.15], [42.2, -17.15], [40.8, -16.65], [42.2, -16.65]]) B.box('hBlackSteel', x, 0.45, z, 0.05, 0.9, 0.05);
+  P.addWall(40.7, 42.3, -17.2, -16.6, 0, 0.95, { kind: 'furniture', tag: 'dumbbell rack' });
+  // an adjustable bench, and a rower (a rail, a seat, the fan wheel in its housing, a little screen)
+  B.box('hLeatherBlack', 38, 0.45, -10, 0.3, 0.08, 1.2); B.box('hBlackSteel', 38, 0.22, -10, 0.08, 0.4, 1.0); for (const z of [-10.5, -9.5]) B.box('hBlackSteel', 38, 0.03, z, 0.5, 0.06, 0.08);
+  P.addWall(37.75, 38.25, -10.65, -9.35, 0, 0.5, { kind: 'furniture', tag: 'bench' });
+  B.box('hChrome', 31.5, 0.3, -8, 0.12, 0.06, 2.2); B.box('hBlackSteel', 31.5, 0.38, -8.4, 0.3, 0.06, 0.35);
+  { const fan = B.mesh(G.cyl, 'hBlackSteel', 31.5, 0.45, -9.0, 0.56, 0.26, 0.56); fan.rotation.z = Math.PI / 2; fan.updateMatrix(); }
+  B.box('hBlackSteel', 31.5, 0.15, -6.95, 0.5, 0.06, 0.08); B.box('hBlackSteel', 31.5, 0.75, -8.95, 0.15, 0.45, 0.04); B.box('hBlackGlass', 31.5, 1.0, -8.92, 0.22, 0.16, 0.03);
+  P.addWall(31.2, 31.8, -9.3, -6.9, 0, 0.6, { kind: 'furniture', tag: 'rower' });
   const tv = canvasMat(256, 144, (g) => { const gr = g.createLinearGradient(0, 0, 256, 144); gr.addColorStop(0, '#0a1a2a'); gr.addColorStop(1, '#16324a'); g.fillStyle = gr; g.fillRect(0, 0, 256, 144); g.fillStyle = '#5ad0ff'; g.font = 'bold 20px sans-serif'; g.fillText('HIIT · 32:00', 20, 40); g.fillStyle = '#fff'; g.font = '14px sans-serif'; g.fillText('Heart rate 128', 20, 70); g.fillText('Calories 412', 20, 92); g.fillStyle = '#ff5a8a'; g.fillRect(20, 110, 150, 8); });
   B.mesh(G.plane, tv, W.x0 + 0.06, 1.8, -10, 2.2, 1.24, 1, Math.PI / 2);
   const gymL = roomLights('gym', 'ground', W.x0, W.x1, W.z0, W.split, W.h, 3.4);
   keypad('gym', gymL, [30, 1.3, W.split - 0.12], [0, -1]);
   // the spa
   B.room = 'spa';
-  B.boxE(new THREE.MeshPhongMaterial({ color: 0x6a6258, shininess: 30 }), W.x0, W.x1, 0.02, 0.03, W.split, W.z1);
+  B.boxE('hTravertine', W.x0, W.x1, 0.02, 0.03, W.split, W.z1);
   // the infrared sauna: a cedar box with a glass front, a red-orange glow inside
   const cedar = new THREE.MeshPhongMaterial({ color: 0xa8683a, shininess: 10 });
   solid(cedar, 27, 30.4, 0, 2.3, W.z1 - 0.1 - 2.6, W.z1 - 2.5 - 0.1); solid(cedar, 27, 27.1, 0, 2.3, W.z1 - 2.7, W.z1); solid(cedar, 30.3, 30.4, 0, 2.3, W.z1 - 2.7, W.z1);
   B.boxE(cedar, 27, 30.4, 2.3, 2.4, W.z1 - 2.7, W.z1);
-  B.furniture(cedar, 28.7, W.z1 - 0.6, 0, 3.2, 0.45, 0.9, 'sauna bench');
+  // two tiers of aspen benches (upper 1.0 m, lower 0.5 m), the heater's stones in a slatted guard in the corner
+  const aspen = BM.M('hAspen');
+  B.furniture(aspen, 28.75, W.z1 - 0.4, 0, 3.1, 1.0, 0.6, 'sauna bench'); B.furniture(aspen, 29.1, W.z1 - 0.95, 0, 2.4, 0.5, 0.5, 'sauna bench');
+  B.box(aspen, 28.75, 1.5, W.z1 - 0.14, 3.1, 0.6, 0.04);
+  B.mesh(G.cyl, M.black, 27.5, 0.4, W.z1 - 1.0, 0.36, 0.8, 0.36); for (let i = 0; i < 10; i++) B.mesh(G.lowSphere, M.stone, 27.5 + Math.cos(i) * 0.1, 0.82 + (i % 3) * 0.04, W.z1 - 1.0 + Math.sin(i) * 0.1, 0.12, 0.08, 0.1);
+  for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; B.box(aspen, 27.5 + Math.cos(a) * 0.26, 0.45, W.z1 - 1.0 + Math.sin(a) * 0.26, 0.04, 0.9, 0.06, -a); }
   const glow = new THREE.MeshBasicMaterial({ color: 0x200800 });
   B.box(glow, 28.7, 1.6, W.z1 - 0.16, 2.6, 0.6, 0.03);
   HC.sauna = { on: false, glow, light: led({ id: 'sauna-glow', name: 'Sauna', room: 'spa', pos: [28.7, 1.4, W.z1 - 1.2], colour: 0xff5a20, target: 0, range: 4, corona: 0 }), temp: 22 };
@@ -15844,7 +16367,7 @@ BM.buildHalcyonAmenities = function (B, game) {
   B.interactable({ id: 'plunge', label: 'Cold plunge: 6°C', pos: [37, 0.95, W.z1 - 2.25], n: [0, -1], act: g => BM.halcyonSay(g, 'The cold plunge is at six degrees. Two minutes, after the sauna.', 3) });
   // a rain shower and two loungers by the glass
   B.boxE(M.steel, 39.4, 40.6, 2.55, 2.6, W.z1 - 1.8, W.z1 - 0.6); B.boxE(new THREE.MeshPhongMaterial({ color: 0x3a3a3c, shininess: 20 }), 39.2, 40.8, 0.02, 0.04, W.z1 - 2, W.z1 - 0.4);
-  for (const x of [42, 43.2]) { B.furniture(M.white, x, -0.5, 0, 0.8, 0.4, 2.0, 'lounger'); }
+  for (const x of [42, 43.2]) K_.lounger(B, x, -0.5, 0.03, Math.PI, { mat: 'hFabricSand' });
   const spaL = roomLights('spa', 'ground', W.x0, W.x1, W.split, W.z1, W.h, 3.4);
   keypad('spa', spaL, [36, 1.3, W.split + 0.12], [0, 1]);
   // its own rain and snow cover, and its own zone
@@ -15864,7 +16387,13 @@ BM.buildHalcyonAmenities = function (B, game) {
   });
   B.mesh(G.plane, bottles, (WR.x0 + WR.x1) / 2, 1.8, WR.z0 + 0.05, WR.x1 - WR.x0 - 0.2, 3.2, 1);
   { const side = B.mesh(G.plane, bottles, WR.x1 - 0.05, 1.8, (WR.z0 + WR.z1) / 2, WR.z1 - WR.z0 - 0.2, 3.2, 1, -Math.PI / 2); side.userData.dynamic = true; }
-  B.furniture(M.oak, 3.0, -0.6, 0, 1.6, 0.95, 0.7, 'tasting table');
+  // real bottles, label out on steel pegs, against the dark backing (the far wall and the side)
+  B.boxE('hBlackSteel', WR.x0 + 0.05, WR.x1 - 0.05, 0, 3.5, WR.z0 + 0.01, WR.z0 + 0.04); B.boxE('hBlackSteel', WR.x1 - 0.04, WR.x1 - 0.01, 0, 3.5, WR.z0 + 0.05, WR.z1 - 0.1);
+  K_.bottles(B, 'x', WR.z0 + 0.06, 1, WR.x0 + 0.15, WR.x1 - 0.15, 0.25, 3.3);
+  K_.bottles(B, 'z', WR.x1 - 0.06, -1, WR.z0 + 0.3, WR.z1 - 0.3, 0.25, 3.3, { gaps: 0.1 });
+  K_.table(B, 3.0, -0.6, 0, 1.6, 0.7, 0, { top: 'hNero', legs: 'pedestal', legMat: 'hBronze', h: 1.0, tag: 'tasting table' });
+  for (const [x, c] of [[2.6, 'hBottleRed'], [3.3, 'hBottleGreen']]) { B.mesh(G.cyl, c, x, 1.14, -0.6, 0.075, 0.24, 0.075); B.mesh(G.cyl, c, x, 1.3, -0.6, 0.03, 0.09, 0.03); }
+  for (const x of [2.9, 3.05]) { B.mesh(G.cyl, 'hBottleClear', x, 1.01, -0.45, 0.06, 0.005, 0.06); B.mesh(G.post, 'hBottleClear', x, 1.06, -0.45, 0.008, 0.1, 0.008); B.mesh(G.sphere, 'hBottleClear', x, 1.16, -0.45, 0.08, 0.1, 0.08); }
   led({ id: 'wine-glow', name: 'Wine wall light', room: 'wine room', pos: [3.2, 2.4, -1.2], colour: 0xffc890, target: 0.7, range: 4, corona: 0 });
   B.interactable({ id: 'wine-room', label: 'Wine room: 13°C, 840 bottles', pos: [WR.x0 + 0.1, 1.3, -1.1], n: [-1, 0], act: g => BM.halcyonSay(g, 'The wine room is at thirteen degrees and sixty-five percent humidity. Eight hundred and forty bottles.', 4) });
 
@@ -15875,38 +16404,54 @@ BM.buildHalcyonAmenities = function (B, game) {
   const gscr = B.mesh(G.plane, golf, -25.66, F1 + 1.8, 8, 5.2, 3.0, 1, Math.PI / 2); gscr.userData.dynamic = true;
   HC.golf = { mat: golf, shot: 0, t: 0, dist: 0 };
   BM.drawGolf(HC.golf, 0);
-  B.boxE(new THREE.MeshPhongMaterial({ color: 0x2a6a30, shininess: 4 }), -24, -20, F1, F1 + 0.03, 6.5, 9.5);
+  B.boxE('hTurf', -24.6, -20.6, F1, F1 + 0.03, 6.8, 9.2); B.boxE(M.black, -23.4, -21.4, F1 + 0.03, F1 + 0.05, 7.4, 8.6);   // landing turf, the hitting mat
+  // the enclosure: padded black sides and a top round the screen
+  for (const z of [5.3, 10.7]) B.solid(M.black, -25.6, -22.8, F1, F1 + 3.0, z - 0.06, z + 0.06, { kind: 'wall', tag: 'golf enclosure' });
+  B.boxE(M.black, -25.6, -22.8, F1 + 3.0, F1 + 3.08, 5.24, 10.76);
+  B.box(M.black, -21.0, F1 + 0.2, 8, 0.4, 0.3, 0.5);   // the launch monitor
   B.mesh(G.sphere, M.white, -22.6, F1 + 0.07, 8, 0.04, 0.04, 0.04);
   B.interactable({ id: 'golf', label: 'Golf simulator: take a shot', pos: [-22.4, F1 + 1.0, 8], n: [1, 0], act: g => BM.halcyonGolf(g) });
   // the pool table
-  B.furniture(M.oak, -14, 9, F1, 2.6, 0.8, 1.5, 'pool table');
-  B.boxE(new THREE.MeshPhongMaterial({ color: 0x1a5a3a, shininess: 6 }), -15.2, -12.8, F1 + 0.8, F1 + 0.82, 8.4, 9.6);
-  const ballCols = [0xffffff, 0xf0c020, 0x2040c0, 0xd02020, 0x6020a0, 0xff7010, 0x208030, 0x801010, 0x101010];
-  ballCols.forEach((c, i) => B.mesh(G.sphere, new THREE.MeshPhongMaterial({ color: c, shininess: 120 }), -14.5 + (i % 3) * 0.08 + (i === 0 ? -0.6 : 0), F1 + 0.85, 9 + Math.floor(i / 3) * 0.08 - 0.08, 0.03, 0.03, 0.03));
-  led({ id: 'pool-table-lamp', name: 'Pool table lamp', room: 'games room', pos: [-14, F1 + 1.9, 9], colour: 0xfff0dc, target: 1.1, range: 4, corona: 0.3, glow: [-14, F1 + 2.0, 9, 2.0, 0.08, 0.3] });
+  K_.poolTable(B, -14, 8.6, F1, 0);
+  B.box(M.black, -14, F1 + 1.93, 8.6, 2.1, 0.1, 0.34); for (const s of [-1, 1]) B.box(M.steel, -14 + s * 0.9, F1 + 2.8, 8.6, 0.006, 1.7, 0.006);
+  led({ id: 'pool-table-lamp', name: 'Pool table lamp', room: 'games room', pos: [-14, F1 + 1.75, 8.6], colour: 0xffd2a1, target: 1.1, range: 4, corona: 0.3, glow: [-14, F1 + 1.875, 8.6, 2.0, 0.01, 0.28] });
   // the bar: a long counter, a backlit shelf wall, stools, a neon sign
-  B.furniture(M.black, -20.5, 12.3, F1, 6, 1.1, 0.7, 'bar counter'); B.boxE(M.marble, -23.5, -17.5, F1 + 1.1, F1 + 1.14, 11.9, 12.7);
-  const shelf = B.mesh(G.plane, bottles, -20.5, F1 + 2.0, 13.66, 5.6, 1.6, 1, Math.PI); shelf.userData.dynamic = true;
-  for (let i = 0; i < 5; i++) { const x = -23 + i * 1.2; B.mesh(G.cyl, M.steel, x, F1 + 0.38, 11.4, 0.08, 0.76, 0.08); B.mesh(G.cyl, M.charcoal, x, F1 + 0.78, 11.4, 0.4, 0.06, 0.4); }
+  // the bar: a fluted oak front, a black marble top with a lit groove under its edge, a brass foot rail, stools
+  B.furniture('hWalnut', -20.5, 12.35, F1, 6, 1.02, 0.5, 'bar counter'); B.boxE('hFluted', -23.5, -17.5, F1 + 0.05, F1 + 1.0, 12.09, 12.1);
+  B.boxE('hNero', -23.55, -17.45, F1 + 1.02, F1 + 1.07, 11.85, 12.62); B.boxE(M.black, -23.5, -17.5, F1, F1 + 0.05, 12.12, 12.55);
+  { const rail = B.mesh(G.cyl, 'hBrass', -20.5, F1 + 0.22, 11.95, 0.05, 5.8, 0.05); rail.rotation.z = Math.PI / 2; rail.updateMatrix(); } for (let x = -23; x <= -18; x += 1.25) B.box('hBrass', x, F1 + 0.12, 12.02, 0.03, 0.2, 0.1);
+  led({ id: 'bar-groove', name: 'Bar edge light', room: 'games room', pos: [-20.5, F1 + 0.9, 11.8], colour: 0xffc890, target: 0.3, range: 2, corona: 0, glow: [-20.5, F1 + 1.012, 11.9, 5.9, 0.008, 0.015] });
+  for (let i = 0; i < 6; i++) K_.barStool(B, -23 + i * 0.95, 11.45, F1, 0, { mat: 'hLeatherBlack', h: 0.75 });
+  // the back bar: a bronze mirror, four glass shelves of bottles, each lit from under
+  B.boxE('hBronze', -23.4, -17.6, F1 + 1.15, F1 + 2.75, 13.6, 13.62);
+  B.boxE('hWalnut', -23.4, -17.6, F1, F1 + 0.9, 13.0, 13.6); B.boxE('hNero', -23.4, -17.6, F1 + 0.9, F1 + 0.94, 12.98, 13.6);
+  { const brnd = BM.mulberry32(5), bc = ['hBottleGreen', 'hBottleAmber', 'hBottleClear', 'hBottleRed', 'hBottleAmber'];
+    for (let k = 0; k < 4; k++) { const y = F1 + 1.2 + k * 0.4; B.boxE(M.glass, -23.4, -17.6, y, y + 0.012, 13.36, 13.6);
+      for (let x = -23.3; x < -17.7; x += 0.11 + brnd() * 0.06) { const h = 0.24 + brnd() * 0.08, c = bc[Math.floor(brnd() * bc.length)]; B.mesh(G.cyl, c, x, y + 0.012 + h / 2, 13.47, 0.075, h, 0.075); B.mesh(G.cyl, c, x, y + 0.012 + h + 0.04, 13.47, 0.025, 0.08, 0.025); } } }
   const neon = B.mesh(G.plane, BM.labelMat('HALCYON CLUB', { w: 512, h: 96, size: 52, bg: '#000000', fg: '#ff4fd8' }), -20.5, F1 + 3.1, 13.64, 2.4, 0.45, 1, Math.PI);
   neon.material.blending = THREE.AdditiveBlending; neon.material.transparent = true;
-  led({ id: 'bar-glow', name: 'Bar backlight', room: 'games room', pos: [-20.5, F1 + 1.6, 13.2], colour: 0xff7ad8, target: 0.6, range: 5, corona: 0, glow: [-20.5, F1 + 1.15, 12.72, 5.8, 0.03, 0.03] });
+  { const more = [1, 2, 3].map(k => ['box', -20.5, F1 + 1.19 + k * 0.4, 13.58, 5.7, 0.008, 0.02]);
+    led({ id: 'bar-glow', name: 'Bar backlight', room: 'games room', pos: [-20.5, F1 + 1.9, 13.2], colour: 0xffb070, target: 0.6, range: 5, corona: 0, glow: [-20.5, F1 + 1.19, 13.58, 5.7, 0.008, 0.02], glowMore: more }); }
 
   /* ================= THE MAIN BATHROOM AND THE DRESSING ROOM ================= */
   B.room = 'master suite';
   // the bath: a freestanding white oval facing the lake, a floor tap beside it
-  B.mesh(G.sphere, M.white, 22, F1 + 0.32, -15.4, 1.8, 0.64, 0.95);
-  B.mesh(G.sphere, new THREE.MeshPhongMaterial({ color: 0xbfe0f0, shininess: 120, transparent: true, opacity: 0.8 }), 22, F1 + 0.5, -15.4, 1.6, 0.2, 0.8);
+  // a freestanding stone-resin tub, 1.8 x 0.87 x 0.56 m: an oval with a thin rim, water in it; travertine on the floor
+  B.boxE('hTravertine', 18.1, 26, F1 + 0.005, F1 + 0.012, -18, 1.9);
+  B.mesh(G.cyl, 'hCeramic', 22, F1 + 0.28, -15.4, 1.8, 0.56, 0.87); B.mesh(G.cyl, M.white, 22, F1 + 0.565, -15.4, 1.66, 0.012, 0.74);
+  B.mesh(G.cyl, new THREE.MeshPhongMaterial({ color: 0xbfe0f0, shininess: 120, transparent: true, opacity: 0.8 }), 22, F1 + 0.5, -15.4, 1.6, 0.01, 0.7);
   P.addWall(21.1, 22.9, -15.9, -14.9, F1, F1 + 0.6, { kind: 'furniture', tag: 'bath' });
-  B.box(M.steel, 23.2, F1 + 0.5, -15.4, 0.04, 1.0, 0.04);
+  B.mesh(G.post, 'hBrass', 23.25, F1 + 0.48, -15.4, 0.045, 0.96, 0.045); B.box('hBrass', 23.1, F1 + 0.94, -15.4, 0.3, 0.035, 0.035); B.mesh(G.cyl, 'hBrass', 23.25, F1 + 0.02, -15.4, 0.14, 0.04, 0.14);
+  K_.plant(B, 25.2, -17.0, F1, 'fig', 1.8, { pot: 'hTravertine' });
   // the rain shower: a glass box, a big square head
   B.solid(M.glass, 23.6, 26, F1, ROOF_(), -4.2, -4.17, { kind: 'wall', tag: 'shower glass' });
   B.boxE(M.steel, 24.3, 25.3, ROOF_() - 0.4, ROOF_() - 0.36, -3.5, -2.5);
   B.boxE(new THREE.MeshPhongMaterial({ color: 0x3a3a3c, shininess: 30 }), 23.6, 26, F1, F1 + 0.02, -4.2, -2);
   // the double vanity on the new wall
-  B.furniture(M.oak, 18.45, -10, F1, 0.6, 0.85, 3.2, 'vanity'); B.boxE(M.marble, 18.1, 18.8, F1 + 0.85, F1 + 0.89, -11.6, -8.4);
-  B.boxE(new THREE.MeshPhongMaterial({ color: 0xcad6de, shininess: 160, specular: 0xffffff }), 18.11, 18.13, F1 + 1.1, F1 + 2.3, -11.4, -8.6);
-  led({ id: 'vanity-glow', name: 'Mirror light', room: 'master suite', pos: [18.6, F1 + 2.2, -10], colour: 0xfff4e6, target: 0.6, range: 3, corona: 0, glow: [18.16, F1 + 2.35, -10, 0.02, 0.04, 2.8] });
+  // the double vanity: floating rift oak, a marble top, two basins and wall taps, two backlit mirrors, light in the shadow gap under it
+  const vl = K_.vanity(B, 18.375, -10, F1, 2.2, Math.PI / 2, { wood: 'hOak', top: 'hMarble' });
+  led({ id: 'vanity-glow', name: 'Mirror light', room: 'master suite', pos: [18.7, F1 + 1.8, -10], colour: 0xfff0dc, target: 0.6, range: 3, corona: 0, glow: [18.14, F1 + 1.75, vl[0][0][1], 0.01, 1.0, 0.76], glowMore: [['box', 18.14, F1 + 1.75, vl[1][0][1], 0.01, 1.0, 0.76]] });
+  led({ id: 'vanity-under', name: 'Under-vanity light', room: 'master suite', pos: [18.6, F1 + 0.2, -10], colour: 0xffc890, target: 0.25, range: 2, corona: 0, glow: [18.62, F1 + 0.385, -10, 0.01, 0.006, 2.1] });
   // the dressing room: shelves lit like a boutique, an island, a long mirror
   B.room = 'dressing room';
   for (const z of [13.62]) for (let k = 0; k < 4; k++) {
@@ -15915,7 +16460,23 @@ BM.buildHalcyonAmenities = function (B, game) {
     const strip = led({ id: 'shelf-' + k, name: 'Shelf light', room: 'dressing room', pos: [16, y - 0.05, z - 0.3], colour: 0xfff4e6, target: 0.25, range: 2, corona: 0, glow: [16, y - 0.01, z - 0.4, 16, 0.01, 0.04] });
     for (let x = 8.4; x < 24; x += 0.55) B.box(new THREE.MeshPhongMaterial({ color: [0x2a2a30, 0xd8d0c0, 0x8a2030, 0x30405a, 0xc8a060][Math.floor(x * 3 + k) % 5] }), x, y + 0.12, z - 0.22, 0.4, 0.2 + (k % 2) * 0.05, 0.3);
   }
-  B.furniture(M.oak, 16, 8, F1, 3.2, 0.95, 1.2, 'island'); B.boxE(M.glass, 14.4, 17.6, F1 + 0.95, F1 + 0.98, 7.4, 8.6);
+  // the island: smoked oak drawers under a bronze glass top, jewellery trays lit inside it
+  B.furniture('hSmokedOak', 16, 8, F1, 2.0, 0.88, 1.0, 'island');
+  for (const y of [0.3, 0.58]) for (const s of [-1, 1]) B.boxE('hBlackSteel', 15.0, 17.0, F1 + y, F1 + y + 0.004, 8 + s * 0.5 - 0.002, 8 + s * 0.5 + 0.002);
+  B.boxE(new THREE.MeshPhongMaterial({ color: 0x4b4038, shininess: 2 }), 15.05, 16.95, F1 + 0.88, F1 + 0.89, 7.55, 8.45);
+  B.boxE('hBronzeGlass', 14.98, 17.02, F1 + 0.89, F1 + 0.9, 7.48, 8.52);
+  for (let i = 0; i < 8; i++) B.mesh(G.sphere, i % 2 ? 'hBrass' : 'hChrome', 15.3 + i * 0.2, F1 + 0.9, 8 + (i % 3 - 1) * 0.15, 0.04, 0.02, 0.04);
+  led({ id: 'island-trays', name: 'Island tray light', room: 'dressing room', pos: [16, F1 + 0.95, 8], colour: 0xffc890, target: 0.2, range: 1.5, corona: 0, glow: [16, F1 + 0.884, 8, 1.8, 0.004, 0.8] });
+  // hanging: double rails at 1.02 and 2.05 m in smoked-oak bays along the wall, lit inside by vertical LED profiles
+  for (const [a0, a1] of [[8.4, 11.3], [12.7, 19.6]]) {
+    B.boxE('hSmokedOak', a0, a1, F1, F1 + 2.4, 2.1, 2.14); B.boxE('hSmokedOak', a0, a1, F1 + 2.4, F1 + 2.45, 2.1, 2.75);
+    for (let x = a0; x <= a1 + 0.01; x += (a1 - a0) / Math.round((a1 - a0) / 1.0)) B.boxE('hSmokedOak', x - 0.012, x + 0.012, F1, F1 + 2.4, 2.1, 2.75);
+    K_.clothes(B, 'x', 2.45, a0 + 0.05, a1 - 0.05, F1 + 2.05, 0); K_.clothes(B, 'x', 2.45, a0 + 0.05, a1 - 0.05, F1 + 1.02, 0);
+    P.addWall(a0, a1, 2.1, 2.75, F1, F1 + 2.45, { kind: 'furniture', tag: 'wardrobe' });
+  }
+  { const more = []; for (let x = 9.4; x < 19.6; x += 1.0) if (x < 11.3 || x > 12.7) more.push(['box', x, F1 + 1.2, 2.74, 0.01, 2.2, 0.01]);
+    const f0 = more.shift(); led({ id: 'closet-profiles', name: 'Wardrobe lights', room: 'dressing room', pos: [14, F1 + 1.5, 3.2], colour: 0xffe0c0, target: 0.4, range: 4, corona: 0, glow: [f0[1], f0[2], f0[3], f0[4], f0[5], f0[6]], glowMore: more }); }
+  B.box('hFabricStone', 16, F1 + 0.22, 4.6, 0.9, 0.44, 0.9);   // an ottoman
   B.boxE(new THREE.MeshPhongMaterial({ color: 0xcad6de, shininess: 160, specular: 0xffffff }), 25.66, 25.7, F1 + 0.2, F1 + 2.6, 6, 9);
   B.levelName = 'ground';
 
@@ -16107,21 +16668,35 @@ BM.buildHalcyonGrounds = function (B, game) {
   BM.addRoofBox(PV.x0 - 0.6, PV.x1 + 0.6, PV.z0 - 0.6, PV.z1 + 0.6, PV.h + 0.4);
   // the kitchen: a long counter, the pizza oven's dome glowing, a grill, the bar with stools
   B.room = 'pool pavilion';
-  B.furniture(M.charcoal, -39, PV.z0 + 0.6, 0, 9, 0.92, 0.8, 'outdoor kitchen'); B.boxE(M.stone, -43.5, -34.5, 0.92, 0.97, PV.z0 + 0.2, PV.z0 + 1.0);
-  B.mesh(G.sphere, M.render, -43, 1.25, PV.z0 + 0.6, 1.1, 0.75, 1.0);
+  // a 9 m run in dark honed stone, with stainless doors under it and a lit lip
+  B.furniture('hSoapstone', -39, PV.z0 + 0.6, 0, 9, 0.91, 0.75, 'outdoor kitchen'); B.boxE('hNero', -43.55, -34.45, 0.91, 0.96, PV.z0 + 0.2, PV.z0 + 1.02);
+  for (let x = -42.9; x < -34.6; x += 0.6) if (x < -39.3 || x > -37.7) { B.boxE('hChrome', x, x + 0.56, 0.12, 0.84, PV.z0 + 0.975, PV.z0 + 0.98); B.boxE('hBlackSteel', x + 0.05, x + 0.51, 0.76, 0.78, PV.z0 + 0.98, PV.z0 + 1.0); }
+  led({ group: 'hpav', id: 'pav-lip', name: 'Counter lip light', pos: [-39, 0.85, PV.z0 + 1.2], colour: 0xffc890, target: 0.3, range: 2.5, corona: 0, glow: [-39, 0.9, PV.z0 + 1.01, 8.8, 0.008, 0.01] });
+  // the pizza oven: a domed body on the counter, a flue, an arched mouth
+  B.mesh(G.lowSphere, 'hTerracotta', -43, 1.15, PV.z0 + 0.6, 1.0, 0.85, 0.9); B.box('hBlackSteel', -43, 0.97, PV.z0 + 0.6, 1.05, 0.06, 0.92);
+  B.mesh(G.post, 'hBlackSteel', -43, 1.75, PV.z0 + 0.45, 0.14, 0.7, 0.14); B.mesh(G.cyl, 'hBlackSteel', -43, 2.12, PV.z0 + 0.45, 0.2, 0.05, 0.2);
   const ovenGlow = new THREE.MeshBasicMaterial({ color: 0xff6a20 }); { const m = B.box(ovenGlow, -43, 1.08, PV.z0 + 1.08, 0.42, 0.24, 0.02); m.userData.dynamic = true; }
-  B.box(M.steel, -38.5, 1.0, PV.z0 + 0.6, 1.4, 0.06, 0.7); B.box(M.black, -38.5, 1.25, PV.z0 + 0.25, 1.4, 0.45, 0.08);
-  B.furniture(M.black, -35.5, PV.z0 + 2.4, 0, 2.6, 1.1, 0.6, 'bar'); for (let i = 0; i < 3; i++) { B.mesh(G.cyl, M.steel, -36.6 + i * 1.1, 0.38, PV.z0 + 3.1, 0.07, 0.76, 0.07); B.mesh(G.cyl, M.charcoal, -36.6 + i * 1.1, 0.78, PV.z0 + 3.1, 0.38, 0.05, 0.38); }
+  // the grill: a stainless hood and its grates, control knobs on the front
+  B.box('hChrome', -38.5, 1.0, PV.z0 + 0.6, 1.0, 0.1, 0.62); for (let i = 0; i < 8; i++) B.box('hBlackSteel', -38.95 + i * 0.13, 1.055, PV.z0 + 0.62, 0.02, 0.01, 0.5);
+  { const hood = B.box('hChrome', -38.5, 1.28, PV.z0 + 0.35, 1.0, 0.5, 0.06); hood.rotation.x = -0.2; hood.updateMatrix(); }
+  for (let i = 0; i < 4; i++) { const k = B.mesh(G.cyl, 'hBlackSteel', -38.85 + i * 0.23, 0.86, PV.z0 + 0.99, 0.05, 0.03, 0.05); k.rotation.x = Math.PI / 2; k.updateMatrix(); }
+  B.furniture('hSoapstone', -35.5, PV.z0 + 2.4, 0, 2.6, 1.04, 0.5, 'bar'); B.boxE('hTeak', -36.85, -34.15, 1.04, 1.08, PV.z0 + 2.05, PV.z0 + 2.95);
+  for (let i = 0; i < 3; i++) BM.KIT.barStool(B, -36.6 + i * 1.1, PV.z0 + 3.2, 0, Math.PI, { mat: 'hTeak', h: 0.75 });
   HC.oven = { glow: ovenGlow, light: led({ group: 'hpav', id: 'pizza-oven', name: 'Pizza oven', pos: [-43, 1.0, PV.z0 + 1.6], colour: 0xff7a30, target: 0.9, range: 4, corona: 0.2 }) };
   // the outdoor living room: sofas round a coffee table, a linear fire, a TV over it
-  B.furniture(M.sofa, -39, PV.z1 - 4.5, 0, 6, 0.6, 0.9, 'outdoor sofa'); B.furniture(M.sofa, -43.6, PV.z1 - 2.6, 0, 0.9, 0.6, 3.2, 'outdoor sofa');
-  B.furniture(M.oak, -39, PV.z1 - 2.6, 0, 2.2, 0.38, 1.0, 'coffee table');
-  B.furniture(M.stone, -39, PV.z1 - 0.4, 0, 4.4, 0.9, 0.6, 'fireplace');
+  BM.KIT.rug(B, -39, PV.z1 - 2.8, 0.02, 6, 4, 0, { mat: 'hRugGrey', border: 'hRugCream' });
+  BM.KIT.sofa(B, -39, PV.z1 - 4.6, 0.02, 4.0, Math.PI, { mat: 'hFabricSand', accent: 'hFabricRust', d: 0.95 });
+  BM.KIT.sofa(B, -43.4, PV.z1 - 2.6, 0.02, 3.0, Math.PI / 2, { mat: 'hFabricSand', accent: 'hFabricOlive', d: 0.95 });
+  BM.KIT.loungeChair(B, -34.6, PV.z1 - 2.6, 0.02, -Math.PI / 2 - 0.3, { mat: 'hFabricSand', ottoman: false });
+  BM.KIT.table(B, -39, PV.z1 - 2.6, 0.02, 2.0, 0.9, 0, { top: 'hTeak', h: 0.38, legs: 'slab', t: 0.05, tag: 'coffee table' });
+  // the fireplace: a stone chimney wall, a linear fire low in it, a TV set above
+  B.furniture('hStone', -39, PV.z1 - 0.4, 0, 4.4, 0.9, 0.6, 'fireplace'); B.boxE('hBlackGlass', -40.9, -37.1, 0.9, 0.93, PV.z1 - 0.7, PV.z1 - 0.5);
+  B.solid('hStone', -41.2, -36.8, 0.9, PV.h, PV.z1 - 0.4, PV.z1 - 0.1, { kind: 'wall', tag: 'chimney' });
   const fire = new THREE.MeshBasicMaterial({ color: 0xff8a2a, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
   HC.pfire = []; for (let i = 0; i < 9; i++) { const f = new THREE.Mesh(G.cone, fire); f.position.set(-40.6 + i * 0.4, 1.02, PV.z1 - 0.62); f.scale.set(0.16, 0.25, 0.08); f.userData.dynamic = true; B.root.add(f); HC.pfire.push(f); }
   led({ group: 'hpav', id: 'pav-fire', name: 'Outdoor fireplace', pos: [-39, 1.3, PV.z1 - 1.2], colour: 0xff9a40, target: 1.0, range: 6, corona: 0.2 });
   const tvc = document.createElement('canvas'); tvc.width = 256; tvc.height = 144; const tvt = new THREE.CanvasTexture(tvc);
-  const tvm = B.mesh(G.plane, new THREE.MeshBasicMaterial({ map: tvt }), -39, 2.1, PV.z1 - 0.68, 2.0, 1.12, 1, Math.PI); tvm.userData.dynamic = true;
+  const tvm = B.mesh(G.plane, new THREE.MeshBasicMaterial({ map: tvt }), -39, 2.1, PV.z1 - 0.42, 2.0, 1.12, 1, Math.PI); tvm.userData.dynamic = true;
   HC.ptv = { c: tvc, t: tvt, k: 0 };
   for (const x of [-44, -39, -34]) led({ group: 'hpav', id: 'pav-' + x, name: 'Pavilion downlight', pos: [x, PV.h - 0.1, -31], colour: 0xfff0dc, target: 0.8, range: 6, corona: 0.2, glow: [x, PV.h - 0.02, -31, 0.18, 0.02, 0.18] });
   led({ group: 'hpav', id: 'pav-strip', name: 'Pavilion edge light', pos: [-39, PV.h, PV.z0 - 0.7], colour: 0xffe2c0, target: 0.5, range: 6, corona: 0, glow: [-39, PV.h + 0.02, PV.z0 - 0.62, PV.x1 - PV.x0 + 1.2, 0.03, 0.04] });
@@ -16183,9 +16758,18 @@ BM.buildHalcyonGrounds = function (B, game) {
   B.levelName = 'upper'; B.floor(M.white, GH.x0 - 1, GH.x1 + 0.3, GH.z0 - 0.3, GH.z1 + 0.3, GH.h + 0.3, 0.3); B.levelName = 'ground';
   B.boxE(M.charcoal, GH.x0 - 1.0, GH.x1 + 0.3, GH.h + 0.3, GH.h + 0.5, GH.z0 - 0.3, GH.z1 + 0.3);
   BM.addRoofBox(GH.x0 - 1, GH.x1 + 0.6, GH.z0 - 0.6, GH.z1 + 0.6, GH.h + 0.6);
-  B.furniture(M.white, 50, 74.5, 0, 2.0, 0.55, 2.2, 'guest bed'); B.boxE(M.charcoal, 48.8, 51.2, 0, 1.1, 75.7, 75.8);
-  B.furniture(M.kitchen, 52.8, 68.5, 0, 1.6, 0.92, 2.6, 'kitchenette'); B.boxE(M.marble, 52.0, 53.6, 0.92, 0.96, 67.2, 69.8);
-  B.furniture(M.sofa, 44, 68.2, 0, 2.6, 0.7, 0.9, 'sofa');
+  // one room: a bed against the back wall facing the glass, a galley kitchenette (a sink, a two-zone hob, a fridge under), a sofa bed
+  BM.KIT.rug(B, 50, 75.6 - 1.5, 0.02, 3.05, 2.45, 0, { mat: 'hRugCream', border: 'hRugGrey' });
+  BM.KIT.bed(B, 50, 76.45, 0.02, Math.PI, { w: 1.55, l: 2.05, headboard: 'hBoucle', throw: 'hFabricOlive' });
+  B.boxE('hBattens', 47.8, 52.2, 0.02, GH.h, 77.64, 77.7);
+  B.furniture('hOak', 52.9, 68.5, 0, 0.62, 0.9, 2.8, 'kitchenette'); B.boxE('hTravertine', 52.55, 53.7, 0.9, 0.94, 67.1, 69.9);
+  for (let z = 67.1; z <= 69.9; z += 0.7) B.boxE('hBlackSteel', 52.585, 52.59, 0.05, 0.88, z - 0.0015, z + 0.0015);
+  B.boxE('hBlackSteel', 52.75, 53.4, 0.92, 0.942, 67.4, 67.9); B.mesh(G.post, 'hBlackSteel', 53.5, 1.1, 67.65, 0.025, 0.35, 0.025);
+  B.boxE('hBlackGlass', 52.7, 53.45, 0.94, 0.945, 68.8, 69.6);
+  B.boxE('hOak', 53.4, 53.7, 1.5, 1.53, 67.1, 69.9); for (let i = 0; i < 5; i++) B.mesh(G.cyl, 'hCeramic', 53.55, 1.58, 67.4 + i * 0.12, 0.08, 0.1, 0.08);
+  BM.KIT.sofa(B, 44, 68.2, 0.02, 2.4, 0, { mat: 'hFabricStone', accent: 'hFabricRust', d: 0.95 });
+  BM.KIT.roundTable(B, 44, 69.6, 0.02, 0.45, 0.4, { top: 'hTravertine' });
+  BM.KIT.plant(B, 41.0, 77.1, 0.02, 'fig', 2.0);
   const ghIds = []; for (let x = GH.x0 + 2; x < GH.x1; x += 4) for (let z = GH.z0 + 2; z < GH.z1; z += 4) ghIds.push(led({ group: 'hguest', id: 'gh-' + x + '-' + z, name: 'Guest house light', pos: [x, GH.h - 0.05, z], colour: 0xffe6c8, target: 0.85, range: 7, corona: 0.2, glow: [x, GH.h - 0.015, z, 0.16, 0.02, 0.16] }).id);
   led({ group: 'hguest', id: 'gh-porch', name: 'Guest house porch', pos: [GH.x0 - 0.6, GH.h - 0.1, 72], colour: 0xfff0dc, target: 0.8, range: 6, corona: 0.3, glow: [GH.x0 - 0.6, GH.h + 0.28, 72, 0.6, 0.02, 3] });
   // a path to it from the drive
@@ -16292,6 +16876,235 @@ BM.halcyonGroundsToggle = function (game, id) {
   else if (id === 'putt') BM.halcyonPutt(game);
   else return false;
   return true;
+};
+})();
+</script>
+<script id="bm-87-halcyon-rooms">
+/* ==========================================================================
+   HALCYON HOUSE — THE ROOMS, DRESSED
+   Built from research into 2026 lakeside houses (sources in the README):
+   - the living room: a stone fireplace wall with a long linear fire set
+     low, no mantel; deep low seating floating off the walls on a big rug;
+     a curved bouclé sofa facing the lake; a travertine block table;
+   - dining for ten under a linear pendant hung 0.8 m over the table;
+   - the kitchen: a 4.2 m island with a waterfall stone top over a fluted
+     oak base, counter stools, globe pendants; a wall of flush handleless
+     cabinets hiding the fridge, the freezer and the ovens, a stone
+     splashback with a lit ledge, a coffee niche;
+   - the atrium: a cascading chandelier of glass globes, sized for a
+     double-height space, its foot about 3.3 m up;
+   - the bedrooms: beds facing the lake against batten headboard walls,
+     the rug under the lower two-thirds, a bench at the foot, lamps level
+     with the mattress, a lounge chair angled to the view, sheers;
+   - the landing: a reading room of shelves, a sofa and two armchairs.
+   Every light is warm (2700K) and layered: downlights, coves, lamps,
+   grazing on the stone.
+   ========================================================================== */
+(function () {
+'use strict';
+const BM = window.BM;
+const G = BM.G;
+
+BM.buildHalcyonRooms = function (B, game) {
+  const K = BM.KIT, HL = BM.HALCYON, F1 = HL.F1, ROOF = HL.ROOF, HC = game.halcyon, P = B.phys;
+  const led = o => BM.halcyonLed(B, game, o);
+  const C = F1 - 0.3, C2 = ROOF - 0.3;   // the ceilings
+  B.zone = 'mansion';
+
+  /* ---- plaster ceilings, which take a little of the room's light back (see halcyonAfterFx) ---- */
+  const ceil = HC.ceilMat = new THREE.MeshPhongMaterial({ color: 0xe8e4dc, shininess: 4, specular: 0x111111 });
+  const H = HL.H, ST2 = { x0: 6.2, x1: 7.7, z0: -4, z1: 2.4 }, LF = HL.LIFT;
+  B.levelName = 'ground';
+  for (const [x0, x1, z0, z1] of [[H.x0, H.x1, H.z0, 2], [H.x0, -6, 2, H.z1 - 0.3], [6, 13.95, 2, H.z1 - 0.3]]) B.boxE(ceil, x0, x1, C - 0.007, C, z0, z1);
+  B.levelName = 'upper';
+  for (const [x0, x1, z0, z1] of [[H.x0, LF.x0, H.z0, H.z1], [LF.x0, LF.x1, H.z0, LF.z0], [LF.x0, LF.x1, LF.z1, H.z1], [LF.x1, ST2.x0, H.z0, H.z1], [ST2.x0, ST2.x1, H.z0, ST2.z0], [ST2.x0, ST2.x1, ST2.z1, H.z1], [ST2.x1, H.x1, H.z0, H.z1]]) B.boxE(ceil, x0, x1, C2 - 0.007, C2, z0, z1);
+
+  /* ================= THE LIVING ROOM ================= */
+  B.levelName = 'ground'; B.room = 'living room';
+  B.boxE('hOak', -26, 1, 0.02, 0.026, -18, 2);   // oak boards over the stone
+  // the fireplace wall: dark soapstone slabs floor to ceiling, a linear fire low in it, art above
+  const FW = { x: -26, z0: -15.5, z1: -8.5 };
+  B.boxE('hSoapstone', FW.x, FW.x + 0.16, 0, C, FW.z0, FW.z1);
+  for (let z = FW.z0 + 1.75; z < FW.z1; z += 1.75) B.boxE('hBlackSteel', FW.x + 0.16, FW.x + 0.163, 0, C, z - 0.002, z + 0.002);   // the slab joints
+  B.boxE('hBlackGlass', FW.x + 0.1, FW.x + 0.18, 0.45, 0.88, -13.2, -10.8);                                              // the firebox
+  B.boxE('hBlackSteel', FW.x + 0.17, FW.x + 0.19, 0.42, 0.45, -13.25, -10.75);
+  const flameMat = new THREE.MeshBasicMaterial({ color: 0xff8a30, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false });
+  HC.lflames = [];
+  for (let i = 0; i < 14; i++) { const f = B.mesh(G.cone, flameMat, FW.x + 0.15, 0.55, -13.05 + i * 0.16, 0.1, 0.2, 0.04); f.userData.dynamic = true; f.matrixAutoUpdate = true; HC.lflames.push(f); }
+  B.boxE('hBlackSteel', FW.x + 0.12, FW.x + 0.17, 0.45, 0.5, -13.2, -10.8);   // the burner bed: black glass beads
+  HC.livingFire = { on: true, mat: flameMat, light: led({ id: 'living-fire', name: 'Fireplace', room: 'living room', pos: [FW.x + 0.8, 0.7, -12], colour: 0xff932c, target: 0.9, range: 6, corona: 0 }) };
+  HC.livingFire.light.smart = false; HC.livingFire.light.base = null;
+  B.interactable({ id: 'living-fire', label: () => HC.livingFire.on ? 'Fireplace: turn it off' : 'Fireplace: light it', pos: [FW.x + 0.3, 0.7, -10.4], n: [1, 0], act: g => BM.halcyonLivingFire(g) });
+  K.art(B, FW.x + 0.17, 2.45, -12, 2.2, 1.4, Math.PI / 2, 3);
+  for (const z of [-14.5, -12, -9.5]) led({ id: 'living-graze-' + z, name: 'Fireplace wall grazer', room: 'living room', pos: [FW.x + 0.3, C - 0.1, z], spot: true, dir: [0.06, -1, 0], colour: 0xffd8b0, target: 0.7, range: 5, corona: 0, glow: [FW.x + 0.3, C - 0.005, z, 0.08, 0.01, 0.08] });
+  // the seating round the fire: a deep sofa, two lounge chairs, the travertine block, a big rug
+  K.rug(B, -22, -11.9, 0.026, 5, 5.6, 0, { mat: 'hRugCream', border: 'hRugGrey' });
+  K.sofa(B, -19.3, -11.9, 0.026, 3.6, -Math.PI / 2, { mat: 'hFabricSand', accent: 'hFabricRust', d: 1.05 });
+  B.box('hTravertine', -22.6, 0.026 + 0.17, -11.9, 0.95, 0.34, 1.7); B.box('hTravertine', -22.6, 0.026 + 0.345, -11.9, 0.97, 0.01, 1.72);
+  K.books(B, -22.7, 0.37, -12.3, 3, 0.2); K.vase(B, -22.5, 0.37, -11.4, 0.7);
+  K.loungeChair(B, -22.6, -15.3, 0.026, 0.25, { ottoman: false }); K.loungeChair(B, -22.6, -8.5, 0.026, Math.PI - 0.25, { ottoman: false });
+  K.sideTable(B, -19.3, -14.25, 0.026); K.sideTable(B, -19.3, -9.55, 0.026);
+  K.floorLamp(B, -24.4, -16.2, 0.026); K.floorLamp(B, -24.4, -7.6, 0.026);
+  for (const [z, k] of [[-16.2, 'a'], [-7.6, 'b']]) led({ id: 'living-lamp-' + k, name: 'Floor lamp', room: 'living room', pos: [-24.4, 1.5, z], colour: 0xffc890, target: 0.45, range: 4, corona: 0.3, glow: [-24.4, 1.626, z, 0.43, 0.35, 0.43], glowGeo: 'cyl' });
+  // facing the lake: a curved bouclé sofa round a low round table
+  K.rug(B, -11.5, -11.5, 0.026, 5.2, 4.6, 0, { mat: 'hRugGrey', border: false });
+  K.curvedSofa(B, -11.5, -12.2, 0.026, 2.3, -1.15, 1.15, { mat: 'hBoucle' });
+  K.roundTable(B, -11.5, -12.4, 0.026, 0.6, 0.34, { top: 'hTravertine' });
+  K.vase(B, -11.3, 0.37, -12.3, 0.8);
+  // along the back wall: a long credenza, books and pots on it, a painting over it
+  K.credenza(B, -19, 1.64, 0.026, 3.2, Math.PI);
+  K.vase(B, -20.2, 0.79, 1.6, 1); K.books(B, -18.6, 0.79, 1.62, 4, 0.1); B.mesh(G.sphere, 'hCeramicDark', -17.8, 0.89, 1.62, 0.2, 0.2, 0.2);
+  K.art(B, -19, 1.95, 1.89, 2.4, 1.2, Math.PI, 1);
+  led({ id: 'living-art', name: 'Picture light', room: 'living room', pos: [-19, C - 0.1, 0.9], spot: true, dir: [0, -1, 0.5], colour: 0xffe0c0, target: 0.6, range: 4, corona: 0, glow: [-19, C - 0.005, 0.9, 0.08, 0.01, 0.08] });
+  // trees in pots: an olive in the corner by the glass, a fig by the dining table
+  K.plant(B, -24.9, -16.9, 0.026, 'olive', 2.5, { pot: 'hConcrete' });
+  K.plant(B, -6.6, -16.9, 0.026, 'fig', 2.2);
+
+  /* ================= THE DINING TABLE ================= */
+  const DT = { x: -1.6, z: -10.6 };
+  K.rug(B, DT.x, DT.z, 0.026, 4.6, 3.4, 0, { mat: 'hRugGrey', border: 'hRugCream' });
+  K.table(B, DT.x, DT.z, 0.026, 3.0, 1.1, 0, { top: 'hWalnut', legs: 'slab', t: 0.06, tag: 'dining table' });
+  for (const lx of [-1.05, -0.35, 0.35, 1.05]) { K.diningChair(B, DT.x + lx, DT.z - 0.78, 0.026, 0, { wood: 'hWalnut', mat: 'hFabricRust' }); K.diningChair(B, DT.x + lx, DT.z + 0.78, 0.026, Math.PI, { wood: 'hWalnut', mat: 'hFabricRust' }); }
+  K.diningChair(B, DT.x - 1.85, DT.z, 0.026, Math.PI / 2, { wood: 'hWalnut', mat: 'hFabricRust' }); K.diningChair(B, DT.x + 1.85, DT.z, 0.026, -Math.PI / 2, { wood: 'hWalnut', mat: 'hFabricRust' });
+  K.pendant(B, DT.x, 1.6, DT.z, 'linear', { len: 1.9, drop: C - 1.6 });
+  led({ id: 'dining-pendant', name: 'Dining pendant', room: 'living room', pos: [DT.x, 1.5, DT.z], colour: 0xffc890, target: 0.8, range: 5, corona: 0.3, glow: [DT.x, 1.563, DT.z, 1.86, 0.012, 0.05] });
+  for (const lx of [-0.6, 0.6]) K.vase(B, DT.x + lx, 0.79, DT.z, 0.6);
+
+  /* ================= THE KITCHEN ================= */
+  B.room = 'kitchen';
+  // the island: a fluted oak base, a 60 mm quartzite top that falls to the floor at both ends
+  const IS = { x: 15, z: -8, w: 4.2, d: 1.3 };
+  B.boxE('hFluted', IS.x - IS.w / 2 + 0.06, IS.x + IS.w / 2 - 0.06, 0.03, 0.86, IS.z - IS.d / 2 + 0.05, IS.z + IS.d / 2 - 0.32);
+  B.boxE('hBlackSteel', IS.x - IS.w / 2 + 0.1, IS.x + IS.w / 2 - 0.1, 0.0, 0.08, IS.z - IS.d / 2 + 0.1, IS.z + IS.d / 2 - 0.36);   // the shadow-gap plinth
+  B.boxE('hMarble', IS.x - IS.w / 2, IS.x + IS.w / 2, 0.86, 0.92, IS.z - IS.d / 2, IS.z + IS.d / 2);
+  for (const s of [-1, 1]) B.boxE('hMarble', IS.x + s * (IS.w / 2 - 0.03) - 0.03, IS.x + s * (IS.w / 2 - 0.03) + 0.03, 0, 0.86, IS.z - IS.d / 2, IS.z + IS.d / 2);
+  P.addWall(IS.x - IS.w / 2, IS.x + IS.w / 2, IS.z - IS.d / 2, IS.z + IS.d / 2, 0, 0.92, { kind: 'furniture', tag: 'kitchen island' });
+  // on it: an induction hob in black glass, a sink with a tall black tap, a bowl of lemons
+  B.boxE('hBlackGlass', 15.6, 16.5, 0.92, 0.926, -8.45, -7.9);
+  B.boxE('hBlackSteel', 13.4, 14.2, 0.9, 0.922, -8.45, -7.95);
+  B.mesh(G.post, 'hBlackSteel', 13.8, 1.1, -8.55, 0.03, 0.38, 0.03); B.box('hBlackSteel', 13.8, 1.28, -8.42, 0.025, 0.025, 0.26);
+  B.mesh(G.cyl, 'hCeramic', 14.9, 0.97, -7.7, 0.34, 0.1, 0.34);
+  for (let i = 0; i < 5; i++) B.mesh(G.sphere, 'hFoil', 14.9 + Math.cos(i * 1.3) * 0.08, 1.02 + (i > 3 ? 0.04 : 0), -7.7 + Math.sin(i * 1.3) * 0.08, 0.08, 0.075, 0.075);
+  for (let i = 0; i < 5; i++) K.barStool(B, 13.7 + i * 0.65, -6.95, 0, Math.PI, { mat: 'hLeather', h: 0.65 });
+  // the back wall: tall flush cabinets (fridge, freezer, ovens), a run with a stone splashback and ledge, a coffee niche
+  const BZ = 1.9, D = 0.65;
+  const tall = (x0, x1) => { B.boxE('hWalnut', x0, x1, 0, C, BZ - D, BZ); for (let x = x0; x <= x1 + 0.01; x += (x1 - x0) / Math.max(1, Math.round((x1 - x0) / 0.6))) B.boxE('hBlackSteel', x - 0.0015, x + 0.0015, 0.1, C, BZ - D - 0.002, BZ - D); B.boxE('hBlackSteel', x0, x1, 2.29, 2.293, BZ - D - 0.002, BZ - D); B.boxE('hBlackSteel', x0, x1, 0, 0.1, BZ - D + 0.05, BZ - D + 0.06); P.addWall(x0, x1, BZ - D, BZ, 0, C, { kind: 'furniture', tag: 'kitchen cabinets' }); };
+  tall(14.2, 17.8);
+  for (const y of [0.95, 1.6]) { B.boxE('hBlackGlass', 16.65, 17.75, y, y + 0.6, BZ - D - 0.01, BZ - D); B.boxE('hChrome', 16.75, 17.65, y + 0.5, y + 0.52, BZ - D - 0.02, BZ - D - 0.01); }   // two ovens, flush in the tall run
+  tall(20.8, 25.8);
+  // the run between: base cabinets, the stone carried up the wall, a ledge, wall cabinets with a light under them
+  B.boxE('hWalnut', 17.8, 19.3, 0, 0.86, BZ - D, BZ); B.boxE('hMarble', 17.8, 19.3, 0.86, 0.9, BZ - D - 0.02, BZ);
+  B.boxE('hMarble', 17.8, 19.3, 0.9, 1.55, BZ - 0.02, BZ); B.boxE('hMarble', 17.8, 19.3, 1.55, 1.59, BZ - 0.2, BZ);
+  B.boxE('hWalnut', 17.8, 19.3, 2.2, C, BZ - 0.4, BZ);
+  P.addWall(17.8, 19.3, BZ - D, BZ, 0, 0.9, { kind: 'furniture', tag: 'kitchen bench' });
+  led({ id: 'kitchen-undercab', name: 'Under-cabinet light', room: 'kitchen', pos: [18.55, 2.0, BZ - 0.3], colour: 0xffd8b0, target: 0.5, range: 3, corona: 0, glow: [18.55, 2.195, BZ - 0.36, 1.46, 0.008, 0.03] });
+  led({ id: 'kitchen-ledge', name: 'Ledge light', room: 'kitchen', pos: [18.55, 1.45, BZ - 0.15], colour: 0xffc890, target: 0.35, range: 2, corona: 0, glow: [18.55, 1.545, BZ - 0.17, 1.46, 0.006, 0.02] });
+  K.vase(B, 18.1, 1.59, BZ - 0.1, 0.6); B.mesh(G.sphere, 'hCeramic', 18.9, 1.65, BZ - 0.1, 0.12, 0.12, 0.12);
+  // the coffee niche (its pocket doors slid back): a machine, cups, a lit stone shelf, and the keypad beside it
+  B.boxE('hTravertine', 19.3, 20.8, 0, 0.9, BZ - 0.45, BZ); B.boxE('hTravertine', 19.3, 20.8, 2.2, C, BZ - 0.45, BZ);
+  B.boxE('hBlackSteel', 19.5, 19.95, 0.9, 1.3, BZ - 0.38, BZ - 0.05); B.boxE('hChrome', 19.6, 19.85, 1.0, 1.03, BZ - 0.42, BZ - 0.38);
+  for (let i = 0; i < 4; i++) B.mesh(G.cyl, 'hCeramic', 20.15 + i * 0.12, 0.94, BZ - 0.2, 0.08, 0.08, 0.08);
+  P.addWall(19.3, 20.8, BZ - 0.45, BZ, 0, 0.9, { kind: 'furniture', tag: 'coffee niche' });
+  K.plant(B, 7.4, -16.8, 0, 'olive', 2.3);
+
+  /* ================= THE ATRIUM: A CASCADE OF GLOBES ================= */
+  B.room = 'atrium';
+  { const cx = 0, cz = 7.6, rnd = BM.mulberry32(77), globes = [];
+    for (let i = 0; i < 34; i++) {
+      const a = i * 2.399, r = 0.25 + 0.6 * Math.sqrt(i / 34), y = 3.4 + (i / 34) * 2.1 + rnd() * 0.25, d = 0.16 + rnd() * 0.12;
+      const x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r;
+      B.box('hBrass', x, (y + C2) / 2, z, 0.006, C2 - y, 0.006);
+      globes.push(['sphere', x, y, z, d, d, d]);
+    }
+    B.mesh(G.cyl, 'hBrass', cx, C2 - 0.02, cz, 1.8, 0.04, 1.8);
+    const g0 = globes.shift();
+    led({ id: 'atrium-chandelier', name: 'Chandelier', room: 'atrium', pos: [cx, 4.4, cz], colour: 0xffc890, target: 1.1, range: 11, corona: 0.4, glow: [g0[1], g0[2], g0[3], g0[4], g0[5], g0[6]], glowGeo: 'sphere', glowMore: globes });
+  }
+  // a fig either side of the door, a sculpture on a travertine plinth, a long bench
+  for (const s of [-1, 1]) K.plant(B, s * 2.4, 12.9, 0, 'fig', 2.4, { pot: 'hTravertine' });
+  B.solid('hTravertine', -3.6, -2.8, 0, 0.9, 11.2, 12.0, { kind: 'furniture', tag: 'plinth' });
+  B.mesh(G.sphere, 'hBronze', -3.2, 1.25, 11.6, 0.5, 0.7, 0.5); B.mesh(G.sphere, 'hBronze', -3.2, 1.72, 11.6, 0.3, 0.36, 0.3);
+  led({ id: 'atrium-sculpture', name: 'Sculpture spot', room: 'atrium', pos: [-3.2, 3.0, 11.6], spot: true, dir: [0, -1, 0], colour: 0xffe0c0, target: 0.6, range: 4, corona: 0 });
+
+  /* ================= THE MASTER BEDROOM ================= */
+  B.levelName = 'upper'; B.room = 'master suite';
+  const MB = { x: 13, z: 0.62 };
+  B.boxE('hBattens', MB.x - 1.9, MB.x + 1.9, F1, C2, 1.86, 1.9);                         // the headboard wall: oak battens
+  led({ id: 'master-headwash', name: 'Headboard wash', room: 'master suite', pos: [MB.x, C2 - 0.2, 1.5], spot: true, dir: [0, -1, 0.15], colour: 0xffc890, target: 0.5, range: 5, corona: 0, glow: [MB.x, C2 - 0.02, 1.75, 3.6, 0.01, 0.03] });
+  K.rug(B, MB.x, 0.15, F1, 3.65, 2.9, 0, { mat: 'hRugCream', border: 'hRugGrey' });
+  const lampsM = K.bed(B, MB.x, MB.z, F1, Math.PI, { w: 1.95, l: 2.1, headboard: 'hFabricStone', throw: 'hFabricRust' });
+  lampsM.forEach(([x, z], i) => led({ id: 'master-lamp-' + i, name: 'Bedside lamp', room: 'master suite', pos: [x, F1 + 0.95, z], colour: 0xffc890, target: 0.4, range: 3, corona: 0.3, glow: [x, F1 + 0.93, z, 0.35, 0.27, 0.35], glowGeo: 'cyl' }));
+  // the bench at the foot of the bed
+  B.box('hFabricStone', MB.x, F1 + 0.4, -0.9, 1.5, 0.12, 0.45); for (const s of [-1, 1]) B.box('hWalnut', MB.x + s * 0.68, F1 + 0.17, -0.9, 0.05, 0.34, 0.4);
+  // a chair angled to the view, a side table, a lamp; a long dresser with art over it
+  K.loungeChair(B, 10.2, -14.2, F1, Math.PI + 0.6, { mat: 'hFabricSand' }); K.sideTable(B, 11.3, -15.2, F1); K.floorLamp(B, 9.2, -15.4, F1);
+  K.credenza(B, 8.4, -9.5, F1, 2.6, Math.PI / 2, { mat: 'hSmokedOak' }); K.art(B, 8.12, F1 + 1.8, -9.5, 1.6, 1.1, Math.PI / 2, 4);
+  K.plant(B, 17.1, -16.9, F1, 'fig', 2.2);
+  // sheers: long folds stacked either side of the glass
+  const sheer = new THREE.MeshPhongMaterial({ color: 0xf2eee8, transparent: true, opacity: 0.7, shininess: 2, side: THREE.DoubleSide });
+  const folds = (x0, x1, z, y0, y1) => { for (let x = x0, k = 0; x < x1; x += 0.11, k++) B.box(sheer, x + 0.055, (y0 + y1) / 2, z + (k % 2 ? 0.05 : 0), 0.12, y1 - y0 - 0.02, 0.02, k % 2 ? 0.5 : -0.5); B.box('hBlackSteel', (x0 + x1) / 2, y1 - 0.01, z + 0.02, x1 - x0, 0.02, 0.04); };
+  folds(8.25, 9.1, -17.75, F1, C2); folds(16.95, 17.8, -17.75, F1, C2);
+
+  /* ================= THE GUEST ROOM ================= */
+  B.room = 'guest room';
+  const GB = { x: -17, z: 0.62 };
+  B.boxE('hPlaster', GB.x - 2.2, GB.x + 2.2, F1, C2, 1.86, 1.9);
+  B.boxE('hWalnut', GB.x - 1.4, GB.x + 1.4, F1 + 1.4, F1 + 1.46, 1.75, 1.9);   // a picture ledge over the bed
+  K.art(B, GB.x - 0.55, F1 + 1.85, 1.82, 0.7, 0.75, Math.PI, 2); K.art(B, GB.x + 0.45, F1 + 1.8, 1.82, 0.6, 0.65, Math.PI, 0);
+  K.rug(B, GB.x, 0.2, F1, 3.05, 2.45, 0, { mat: 'hRugRust', border: 'hRugCream' });
+  const lampsG = K.bed(B, GB.x, GB.z + 0.02, F1, Math.PI, { w: 1.55, l: 2.05, headboard: 'hFabricOlive', throw: 'hFabricWhite', accent: 'hFabricRust' });
+  lampsG.forEach(([x, z], i) => led({ id: 'guest-lamp-' + i, name: 'Bedside lamp', room: 'guest room', pos: [x, F1 + 0.95, z], colour: 0xffc890, target: 0.4, range: 3, corona: 0.3, glow: [x, F1 + 0.93, z, 0.35, 0.27, 0.35], glowGeo: 'cyl' }));
+  // a desk on the west wall, its chair; a lounge chair by the glass; a built-in wardrobe of flush oak
+  K.table(B, -25.65, -6, F1, 1.2, 0.5, Math.PI / 2, { top: 'hOak', h: 0.75, tag: 'desk' });
+  K.diningChair(B, -25.0, -6, F1, -Math.PI / 2, { wood: 'hOak', mat: 'hFabricStone' });
+  B.mesh(G.cyl, 'hBrass', -25.75, F1 + 0.76, -5.6, 0.14, 0.02, 0.14); B.mesh(G.post, 'hBrass', -25.75, F1 + 0.98, -5.6, 0.015, 0.44, 0.015); B.mesh(G.sphere, 'hOpal', -25.7, F1 + 1.22, -5.6, 0.16);
+  K.books(B, -25.7, F1 + 0.775, -6.3, 3, 0.3);
+  K.loungeChair(B, -11.2, -15, F1, Math.PI - 0.5, { mat: 'hBoucle', ottoman: false }); K.sideTable(B, -12.2, -15.8, F1);
+  B.boxE('hOak', -8.75, -8.1, F1, C2 - 0.6, -16.4, -6);
+  for (let z = -16.4; z <= -6; z += 0.6933) B.boxE('hBlackSteel', -8.752, -8.75, F1 + 0.05, C2 - 0.65, z - 0.0015, z + 0.0015);
+  B.boxE('hOak', -8.75, -8.1, C2 - 0.6, C2, -16.4, -6);
+  P.addWall(-8.75, -8.1, -16.4, -6, F1, C2, { kind: 'furniture', tag: 'wardrobe' });
+  K.plant(B, -24.9, -16.9, F1, 'olive', 2.0);
+  folds(-25.8, -24.95, -17.75, F1, C2); folds(-9.1, -8.25, -17.75, F1, C2);
+
+  /* ================= THE LANDING: A READING ROOM OVER THE LAKE ================= */
+  B.room = 'landing';
+  K.rug(B, 0, -12.2, F1, 4.6, 4.0, 0, { mat: 'hRugCream', border: 'hRugRust' });
+  K.sofa(B, 0, -10.6, F1, 3.0, Math.PI, { mat: 'hFabricCharcoal', accent: 'hFabricSand' });
+  K.armchair(B, -1.6, -14.2, F1, 0.35, { mat: 'hBoucle' }); K.armchair(B, 1.6, -14.2, F1, -0.35, { mat: 'hBoucle' });
+  K.table(B, 0, -12.4, F1, 1.4, 0.8, 0, { top: 'hTravertine', h: 0.34, legs: 'slab', t: 0.06, tag: 'coffee table' });
+  K.books(B, -0.3, F1 + 0.34, -12.5, 4, 0.4); K.vase(B, 0.35, F1 + 0.34, -12.3, 0.7);
+  K.shelves(B, -7.72, -12, F1, 4.2, 2.8, Math.PI / 2, { mat: 'hWalnut' });
+  K.shelves(B, -7.72, -7.2, F1, 4.2, 2.8, Math.PI / 2, { mat: 'hWalnut' });
+  led({ id: 'landing-shelves', name: 'Shelf light', room: 'landing', pos: [-7.2, F1 + 2.9, -9.6], spot: true, dir: [-0.3, -1, 0], colour: 0xffd8b0, target: 0.5, range: 5, corona: 0, glow: [-7.45, F1 + 2.83, -9.6, 0.02, 0.01, 8.6] });
+  K.credenza(B, 7.65, -13, F1, 2.4, -Math.PI / 2, { mat: 'hSmokedOak' }); K.art(B, 7.89, F1 + 1.8, -13, 1.8, 1.1, -Math.PI / 2, 2);
+  K.floorLamp(B, -2.6, -9.6, F1);
+  led({ id: 'landing-lamp', name: 'Floor lamp', room: 'landing', pos: [-2.6, F1 + 1.5, -9.6], colour: 0xffc890, target: 0.45, range: 4, corona: 0.3, glow: [-2.6, F1 + 1.6, -9.6, 0.43, 0.35, 0.43], glowGeo: 'cyl' });
+  K.plant(B, 6.8, -16.9, F1, 'olive', 2.2);
+  B.levelName = 'ground'; B.room = 'house';
+
+  /* ================= THE POOL TERRACE: LOUNGERS IN PAIRS, UMBRELLAS ================= */
+  B.zone = 'exterior'; B.room = 'grounds';
+  for (const s of [-1, 1]) {
+    for (const x of [19, 19.8, 23, 23.8]) K.lounger(B, s * x, -29.5, 0.02, Math.PI);
+    for (const x of [21.4]) { B.mesh(G.cyl, 'hTravertine', s * x, 0.06, -28.2, 0.5, 0.12, 0.5); B.mesh(G.post, 'hBlackSteel', s * x, 1.3, -28.2, 0.05, 2.5, 0.05); B.box('hFabricSand', s * x, 2.5, -28.2, 3, 0.05, 3); B.box('hFabricSand', s * x, 2.45, -28.2, 3.02, 0.12, 3.02); }
+    K.sideTable(B, s * 19.4, -27.8, 0.02); K.sideTable(B, s * 23.4, -27.8, 0.02);
+  }
+  B.zone = 'mansion';
+};
+
+/* the living-room fire: on and off, the flames licking */
+BM.halcyonLivingFire = function (game, on) {
+  const F = game.halcyon.livingFire; F.on = on === undefined ? !F.on : on;
+  F.light.on = F.on; F.light.target = F.on ? 0.9 : 0;
+  BM.halcyonSay(game, F.on ? 'Fireplace on.' : 'Fireplace off.', 2);
+};
+BM.updateHalcyonRooms = function (game, dt) {
+  const HC = game.halcyon; if (!HC || !HC.lflames) return;
+  const F = HC.livingFire, t = HC.t;
+  F.mat.opacity += ((F.on ? 0.9 : 0) - F.mat.opacity) * Math.min(1, dt * 3);
+  HC.lflames.forEach((f, i) => { const h = 0.16 + 0.1 * Math.abs(Math.sin(t * (3.1 + i * 0.37) + i)) + 0.05 * Math.sin(t * 7.3 + i * 2); f.scale.set(0.09, h, 0.04); f.position.y = 0.5 + h / 2; f.visible = F.mat.opacity > 0.02; });
+  if (F.on && F.light.intensity > 0) F.light.colour = 0xff932c;
 };
 })();
 </script>

@@ -411,7 +411,7 @@ const MAT_DEFS = {
 function M(name) {
   if (MATS[name]) return MATS[name];
   if (name === 'cobweb') { const m = new THREE.MeshBasicMaterial({ map: tex('cobweb'), transparent: true, depthWrite: false, side: THREE.DoubleSide, color: 0xb8b8b0 }); m.name = name; return MATS[name] = m; }
-  const d = MAT_DEFS[name] || [0xff00ff, null, 0, 10];
+  const d = MAT_DEFS[name] || (BM.MAT_EXTRA && BM.MAT_EXTRA[name]) || [0xff00ff, null, 0, 10];
   const extra = Object.assign({}, d[4] || {}), sway = extra.sway, weather = extra.weather, bump = extra.bump;
   delete extra.sway; delete extra.weather; delete extra.bump;
   const o = Object.assign({ color: d[0], shininess: d[3], specular: 0x222222 }, extra);

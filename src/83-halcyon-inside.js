@@ -64,7 +64,7 @@ BM.buildHalcyonInside = function (B, game) {
 
   /* ================= THE CINEMA ================= */
   B.room = 'cinema';
-  const SX = 25.6, SZ = 8, SW = 6.8, SH = 3.2;
+  const SX = 25.6, SZ = 8, SW = 6.8, SH = 3.2, H_Z1 = HL.H.z1;
   B.boxE(M.black, SX - 0.05, SX + 0.25, 0.2, 3.7, SZ - SW / 2 - 0.3, SZ + SW / 2 + 0.3);          // the frame
   const cvs = document.createElement('canvas'); cvs.width = 256; cvs.height = 120;
   const tex = new THREE.CanvasTexture(cvs);
@@ -73,10 +73,18 @@ BM.buildHalcyonInside = function (B, game) {
   for (let r = 0; r < 3; r++) {
     const x = 22 - r * 2.6, y0 = r * 0.25;
     if (r) B.solid(M.charcoal, x - 1.2, x + 1.3, 0, y0, 3.5, 13.6, { kind: 'furniture', tag: 'riser' });
-    for (let s = 0; s < 4; s++) { const z = 5 + s * 1.9; B.furniture(M.sofa, x, z, y0, 1.0, 0.5, 0.9, 'recliner'); B.box(M.sofa, x - 0.45, y0 + 0.75, z, 0.18, 0.55, 0.9); B.box(M.black, x, y0 + 0.62, z - 0.5, 0.9, 0.1, 0.1); }
+    // leather recliners, five to a row with shared console arms, facing the screen
+    for (let s = 0; s < 5; s++) BM.KIT.recliner(B, x, 8 + (s - 2) * 0.98, y0, Math.PI / 2, { mat: 'hLeather' });
+    if (r) { B.boxE('hAcoustic', x + 1.3, x + 1.31, 0, y0, 3.5, 13.6);   // the riser's fascia, carpeted, with amber step lights along its nose
+      const more = []; for (let z = 4.1; z < 13.5; z += 0.6) more.push(['box', x + 1.312, y0 - 0.06, z, 0.004, 0.02, 0.05]);
+      const f = more.shift(); led({ id: 'cinema-step-' + r, name: 'Step lights', room: 'cinema', pos: [x + 1.5, 0.15 + y0 / 2, 8], colour: 0xffa040, target: 0.15, range: 2, corona: 0, glow: [f[1], f[2], f[3], f[4], f[5], f[6]], glowMore: more }); }
   }
-  const starMat = new THREE.MeshBasicMaterial({ color: 0x9aa8d0 });
-  for (let i = 0; i < 160; i++) { const s = B.box(starMat, 14.3 + Math.random() * 11.4, F1 - 0.31, 2.3 + Math.random() * 11.4, 0.025, 0.004, 0.025); s.userData.star = true; }
+  // the walls in dark fabric acoustic panels, the ceiling deep navy, and a field of fibre-optic stars in three sizes
+  B.boxE('hAcoustic', 14.2, 25.5, 0.3, F1 - 0.4, 2.1, 2.14); B.boxE('hAcoustic', 14.2, 25.5, 0.3, F1 - 0.4, H_Z1 - 0.34, H_Z1 - 0.3);
+  B.boxE('hAcoustic', 14.15, 14.19, 2.5, F1 - 0.4, 2.2, 13.6); B.boxE('hAcoustic', 25.9, 25.96, 0, F1 - 0.3, 2.1, H_Z1 - 0.3);
+  B.boxE(new THREE.MeshPhongMaterial({ color: 0x0e1424, shininess: 2 }), 14.15, 26, F1 - 0.305, F1 - 0.3, 2.1, H_Z1 - 0.3);
+  const starMat = new THREE.MeshBasicMaterial({ color: 0xdce6ff }), srnd = BM.mulberry32(9);
+  for (let i = 0; i < 600; i++) { const d = [0.012, 0.018, 0.028][Math.floor(srnd() * srnd() * 3)]; const s = B.box(starMat, 14.3 + srnd() * 11.4, F1 - 0.31, 2.3 + srnd() * 11.2, d, 0.004, d); s.userData.star = true; }
   HC.cinema = { tex, cvs, screen, playing: false, t: 0, dim: 0, screenLight: led({ id: 'cinema-screen', name: 'Screen glow', room: 'cinema', pos: [SX - 1.5, 2, SZ], colour: 0x000000, target: 0, range: 12, corona: 0 }), starMat };
   HC.cinema.screenLight.smart = false; HC.cinema.screenLight.base = null;
   B.interactable({ id: 'cinema-play', label: () => HC.cinema.playing ? 'Cinema: stop the film' : 'Cinema: play a film', pos: [14.4, 1.2, 5.6], n: [1, 0], act: g => BM.halcyonCinema(g) });
@@ -96,7 +104,18 @@ BM.buildHalcyonInside = function (B, game) {
     const nose = B.box(paint, 0, 0.48, -2.4, 1.9, 0.32, 0.8, 0, g); nose.rotation.x = 0.28;
     const deck = B.box(paint, 0, 0.92, 1.4, 1.9, 0.3, 1.6, 0, g); deck.rotation.x = -0.1;
     B.mesh(G.sphere, glass, 0, 0.92, -0.2, 0.9, 0.42, 1.6, 0, g);       // the canopy
-    for (const [wx, wz] of [[-0.95, -1.45], [0.95, -1.45], [-0.95, 1.45], [0.95, 1.45]]) { const wh = B.mesh(G.cyl, M.black, wx, 0.36, wz, 0.72, 0.3, 0.72, 0, g); wh.rotation.z = Math.PI / 2; const rim = B.mesh(G.cyl, M.steel, wx * 1.02, 0.36, wz, 0.46, 0.31, 0.46, 0, g); rim.rotation.z = Math.PI / 2; }
+    // the details that make it a car: sills, a splitter and diffuser, mirrors, a grille, door shut-lines, a rear light bar
+    for (const s of [-1, 1]) { B.box('hBlackGlass', s * 1.0, 0.34, 0, 0.06, 0.1, 3.0, 0, g); B.box(paint, s * 1.02, 0.92, -0.75, 0.16, 0.06, 0.1, 0, g); B.box('hBlackGlass', s * 1.08, 0.92, -0.75, 0.02, 0.05, 0.09, 0, g); B.box('hBlackSteel', s * 1.001, 0.62, -0.3, 0.002, 0.42, 0.004, 0, g); B.box('hBlackSteel', s * 1.001, 0.62, 0.9, 0.002, 0.42, 0.004, 0, g); B.box('hBlackSteel', s * 1.0, 0.55, 0.45, 0.01, 0.12, 0.5, 0, g); }
+    B.box('hBlackGlass', 0, 0.22, -2.72, 1.9, 0.05, 0.3, 0, g); B.box('hBlackGlass', 0, 0.42, -2.78, 1.1, 0.16, 0.04, 0, g); B.box('hBlackGlass', 0, 0.34, 2.22, 1.7, 0.16, 0.06, 0, g);
+    for (const s of [-1, 1]) B.mesh(G.cyl, 'hChrome', s * 0.35, 0.28, 2.24, 0.1, 0.04, 0.1, 0, g).rotation.x = Math.PI / 2;
+    B.box('hBlackGlass', 0, 1.06, 2.05, 1.5, 0.03, 0.25, 0, g);
+    for (const [wx, wz] of [[-0.95, -1.45], [0.95, -1.45], [-0.95, 1.45], [0.95, 1.45]]) {
+      const wh = B.mesh(G.cyl, 'hTyre', wx, 0.36, wz, 0.72, 0.3, 0.72, 0, g); wh.rotation.z = Math.PI / 2;
+      const rim = B.mesh(G.cyl, 'hChrome', wx * 1.02, 0.36, wz, 0.5, 0.31, 0.5, 0, g); rim.rotation.z = Math.PI / 2;
+      const hub = B.mesh(G.cyl, 'hBlackSteel', wx * 1.03, 0.36, wz, 0.4, 0.312, 0.4, 0, g); hub.rotation.z = Math.PI / 2;
+      for (let k = 0; k < 5; k++) { const sp = B.box('hChrome', wx * 1.03 + Math.sign(wx) * 0.157, 0.36, wz, 0.012, 0.38, 0.05, 0, g); sp.rotation.set(k * Math.PI * 2 / 5, 0, 0); }
+      const cal = B.box(new THREE.MeshPhongMaterial({ color: 0xd8a010, shininess: 60 }), wx * 0.97, 0.48, wz - 0.1, 0.06, 0.14, 0.18, 0, g);
+    }
     const lamp = new THREE.MeshBasicMaterial({ color: 0xe8f4ff });
     for (const s of [-1, 1]) { B.box(lamp, s * 0.72, 0.6, -2.62, 0.4, 0.04, 0.06, 0, g); B.box(new THREE.MeshBasicMaterial({ color: 0xff1a1a }), s * 0.6, 0.72, 2.21, 0.6, 0.05, 0.03, 0, g); }
     g.traverse(o => { o.userData.dynamic = true; o.matrixAutoUpdate = true; });
@@ -121,7 +140,7 @@ BM.buildHalcyonInside = function (B, game) {
   // the garage doors: two wide panels that lift up into the head
   HC.gdoors = HC.garageOpenings.map(([x0, x1]) => {
     const g = new THREE.Group(); g.position.set((x0 + x1) / 2, 0, GA.z1 - 0.15); B.root.add(g);
-    for (let k = 0; k < 4; k++) B.box(k % 2 ? M.charcoal : new THREE.MeshPhongMaterial({ color: 0x1a1c1e, shininess: 80 }), 0, 0.4 + k * 0.8, 0, x1 - x0, 0.78, 0.06, 0, g);
+    for (let k = 0; k < 4; k++) B.box(M.timber, 0, 0.4 + k * 0.8, 0, x1 - x0, 0.79, 0.06, 0, g);   // flush, clad in the same battens as the wall: they disappear
     g.traverse(o => { o.userData.dynamic = true; o.matrixAutoUpdate = true; });
     const wall = P.addWall(x0, x1, GA.z1 - 0.3, GA.z1, 0, 3.2, { kind: 'door', tag: 'garage door' });
     return { g, wall, t: 0 };

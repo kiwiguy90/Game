@@ -27,7 +27,7 @@ function canvasMat(w, h, draw, basic) {
 }
 
 BM.buildHalcyonAmenities = function (B, game) {
-  const HC = game.halcyon, M = BM.halcyonMats(), P = B.phys, HL = BM.HALCYON, F1 = HL.F1;
+  const HC = game.halcyon, M = BM.halcyonMats(), P = B.phys, HL = BM.HALCYON, F1 = HL.F1, K_ = BM.KIT;
   const led = o => BM.halcyonLed(B, game, o);
   const solid = (mat, x0, x1, y0, y1, z0, z1, tag) => B.solid(mat, x0, x1, y0, y1, z0, z1, { kind: 'wall', tag: tag || 'wall' });
   const keypadIds = [];
@@ -58,29 +58,56 @@ BM.buildHalcyonAmenities = function (B, game) {
   // the partition between the gym and the spa, with a door through it
   solid(M.timber, W.x0, 40, 0, W.h, W.split - 0.1, W.split + 0.1); solid(M.timber, 41.6, W.x1, 0, W.h, W.split - 0.1, W.split + 0.1); solid(M.timber, 40, 41.6, 2.4, W.h, W.split - 0.1, W.split + 0.1);
   // the gym: a rubber floor, a mirror wall, the machines, a screen
-  B.boxE(new THREE.MeshPhongMaterial({ color: 0x1c1d20, shininess: 4 }), W.x0, W.x1, 0.02, 0.03, W.z0, W.split);
+  B.boxE('hRubber', W.x0, W.x1, 0.02, 0.03, W.z0, W.split);
   B.boxE(new THREE.MeshPhongMaterial({ color: 0xcad6de, shininess: 160, specular: 0xffffff }), W.x0 + 1, 39.6, 0.3, 2.6, W.split - 0.14, W.split - 0.11);   // the mirror
+  // treadmills facing the lake (1.9 x 0.9 m): a deck and belt, side rails, uprights angled up to a console with a screen
+  const tilt = (m, rx) => { m.rotation.x = rx; m.updateMatrix(); return m; };
   for (const [x, z] of [[30, -15], [33, -15]]) {
-    B.furniture(M.charcoal, x, z, 0, 0.9, 0.25, 2.0, 'treadmill base');
-    B.box(M.black, x, 0.27, z + 0.1, 0.6, 0.02, 1.6);
-    for (const s of [-1, 1]) B.box(M.steel, x + s * 0.42, 0.75, z - 0.85, 0.05, 1.0, 0.05);
-    const scr = B.box(new THREE.MeshBasicMaterial({ color: 0x2a8cff }), x, 1.3, z - 0.92, 0.5, 0.3, 0.03); scr.userData.dynamic = true;
+    B.furniture('hBlackSteel', x, z, 0, 0.89, 0.2, 1.91, 'treadmill');
+    B.box('hTyre', x, 0.21, z + 0.1, 0.56, 0.012, 1.5);
+    for (const s of [-1, 1]) { B.box('hChrome', x + s * 0.38, 0.21, z + 0.1, 0.1, 0.02, 1.5); tilt(B.box('hBlackSteel', x + s * 0.4, 0.75, z - 0.72, 0.06, 1.1, 0.06), 0.25); B.box('hChrome', x + s * 0.38, 1.0, z - 0.45, 0.04, 0.04, 0.6); }
+    tilt(B.box('hBlackSteel', x, 1.32, z - 0.86, 0.75, 0.32, 0.1), -0.4);
+    const scr = tilt(B.box(new THREE.MeshBasicMaterial({ color: 0x2a8cff }), x, 1.33, z - 0.82, 0.5, 0.24, 0.02), -0.4); scr.userData.dynamic = true;
   }
-  B.furniture(M.black, 38, -15, 0, 2.2, 2.2, 0.7, 'weights rack'); for (let i = 0; i < 6; i++) B.mesh(G.cyl, M.steel, 37.2 + i * 0.32, 0.9 + (i % 2) * 0.6, -14.7, 0.16, 0.3, 0.16).rotation.x = Math.PI / 2;
-  B.furniture(M.charcoal, 38, -10, 0, 0.5, 0.45, 1.3, 'bench');
-  B.furniture(M.steel, 31.5, -8, 0, 0.6, 0.4, 2.2, 'rower');
+  // a power rack on an oak lifting platform: four uprights, J-hooks, safety arms, a loaded bar
+  B.boxE('hOak', 35.6, 38.4, 0.03, 0.05, -16.8, -14.0); B.boxE('hRubber', 35.6, 36.2, 0.05, 0.055, -16.8, -14.0); B.boxE('hRubber', 37.8, 38.4, 0.05, 0.055, -16.8, -14.0);
+  for (const [x, z] of [[36.4, -16.0], [37.6, -16.0], [36.4, -14.8], [37.6, -14.8]]) B.box('hBlackSteel', x, 1.17, z, 0.075, 2.34, 0.075);
+  for (const z of [-16.0, -14.8]) B.box('hBlackSteel', 37, 2.3, z, 1.28, 0.075, 0.075);
+  for (const x of [36.4, 37.6]) { B.box('hBlackSteel', x, 2.3, -15.4, 0.075, 0.075, 1.28); B.box('hBlackSteel', x, 0.05, -15.4, 0.075, 0.075, 1.28); B.box('hChrome', x, 0.8, -14.65, 0.05, 0.05, 0.4); }
+  { const bar = B.mesh(G.cyl, 'hChrome', 37, 1.4, -14.85, 0.03, 2.2, 0.03); bar.rotation.z = Math.PI / 2; bar.updateMatrix(); }
+  for (const s of [-1, 1]) for (let k = 0; k < 2; k++) { const pl = B.mesh(G.cyl, 'hBlackSteel', 37 + s * (0.78 + k * 0.06), 1.4, -14.85, 0.45 - k * 0.12, 0.05, 0.45 - k * 0.12); pl.rotation.z = Math.PI / 2; pl.updateMatrix(); }
+  P.addWall(36.3, 37.7, -16.1, -14.7, 0, 2.34, { kind: 'furniture', tag: 'power rack' });
+  // a two-tier rack of hex dumbbells, smallest to largest
+  for (const [y, t] of [[0.5, 0], [0.85, 1]]) {
+    tilt(B.box('hBlackSteel', 41.5, y, -16.9 + t * 0.12, 1.5, 0.03, 0.3), -0.2);
+    for (let i = 0; i < 5; i++) { const x = 40.9 + i * 0.3, r = 0.08 + i * 0.012 + t * 0.03; for (const dz of [-0.1, 0.1]) tilt(B.mesh(G.cyl, 'hBlackSteel', x, y + 0.08, -16.9 + t * 0.12 + dz, r * 2, 0.06, r * 2), Math.PI / 2); tilt(B.mesh(G.cyl, 'hChrome', x, y + 0.08, -16.9 + t * 0.12, 0.03, 0.14, 0.03), Math.PI / 2); }
+  }
+  for (const [x, z] of [[40.8, -17.15], [42.2, -17.15], [40.8, -16.65], [42.2, -16.65]]) B.box('hBlackSteel', x, 0.45, z, 0.05, 0.9, 0.05);
+  P.addWall(40.7, 42.3, -17.2, -16.6, 0, 0.95, { kind: 'furniture', tag: 'dumbbell rack' });
+  // an adjustable bench, and a rower (a rail, a seat, the fan wheel in its housing, a little screen)
+  B.box('hLeatherBlack', 38, 0.45, -10, 0.3, 0.08, 1.2); B.box('hBlackSteel', 38, 0.22, -10, 0.08, 0.4, 1.0); for (const z of [-10.5, -9.5]) B.box('hBlackSteel', 38, 0.03, z, 0.5, 0.06, 0.08);
+  P.addWall(37.75, 38.25, -10.65, -9.35, 0, 0.5, { kind: 'furniture', tag: 'bench' });
+  B.box('hChrome', 31.5, 0.3, -8, 0.12, 0.06, 2.2); B.box('hBlackSteel', 31.5, 0.38, -8.4, 0.3, 0.06, 0.35);
+  { const fan = B.mesh(G.cyl, 'hBlackSteel', 31.5, 0.45, -9.0, 0.56, 0.26, 0.56); fan.rotation.z = Math.PI / 2; fan.updateMatrix(); }
+  B.box('hBlackSteel', 31.5, 0.15, -6.95, 0.5, 0.06, 0.08); B.box('hBlackSteel', 31.5, 0.75, -8.95, 0.15, 0.45, 0.04); B.box('hBlackGlass', 31.5, 1.0, -8.92, 0.22, 0.16, 0.03);
+  P.addWall(31.2, 31.8, -9.3, -6.9, 0, 0.6, { kind: 'furniture', tag: 'rower' });
   const tv = canvasMat(256, 144, (g) => { const gr = g.createLinearGradient(0, 0, 256, 144); gr.addColorStop(0, '#0a1a2a'); gr.addColorStop(1, '#16324a'); g.fillStyle = gr; g.fillRect(0, 0, 256, 144); g.fillStyle = '#5ad0ff'; g.font = 'bold 20px sans-serif'; g.fillText('HIIT · 32:00', 20, 40); g.fillStyle = '#fff'; g.font = '14px sans-serif'; g.fillText('Heart rate 128', 20, 70); g.fillText('Calories 412', 20, 92); g.fillStyle = '#ff5a8a'; g.fillRect(20, 110, 150, 8); });
   B.mesh(G.plane, tv, W.x0 + 0.06, 1.8, -10, 2.2, 1.24, 1, Math.PI / 2);
   const gymL = roomLights('gym', 'ground', W.x0, W.x1, W.z0, W.split, W.h, 3.4);
   keypad('gym', gymL, [30, 1.3, W.split - 0.12], [0, -1]);
   // the spa
   B.room = 'spa';
-  B.boxE(new THREE.MeshPhongMaterial({ color: 0x6a6258, shininess: 30 }), W.x0, W.x1, 0.02, 0.03, W.split, W.z1);
+  B.boxE('hTravertine', W.x0, W.x1, 0.02, 0.03, W.split, W.z1);
   // the infrared sauna: a cedar box with a glass front, a red-orange glow inside
   const cedar = new THREE.MeshPhongMaterial({ color: 0xa8683a, shininess: 10 });
   solid(cedar, 27, 30.4, 0, 2.3, W.z1 - 0.1 - 2.6, W.z1 - 2.5 - 0.1); solid(cedar, 27, 27.1, 0, 2.3, W.z1 - 2.7, W.z1); solid(cedar, 30.3, 30.4, 0, 2.3, W.z1 - 2.7, W.z1);
   B.boxE(cedar, 27, 30.4, 2.3, 2.4, W.z1 - 2.7, W.z1);
-  B.furniture(cedar, 28.7, W.z1 - 0.6, 0, 3.2, 0.45, 0.9, 'sauna bench');
+  // two tiers of aspen benches (upper 1.0 m, lower 0.5 m), the heater's stones in a slatted guard in the corner
+  const aspen = BM.M('hAspen');
+  B.furniture(aspen, 28.75, W.z1 - 0.4, 0, 3.1, 1.0, 0.6, 'sauna bench'); B.furniture(aspen, 29.1, W.z1 - 0.95, 0, 2.4, 0.5, 0.5, 'sauna bench');
+  B.box(aspen, 28.75, 1.5, W.z1 - 0.14, 3.1, 0.6, 0.04);
+  B.mesh(G.cyl, M.black, 27.5, 0.4, W.z1 - 1.0, 0.36, 0.8, 0.36); for (let i = 0; i < 10; i++) B.mesh(G.lowSphere, M.stone, 27.5 + Math.cos(i) * 0.1, 0.82 + (i % 3) * 0.04, W.z1 - 1.0 + Math.sin(i) * 0.1, 0.12, 0.08, 0.1);
+  for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; B.box(aspen, 27.5 + Math.cos(a) * 0.26, 0.45, W.z1 - 1.0 + Math.sin(a) * 0.26, 0.04, 0.9, 0.06, -a); }
   const glow = new THREE.MeshBasicMaterial({ color: 0x200800 });
   B.box(glow, 28.7, 1.6, W.z1 - 0.16, 2.6, 0.6, 0.03);
   HC.sauna = { on: false, glow, light: led({ id: 'sauna-glow', name: 'Sauna', room: 'spa', pos: [28.7, 1.4, W.z1 - 1.2], colour: 0xff5a20, target: 0, range: 4, corona: 0 }), temp: 22 };
@@ -102,7 +129,7 @@ BM.buildHalcyonAmenities = function (B, game) {
   B.interactable({ id: 'plunge', label: 'Cold plunge: 6°C', pos: [37, 0.95, W.z1 - 2.25], n: [0, -1], act: g => BM.halcyonSay(g, 'The cold plunge is at six degrees. Two minutes, after the sauna.', 3) });
   // a rain shower and two loungers by the glass
   B.boxE(M.steel, 39.4, 40.6, 2.55, 2.6, W.z1 - 1.8, W.z1 - 0.6); B.boxE(new THREE.MeshPhongMaterial({ color: 0x3a3a3c, shininess: 20 }), 39.2, 40.8, 0.02, 0.04, W.z1 - 2, W.z1 - 0.4);
-  for (const x of [42, 43.2]) { B.furniture(M.white, x, -0.5, 0, 0.8, 0.4, 2.0, 'lounger'); }
+  for (const x of [42, 43.2]) K_.lounger(B, x, -0.5, 0.03, Math.PI, { mat: 'hFabricSand' });
   const spaL = roomLights('spa', 'ground', W.x0, W.x1, W.split, W.z1, W.h, 3.4);
   keypad('spa', spaL, [36, 1.3, W.split + 0.12], [0, 1]);
   // its own rain and snow cover, and its own zone
@@ -122,7 +149,13 @@ BM.buildHalcyonAmenities = function (B, game) {
   });
   B.mesh(G.plane, bottles, (WR.x0 + WR.x1) / 2, 1.8, WR.z0 + 0.05, WR.x1 - WR.x0 - 0.2, 3.2, 1);
   { const side = B.mesh(G.plane, bottles, WR.x1 - 0.05, 1.8, (WR.z0 + WR.z1) / 2, WR.z1 - WR.z0 - 0.2, 3.2, 1, -Math.PI / 2); side.userData.dynamic = true; }
-  B.furniture(M.oak, 3.0, -0.6, 0, 1.6, 0.95, 0.7, 'tasting table');
+  // real bottles, label out on steel pegs, against the dark backing (the far wall and the side)
+  B.boxE('hBlackSteel', WR.x0 + 0.05, WR.x1 - 0.05, 0, 3.5, WR.z0 + 0.01, WR.z0 + 0.04); B.boxE('hBlackSteel', WR.x1 - 0.04, WR.x1 - 0.01, 0, 3.5, WR.z0 + 0.05, WR.z1 - 0.1);
+  K_.bottles(B, 'x', WR.z0 + 0.06, 1, WR.x0 + 0.15, WR.x1 - 0.15, 0.25, 3.3);
+  K_.bottles(B, 'z', WR.x1 - 0.06, -1, WR.z0 + 0.3, WR.z1 - 0.3, 0.25, 3.3, { gaps: 0.1 });
+  K_.table(B, 3.0, -0.6, 0, 1.6, 0.7, 0, { top: 'hNero', legs: 'pedestal', legMat: 'hBronze', h: 1.0, tag: 'tasting table' });
+  for (const [x, c] of [[2.6, 'hBottleRed'], [3.3, 'hBottleGreen']]) { B.mesh(G.cyl, c, x, 1.14, -0.6, 0.075, 0.24, 0.075); B.mesh(G.cyl, c, x, 1.3, -0.6, 0.03, 0.09, 0.03); }
+  for (const x of [2.9, 3.05]) { B.mesh(G.cyl, 'hBottleClear', x, 1.01, -0.45, 0.06, 0.005, 0.06); B.mesh(G.post, 'hBottleClear', x, 1.06, -0.45, 0.008, 0.1, 0.008); B.mesh(G.sphere, 'hBottleClear', x, 1.16, -0.45, 0.08, 0.1, 0.08); }
   led({ id: 'wine-glow', name: 'Wine wall light', room: 'wine room', pos: [3.2, 2.4, -1.2], colour: 0xffc890, target: 0.7, range: 4, corona: 0 });
   B.interactable({ id: 'wine-room', label: 'Wine room: 13°C, 840 bottles', pos: [WR.x0 + 0.1, 1.3, -1.1], n: [-1, 0], act: g => BM.halcyonSay(g, 'The wine room is at thirteen degrees and sixty-five percent humidity. Eight hundred and forty bottles.', 4) });
 
@@ -133,38 +166,54 @@ BM.buildHalcyonAmenities = function (B, game) {
   const gscr = B.mesh(G.plane, golf, -25.66, F1 + 1.8, 8, 5.2, 3.0, 1, Math.PI / 2); gscr.userData.dynamic = true;
   HC.golf = { mat: golf, shot: 0, t: 0, dist: 0 };
   BM.drawGolf(HC.golf, 0);
-  B.boxE(new THREE.MeshPhongMaterial({ color: 0x2a6a30, shininess: 4 }), -24, -20, F1, F1 + 0.03, 6.5, 9.5);
+  B.boxE('hTurf', -24.6, -20.6, F1, F1 + 0.03, 6.8, 9.2); B.boxE(M.black, -23.4, -21.4, F1 + 0.03, F1 + 0.05, 7.4, 8.6);   // landing turf, the hitting mat
+  // the enclosure: padded black sides and a top round the screen
+  for (const z of [5.3, 10.7]) B.solid(M.black, -25.6, -22.8, F1, F1 + 3.0, z - 0.06, z + 0.06, { kind: 'wall', tag: 'golf enclosure' });
+  B.boxE(M.black, -25.6, -22.8, F1 + 3.0, F1 + 3.08, 5.24, 10.76);
+  B.box(M.black, -21.0, F1 + 0.2, 8, 0.4, 0.3, 0.5);   // the launch monitor
   B.mesh(G.sphere, M.white, -22.6, F1 + 0.07, 8, 0.04, 0.04, 0.04);
   B.interactable({ id: 'golf', label: 'Golf simulator: take a shot', pos: [-22.4, F1 + 1.0, 8], n: [1, 0], act: g => BM.halcyonGolf(g) });
   // the pool table
-  B.furniture(M.oak, -14, 9, F1, 2.6, 0.8, 1.5, 'pool table');
-  B.boxE(new THREE.MeshPhongMaterial({ color: 0x1a5a3a, shininess: 6 }), -15.2, -12.8, F1 + 0.8, F1 + 0.82, 8.4, 9.6);
-  const ballCols = [0xffffff, 0xf0c020, 0x2040c0, 0xd02020, 0x6020a0, 0xff7010, 0x208030, 0x801010, 0x101010];
-  ballCols.forEach((c, i) => B.mesh(G.sphere, new THREE.MeshPhongMaterial({ color: c, shininess: 120 }), -14.5 + (i % 3) * 0.08 + (i === 0 ? -0.6 : 0), F1 + 0.85, 9 + Math.floor(i / 3) * 0.08 - 0.08, 0.03, 0.03, 0.03));
-  led({ id: 'pool-table-lamp', name: 'Pool table lamp', room: 'games room', pos: [-14, F1 + 1.9, 9], colour: 0xfff0dc, target: 1.1, range: 4, corona: 0.3, glow: [-14, F1 + 2.0, 9, 2.0, 0.08, 0.3] });
+  K_.poolTable(B, -14, 8.6, F1, 0);
+  B.box(M.black, -14, F1 + 1.93, 8.6, 2.1, 0.1, 0.34); for (const s of [-1, 1]) B.box(M.steel, -14 + s * 0.9, F1 + 2.8, 8.6, 0.006, 1.7, 0.006);
+  led({ id: 'pool-table-lamp', name: 'Pool table lamp', room: 'games room', pos: [-14, F1 + 1.75, 8.6], colour: 0xffd2a1, target: 1.1, range: 4, corona: 0.3, glow: [-14, F1 + 1.875, 8.6, 2.0, 0.01, 0.28] });
   // the bar: a long counter, a backlit shelf wall, stools, a neon sign
-  B.furniture(M.black, -20.5, 12.3, F1, 6, 1.1, 0.7, 'bar counter'); B.boxE(M.marble, -23.5, -17.5, F1 + 1.1, F1 + 1.14, 11.9, 12.7);
-  const shelf = B.mesh(G.plane, bottles, -20.5, F1 + 2.0, 13.66, 5.6, 1.6, 1, Math.PI); shelf.userData.dynamic = true;
-  for (let i = 0; i < 5; i++) { const x = -23 + i * 1.2; B.mesh(G.cyl, M.steel, x, F1 + 0.38, 11.4, 0.08, 0.76, 0.08); B.mesh(G.cyl, M.charcoal, x, F1 + 0.78, 11.4, 0.4, 0.06, 0.4); }
+  // the bar: a fluted oak front, a black marble top with a lit groove under its edge, a brass foot rail, stools
+  B.furniture('hWalnut', -20.5, 12.35, F1, 6, 1.02, 0.5, 'bar counter'); B.boxE('hFluted', -23.5, -17.5, F1 + 0.05, F1 + 1.0, 12.09, 12.1);
+  B.boxE('hNero', -23.55, -17.45, F1 + 1.02, F1 + 1.07, 11.85, 12.62); B.boxE(M.black, -23.5, -17.5, F1, F1 + 0.05, 12.12, 12.55);
+  { const rail = B.mesh(G.cyl, 'hBrass', -20.5, F1 + 0.22, 11.95, 0.05, 5.8, 0.05); rail.rotation.z = Math.PI / 2; rail.updateMatrix(); } for (let x = -23; x <= -18; x += 1.25) B.box('hBrass', x, F1 + 0.12, 12.02, 0.03, 0.2, 0.1);
+  led({ id: 'bar-groove', name: 'Bar edge light', room: 'games room', pos: [-20.5, F1 + 0.9, 11.8], colour: 0xffc890, target: 0.3, range: 2, corona: 0, glow: [-20.5, F1 + 1.012, 11.9, 5.9, 0.008, 0.015] });
+  for (let i = 0; i < 6; i++) K_.barStool(B, -23 + i * 0.95, 11.45, F1, 0, { mat: 'hLeatherBlack', h: 0.75 });
+  // the back bar: a bronze mirror, four glass shelves of bottles, each lit from under
+  B.boxE('hBronze', -23.4, -17.6, F1 + 1.15, F1 + 2.75, 13.6, 13.62);
+  B.boxE('hWalnut', -23.4, -17.6, F1, F1 + 0.9, 13.0, 13.6); B.boxE('hNero', -23.4, -17.6, F1 + 0.9, F1 + 0.94, 12.98, 13.6);
+  { const brnd = BM.mulberry32(5), bc = ['hBottleGreen', 'hBottleAmber', 'hBottleClear', 'hBottleRed', 'hBottleAmber'];
+    for (let k = 0; k < 4; k++) { const y = F1 + 1.2 + k * 0.4; B.boxE(M.glass, -23.4, -17.6, y, y + 0.012, 13.36, 13.6);
+      for (let x = -23.3; x < -17.7; x += 0.11 + brnd() * 0.06) { const h = 0.24 + brnd() * 0.08, c = bc[Math.floor(brnd() * bc.length)]; B.mesh(G.cyl, c, x, y + 0.012 + h / 2, 13.47, 0.075, h, 0.075); B.mesh(G.cyl, c, x, y + 0.012 + h + 0.04, 13.47, 0.025, 0.08, 0.025); } } }
   const neon = B.mesh(G.plane, BM.labelMat('HALCYON CLUB', { w: 512, h: 96, size: 52, bg: '#000000', fg: '#ff4fd8' }), -20.5, F1 + 3.1, 13.64, 2.4, 0.45, 1, Math.PI);
   neon.material.blending = THREE.AdditiveBlending; neon.material.transparent = true;
-  led({ id: 'bar-glow', name: 'Bar backlight', room: 'games room', pos: [-20.5, F1 + 1.6, 13.2], colour: 0xff7ad8, target: 0.6, range: 5, corona: 0, glow: [-20.5, F1 + 1.15, 12.72, 5.8, 0.03, 0.03] });
+  { const more = [1, 2, 3].map(k => ['box', -20.5, F1 + 1.19 + k * 0.4, 13.58, 5.7, 0.008, 0.02]);
+    led({ id: 'bar-glow', name: 'Bar backlight', room: 'games room', pos: [-20.5, F1 + 1.9, 13.2], colour: 0xffb070, target: 0.6, range: 5, corona: 0, glow: [-20.5, F1 + 1.19, 13.58, 5.7, 0.008, 0.02], glowMore: more }); }
 
   /* ================= THE MAIN BATHROOM AND THE DRESSING ROOM ================= */
   B.room = 'master suite';
   // the bath: a freestanding white oval facing the lake, a floor tap beside it
-  B.mesh(G.sphere, M.white, 22, F1 + 0.32, -15.4, 1.8, 0.64, 0.95);
-  B.mesh(G.sphere, new THREE.MeshPhongMaterial({ color: 0xbfe0f0, shininess: 120, transparent: true, opacity: 0.8 }), 22, F1 + 0.5, -15.4, 1.6, 0.2, 0.8);
+  // a freestanding stone-resin tub, 1.8 x 0.87 x 0.56 m: an oval with a thin rim, water in it; travertine on the floor
+  B.boxE('hTravertine', 18.1, 26, F1 + 0.005, F1 + 0.012, -18, 1.9);
+  B.mesh(G.cyl, 'hCeramic', 22, F1 + 0.28, -15.4, 1.8, 0.56, 0.87); B.mesh(G.cyl, M.white, 22, F1 + 0.565, -15.4, 1.66, 0.012, 0.74);
+  B.mesh(G.cyl, new THREE.MeshPhongMaterial({ color: 0xbfe0f0, shininess: 120, transparent: true, opacity: 0.8 }), 22, F1 + 0.5, -15.4, 1.6, 0.01, 0.7);
   P.addWall(21.1, 22.9, -15.9, -14.9, F1, F1 + 0.6, { kind: 'furniture', tag: 'bath' });
-  B.box(M.steel, 23.2, F1 + 0.5, -15.4, 0.04, 1.0, 0.04);
+  B.mesh(G.post, 'hBrass', 23.25, F1 + 0.48, -15.4, 0.045, 0.96, 0.045); B.box('hBrass', 23.1, F1 + 0.94, -15.4, 0.3, 0.035, 0.035); B.mesh(G.cyl, 'hBrass', 23.25, F1 + 0.02, -15.4, 0.14, 0.04, 0.14);
+  K_.plant(B, 25.2, -17.0, F1, 'fig', 1.8, { pot: 'hTravertine' });
   // the rain shower: a glass box, a big square head
   B.solid(M.glass, 23.6, 26, F1, ROOF_(), -4.2, -4.17, { kind: 'wall', tag: 'shower glass' });
   B.boxE(M.steel, 24.3, 25.3, ROOF_() - 0.4, ROOF_() - 0.36, -3.5, -2.5);
   B.boxE(new THREE.MeshPhongMaterial({ color: 0x3a3a3c, shininess: 30 }), 23.6, 26, F1, F1 + 0.02, -4.2, -2);
   // the double vanity on the new wall
-  B.furniture(M.oak, 18.45, -10, F1, 0.6, 0.85, 3.2, 'vanity'); B.boxE(M.marble, 18.1, 18.8, F1 + 0.85, F1 + 0.89, -11.6, -8.4);
-  B.boxE(new THREE.MeshPhongMaterial({ color: 0xcad6de, shininess: 160, specular: 0xffffff }), 18.11, 18.13, F1 + 1.1, F1 + 2.3, -11.4, -8.6);
-  led({ id: 'vanity-glow', name: 'Mirror light', room: 'master suite', pos: [18.6, F1 + 2.2, -10], colour: 0xfff4e6, target: 0.6, range: 3, corona: 0, glow: [18.16, F1 + 2.35, -10, 0.02, 0.04, 2.8] });
+  // the double vanity: floating rift oak, a marble top, two basins and wall taps, two backlit mirrors, light in the shadow gap under it
+  const vl = K_.vanity(B, 18.375, -10, F1, 2.2, Math.PI / 2, { wood: 'hOak', top: 'hMarble' });
+  led({ id: 'vanity-glow', name: 'Mirror light', room: 'master suite', pos: [18.7, F1 + 1.8, -10], colour: 0xfff0dc, target: 0.6, range: 3, corona: 0, glow: [18.14, F1 + 1.75, vl[0][0][1], 0.01, 1.0, 0.76], glowMore: [['box', 18.14, F1 + 1.75, vl[1][0][1], 0.01, 1.0, 0.76]] });
+  led({ id: 'vanity-under', name: 'Under-vanity light', room: 'master suite', pos: [18.6, F1 + 0.2, -10], colour: 0xffc890, target: 0.25, range: 2, corona: 0, glow: [18.62, F1 + 0.385, -10, 0.01, 0.006, 2.1] });
   // the dressing room: shelves lit like a boutique, an island, a long mirror
   B.room = 'dressing room';
   for (const z of [13.62]) for (let k = 0; k < 4; k++) {
@@ -173,7 +222,23 @@ BM.buildHalcyonAmenities = function (B, game) {
     const strip = led({ id: 'shelf-' + k, name: 'Shelf light', room: 'dressing room', pos: [16, y - 0.05, z - 0.3], colour: 0xfff4e6, target: 0.25, range: 2, corona: 0, glow: [16, y - 0.01, z - 0.4, 16, 0.01, 0.04] });
     for (let x = 8.4; x < 24; x += 0.55) B.box(new THREE.MeshPhongMaterial({ color: [0x2a2a30, 0xd8d0c0, 0x8a2030, 0x30405a, 0xc8a060][Math.floor(x * 3 + k) % 5] }), x, y + 0.12, z - 0.22, 0.4, 0.2 + (k % 2) * 0.05, 0.3);
   }
-  B.furniture(M.oak, 16, 8, F1, 3.2, 0.95, 1.2, 'island'); B.boxE(M.glass, 14.4, 17.6, F1 + 0.95, F1 + 0.98, 7.4, 8.6);
+  // the island: smoked oak drawers under a bronze glass top, jewellery trays lit inside it
+  B.furniture('hSmokedOak', 16, 8, F1, 2.0, 0.88, 1.0, 'island');
+  for (const y of [0.3, 0.58]) for (const s of [-1, 1]) B.boxE('hBlackSteel', 15.0, 17.0, F1 + y, F1 + y + 0.004, 8 + s * 0.5 - 0.002, 8 + s * 0.5 + 0.002);
+  B.boxE(new THREE.MeshPhongMaterial({ color: 0x4b4038, shininess: 2 }), 15.05, 16.95, F1 + 0.88, F1 + 0.89, 7.55, 8.45);
+  B.boxE('hBronzeGlass', 14.98, 17.02, F1 + 0.89, F1 + 0.9, 7.48, 8.52);
+  for (let i = 0; i < 8; i++) B.mesh(G.sphere, i % 2 ? 'hBrass' : 'hChrome', 15.3 + i * 0.2, F1 + 0.9, 8 + (i % 3 - 1) * 0.15, 0.04, 0.02, 0.04);
+  led({ id: 'island-trays', name: 'Island tray light', room: 'dressing room', pos: [16, F1 + 0.95, 8], colour: 0xffc890, target: 0.2, range: 1.5, corona: 0, glow: [16, F1 + 0.884, 8, 1.8, 0.004, 0.8] });
+  // hanging: double rails at 1.02 and 2.05 m in smoked-oak bays along the wall, lit inside by vertical LED profiles
+  for (const [a0, a1] of [[8.4, 11.3], [12.7, 19.6]]) {
+    B.boxE('hSmokedOak', a0, a1, F1, F1 + 2.4, 2.1, 2.14); B.boxE('hSmokedOak', a0, a1, F1 + 2.4, F1 + 2.45, 2.1, 2.75);
+    for (let x = a0; x <= a1 + 0.01; x += (a1 - a0) / Math.round((a1 - a0) / 1.0)) B.boxE('hSmokedOak', x - 0.012, x + 0.012, F1, F1 + 2.4, 2.1, 2.75);
+    K_.clothes(B, 'x', 2.45, a0 + 0.05, a1 - 0.05, F1 + 2.05, 0); K_.clothes(B, 'x', 2.45, a0 + 0.05, a1 - 0.05, F1 + 1.02, 0);
+    P.addWall(a0, a1, 2.1, 2.75, F1, F1 + 2.45, { kind: 'furniture', tag: 'wardrobe' });
+  }
+  { const more = []; for (let x = 9.4; x < 19.6; x += 1.0) if (x < 11.3 || x > 12.7) more.push(['box', x, F1 + 1.2, 2.74, 0.01, 2.2, 0.01]);
+    const f0 = more.shift(); led({ id: 'closet-profiles', name: 'Wardrobe lights', room: 'dressing room', pos: [14, F1 + 1.5, 3.2], colour: 0xffe0c0, target: 0.4, range: 4, corona: 0, glow: [f0[1], f0[2], f0[3], f0[4], f0[5], f0[6]], glowMore: more }); }
+  B.box('hFabricStone', 16, F1 + 0.22, 4.6, 0.9, 0.44, 0.9);   // an ottoman
   B.boxE(new THREE.MeshPhongMaterial({ color: 0xcad6de, shininess: 160, specular: 0xffffff }), 25.66, 25.7, F1 + 0.2, F1 + 2.6, 6, 9);
   B.levelName = 'ground';
 

@@ -26,6 +26,19 @@ The title screen offers two worlds (your choice is remembered):
   floodlit sport court, a putting green, a guest house, a yoga deck and
   sprinklers at dawn. All of it on the side panel (Tab).
 
+  The house is dressed from research into 2026 lakeside houses: real
+  surfaces (oak boards, stacked stone, veined marble, travertine, soapstone,
+  timber battens, bouclé, leather, granite setts), furniture built from its
+  parts (sofas with cushions, beds with pillows and throws, a waterfall
+  island over a fluted base, cinema recliners, a 9 ft pool table, a power
+  rack, wine on pegs), and layered warm light (2700K downlights, coves,
+  lamps, grazers on the stone, a cascade of globes in the atrium). Sources
+  for the sizes and finishes: Minotti and B&B Italia (sofas), Victoria +
+  Albert and Hansgrohe (bath, shower), Savaria (glass lift), Trackman and
+  Harvia (golf bay, sauna), Rogue and Technogym (gym), Visual Comfort
+  (chandelier sizing), Kichler, Hydrel and the IDA (landscape lighting),
+  Houzz, Dimensions.com and Living Etc (room layouts and clearances).
+
 ## Play
 
 Open `blackthorn-manor.html` in a browser. It is one self-contained file

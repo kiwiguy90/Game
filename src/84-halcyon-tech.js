@@ -49,9 +49,23 @@ BM.buildHalcyonTech = function (B, game) {
     B.mesh(G.plane, BM.labelMat('CAM ' + (i + 1) + ' · ' + c.name, { w: 256, h: 32, size: 18, bg: '#000000', fg: '#7ad08a' }), x - 0.7, y - 0.3, wallZ + 0.065, 0.7, 0.088, 1);
     return s;
   });
-  B.furniture(M.charcoal, cx, 4.6, 0, 4.4, 0.76, 1.0, 'console desk');
-  B.boxE(M.black, cx - 1.6, cx + 1.6, 0.76, 0.8, 4.2, 4.9);
-  B.furniture(M.sofa, cx, 5.9, 0, 0.7, 0.5, 0.7, 'chair');
+  // a curved console in three angled sections (black top, an aluminium edge), three monitors on arms at eye height, a mesh chair
+  const K = BM.KIT;
+  for (const [ox, a] of [[-1.45, 0.32], [0, 0], [1.45, -0.32]]) {
+    const x = cx + ox, z = 4.6 + Math.abs(ox) * 0.22;
+    B.box('hBlackSteel', x, 0.36, z, 1.5, 0.7, 0.7, a); B.box(M.black, x, 0.73, z, 1.52, 0.04, 0.76, a); B.box('hChrome', x - Math.sin(a) * 0.38, 0.73, z + Math.cos(a) * 0.38, 1.52, 0.04, 0.012, a);
+    B.box('hBlackSteel', x, 0.95, z - 0.25, 0.04, 0.4, 0.04, a);
+    const mon = B.box('hBlackGlass', x, 1.18, z - 0.22, 0.71, 0.42, 0.03, a);
+    const scr = B.box(new THREE.MeshBasicMaterial({ color: [0x1a3a5a, 0x163020, 0x2a2a40][ox > 0 ? 2 : ox < 0 ? 0 : 1] }), x + Math.sin(a) * 0.017, 1.18, z - 0.22 + Math.cos(a) * 0.017, 0.68, 0.39, 0.002, a); scr.userData.dynamic = true;
+  }
+  B.phys.addWall(cx - 2.2, cx + 2.2, 4.2, 5.3, 0, 0.76, { kind: 'furniture', tag: 'console desk' });
+  B.box(M.black, cx, 0.75, 4.45, 0.5, 0.02, 0.18);   // the keyboard
+  { const f = cx, z = 5.9; B.mesh(G.cyl, 'hBlackSteel', f, 0.03, z, 0.6, 0.04, 0.6); B.mesh(G.cyl, 'hBlackSteel', f, 0.25, z, 0.05, 0.42, 0.05); B.box('hFabricCharcoal', f, 0.48, z, 0.5, 0.07, 0.48); B.box('hFabricCharcoal', f, 0.85, z + 0.25, 0.46, 0.6, 0.05, 0, undefined); B.box('hBlackSteel', f, 0.65, z + 0.27, 0.04, 0.3, 0.03); B.phys.addWall(f - 0.3, f + 0.3, z - 0.3, z + 0.3, 0, 0.5, { kind: 'furniture', tag: 'chair' }); }
+  // two equipment racks behind a glass screen, their lights blinking green and blue
+  B.solid(M.glass, -26, -22.6, 0, 2.6, 12.0, 12.04, { kind: 'wall', tag: 'glass' });
+  for (const x of [-25.4, -24.6, -23.8]) { B.solid('hRackPerf', x - 0.3, x + 0.3, 0, 2.0, 12.4, 13.6, { kind: 'furniture', tag: 'rack' }); B.boxE('hBlackSteel', x - 0.29, x + 0.29, 0.05, 1.95, 12.39, 12.4); }
+  HC.rackLeds = [];
+  for (let i = 0; i < 36; i++) { const m = new THREE.MeshBasicMaterial({ color: [0x2eff7a, 0x3e8bff, 0x2eff7a, 0xffb000][i % 4] }); const d = B.box(m, -25.6 + (i % 3) * 0.8 + ((i * 7) % 5) * 0.08, 0.3 + Math.floor(i / 3) * 0.14, 12.385, 0.015, 0.01, 0.004); d.userData.dynamic = true; HC.rackLeds.push(m); }
   B.interactable({ id: 'cctv-console', label: 'Security console: look through the cameras', pos: [cx, 1.0, 5.15], n: [0, 1], act: g => BM.cctvOpen(g) });
   HC.cctv = { on: false, i: 0, rr: 0, overlay: null };
 
@@ -132,6 +146,8 @@ BM.updateHalcyonTech = function (game, dt) {
     V.led.color.setHex(d > 0.05 ? 0xffb030 : 0x30ff60);
   }
   V.g.rotation.y = V.heading;
+  /* the racks blink */
+  if (HC.rackLeds) for (let i = 0; i < HC.rackLeds.length; i++) if (Math.random() < dt * 2) HC.rackLeds[i].color.setHex(Math.random() < 0.7 ? [0x2eff7a, 0x3e8bff, 0x2eff7a, 0xffb000][i % 4] : 0x050505);
   /* motion path lights */
   const ids = game.estateLights.hgarden;
   for (const id of ids) {

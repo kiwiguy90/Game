@@ -88,6 +88,10 @@ The game should not get too hard. For anything we add:
       escape — playing with the lights and the high-tech features of a modern
       glass house. (To plan together: the house, the grounds, the features.)
 
+- [x] **Halcyon, dressed properly.** Researched every room and the grounds,
+      then replaced the simple boxes with detailed furniture, real surface
+      textures and layered warm lighting.
+
 ## Maybe later
 
 Ideas to look at further down the track, not now.

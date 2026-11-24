@@ -87,8 +87,17 @@ BM.buildHalcyonOutside = function (B, game) {
   for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2, f = new THREE.Mesh(G.cone, flameMat); f.position.set(FX + Math.cos(a) * 0.45, R + 0.75, FZ + Math.sin(a) * 0.45); f.scale.set(0.25, 0.6, 0.25); f.userData.dynamic = true; B.root.add(f); HC.flames.push(f); }
   HC.flameMat = flameMat;
   HC.fireLight = led({ group: 'hroof', id: 'fire-pit', name: 'Fire pit', pos: [FX, R + 1.0, FZ], colour: 0xff9a40, target: 1.4, range: 9, corona: 0.4 });
-  for (const [x, z, w, d] of [[FX, FZ - 3.2, 4.4, 1.0], [FX, FZ + 3.2, 4.4, 1.0], [FX - 3.2, FZ, 1.0, 4.4]]) B.furniture(M.sofa, x, z, R, w, 0.45, d, 'lounge');
-  for (const [x, z] of [[2, -10], [22, -10], [2, 8], [22, 8]]) { B.furniture(M.charcoal, x, z, R, 1.6, 0.7, 1.6, 'planter'); B.mesh(G.sphere, 'leaves', x, R + 1.2, z, 1.2, 0.9, 1.2); }
+  // outdoor sofas round the fire on three sides (all-weather fabric, teak frames), corten planters of grasses, lavender and an olive
+  BM.KIT.sofa(B, FX, FZ - 3.0, R, 4.2, 0, { mat: 'hFabricSand', accent: 'hFabricOlive', d: 0.95 });
+  BM.KIT.sofa(B, FX, FZ + 3.0, R, 4.2, Math.PI, { mat: 'hFabricSand', accent: 'hFabricRust', d: 0.95 });
+  BM.KIT.sofa(B, FX - 3.0, FZ, R, 4.2, Math.PI / 2, { mat: 'hFabricSand', accent: 'hFabricOlive', d: 0.95 });
+  for (const [x, z] of [[2, -10], [22, -10], [2, 8], [22, 8]]) {
+    B.furniture('hCorten', x, z, R, 1.6, 0.75, 1.6, 'planter'); B.boxE('hSoil', x - 0.74, x + 0.74, R + 0.7, R + 0.74, z - 0.74, z + 0.74);
+    const rnd = BM.mulberry32(Math.floor(x * 9 + z));
+    if (x === 22 && z === 8) BM.KIT.plant(B, x, z, R + 0.15, 'olive', 2.2, { pot: 'hSoil' });
+    else for (let i = 0; i < 18; i++) { const m = B.mesh(G.cone, i % 3 ? 'longGrass' : 'hOliveLeaf', x + (rnd() - 0.5) * 1.3, R + 1.05, z + (rnd() - 0.5) * 1.3, 0.12, 0.7 + rnd() * 0.3, 0.12); m.rotation.set((rnd() - 0.5) * 0.5, 0, (rnd() - 0.5) * 0.5); m.updateMatrix(); }
+    led({ group: 'hroof', id: 'planter-' + x + '-' + z, name: 'Planter grazer', pos: [x, R + 0.05, z + 0.95], spot: true, dir: [0, 1, -0.05], colour: 0xffd8b0, target: 0.35, range: 2.5, corona: 0, glow: [x, R + 0.02, z + 0.92, 0.12, 0.03, 0.06] });
+  }
   // the helipad: a white circle and an H on the west half of the roof, ringed with green lights
   const HX = -14, HZ = -2;
   { const ring = B.mesh(G.ring, M.white, HX, R + 0.01, HZ, 11, 11, 11); ring.rotation.x = -Math.PI / 2; ring.updateMatrix(); }

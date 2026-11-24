@@ -39,12 +39,13 @@ function mats() {
   if (MAT.ready) return MAT;
   Object.assign(MAT, {
     ready: true,
-    concrete: phong(0xb9b5ac, 6), render: phong(0xe8e5de, 6), charcoal: phong(0x26282c, 30), timber: phong(0x8a5a36, 14),
-    oak: phong(0xa07a52, 30), floor: phong(0x8e8b86, 70, { specular: 0x555555 }), steel: phong(0x141618, 90, { specular: 0x666666 }),
+    // (the real surfaces come from the kit, 79-halcyon-kit.js: drawn textures laid in world space)
+    concrete: BM.M('hConcrete'), render: BM.M('hPlaster'), charcoal: phong(0x2a2a2a, 20), timber: BM.M('hBattens'),
+    oak: BM.M('hOak'), floor: BM.M('hSlabIn'), steel: phong(0x1c1c1c, 90, { specular: 0x666666 }),
     glass: phong(0x9cc0d0, 140, { transparent: true, opacity: 0.16, depthWrite: false, specular: 0xffffff }),
     glazing: phong(0x9cc0d0, 140, { transparent: true, opacity: 0.16, depthWrite: false, specular: 0xffffff }),   // the house's own windows: these can frost
-    paver: phong(0xc8c2b4, 6), deck: phong(0x5e4430, 12), white: phong(0xf2f0ec, 20), sofa: phong(0x5a5e66, 4), rug: phong(0xb0a690, 2),
-    black: phong(0x0c0c0e, 60), stone: phong(0x8c8780, 8), kitchen: phong(0x2e2a26, 50), marble: phong(0xe6e2da, 90, { specular: 0x888888 }),
+    paver: BM.M('hSlab'), deck: BM.M('hDeck'), white: phong(0xf2f0ec, 20), sofa: BM.M('hFabricStone'), rug: BM.M('hRugCream'),
+    black: phong(0x0c0c0e, 60), stone: BM.M('hStone'), kitchen: BM.M('hWalnut'), marble: BM.M('hMarble'), setts: BM.M('hSetts'), limestone: BM.M('hTravertine'), anthracite: phong(0x383e42, 24),
     asphalt: phong(0x2c2c2e, 4), line: phong(0xd8d4c8, 4), lawn: null,
   });
   return MAT;
@@ -58,6 +59,8 @@ function led(B, game, o) {
   if (o.glow) {
     const g = o.glow, m = B.box(new THREE.MeshBasicMaterial({ color: 0x111111 }), g[0], g[1], g[2], g[3], g[4], g[5], g[6] || 0);
     m.userData.dynamic = true; rec.bulbBox = m;
+    if (o.glowGeo) { m.geometry = G[o.glowGeo]; }
+    for (const e of o.glowMore || []) { const k = B.mesh(G[e[0]], m.material, e[1], e[2], e[3], e[4], e[5], e[6]); k.userData.dynamic = true; }
   }
   rec.base = { colour: rec.colour, target: rec.target };
   rec.smart = !grp;
@@ -166,7 +169,7 @@ BM.buildHalcyon = function (B, game) {
 
   /* ---- the gates: one wide sliding gate of black slats, on a motor, between two stone pillars ---- */
   for (const s of [-1, 1]) {
-    solid(B, M.stone, s * 7 - 0.6, s * 7 + 0.6, 0, 2.8, 99.4, 100.6, 'gate pillar');
+    solid(B, M.limestone, s * 7 - 0.6, s * 7 + 0.6, 0, 2.8, 99.4, 100.6, 'gate pillar');
     B.boxE(M.charcoal, s * 7 - 0.7, s * 7 + 0.7, 2.8, 2.9, 99.3, 100.7);
     led(B, game, { group: 'hgate', id: 'pillar-' + s, name: 'Pillar light', pos: [s * 7, 2.6, 100.7], colour: 0xfff0dc, target: 0.9, range: 7, corona: 0.6, glow: [s * 7, 2.55, 100.62, 1.0, 0.04, 0.02] });
     led(B, game, { group: 'hgate', id: 'pillar-in-' + s, name: 'Pillar light', pos: [s * 7, 2.6, 99.3], colour: 0xfff0dc, target: 0.7, range: 6, corona: 0.6, glow: [s * 7, 2.55, 99.38, 1.0, 0.04, 0.02] });
@@ -176,8 +179,10 @@ BM.buildHalcyon = function (B, game) {
   // the intercom and a camera on the east pillar
   B.box(M.steel, 6.55, 1.35, 100.62, 0.14, 0.22, 0.04);
   const gate = new THREE.Group(); gate.position.set(0, 0, 100); B.root.add(gate);
-  for (let x = -6.4; x <= 6.4; x += 0.16) B.box(M.charcoal, x, 1.1, 0, 0.1, 2.0, 0.06, 0, gate);
-  B.box(M.charcoal, 0, 2.12, 0, 13.6, 0.08, 0.1, 0, gate); B.box(M.charcoal, 0, 0.08, 0, 13.6, 0.08, 0.1, 0, gate);
+  // horizontal slats, 120 x 16 mm with 15 mm gaps, in a slim frame (as the real sliding gates are made)
+  for (let y = 0.2; y < 2.05; y += 0.135) B.box(M.anthracite, 0, y, 0, 13.4, 0.12, 0.03, 0, gate);
+  for (const x of [-6.7, 6.7]) B.box(M.anthracite, x, 1.1, 0, 0.08, 2.1, 0.08, 0, gate);
+  B.box(M.anthracite, 0, 2.12, 0, 13.6, 0.08, 0.08, 0, gate); B.box(M.anthracite, 0, 0.08, 0, 13.6, 0.08, 0.08, 0, gate);
   const strip = B.box(new THREE.MeshBasicMaterial({ color: 0x111111 }), 0, 2.18, 0.0, 13.4, 0.03, 0.03, 0, gate);
   gate.traverse(m => { m.userData.dynamic = true; m.matrixAutoUpdate = true; });
   const gateLed = led(B, game, { group: 'hgate', id: 'gate-strip', name: 'Gate light strip', pos: [0, 2.3, 100], colour: 0xffffff, target: 0.5, range: 5, corona: 0 }); gateLed.bulbBox = strip;
@@ -191,32 +196,31 @@ BM.buildHalcyon = function (B, game) {
   let bi = 0;
   for (let i = 0; i < DRIVE.length - 1; i++) {
     const [ax, az] = DRIVE[i], [bx, bz] = DRIVE[i + 1], len = Math.hypot(bx - ax, bz - az), ang = Math.atan2(bx - ax, bz - az);
-    const seg = B.box(M.paver, (ax + bx) / 2, 0.01, (az + bz) / 2, 6, 0.02, len + 3.2, ang);
-    for (const s of [-1, 1]) B.box(M.charcoal, (ax + bx) / 2 + Math.cos(ang) * s * 3.05, 0.015, (az + bz) / 2 - Math.sin(ang) * s * 3.05, 0.12, 0.03, len + 3.2, ang);
+    const seg = B.box(M.setts, (ax + bx) / 2, 0.01, (az + bz) / 2, 6, 0.02, len + 3.2, ang);
+    for (const s of [-1, 1]) { B.box('hSoapstone', (ax + bx) / 2 + Math.cos(ang) * s * 2.85, 0.016, (az + bz) / 2 - Math.sin(ang) * s * 2.85, 0.3, 0.02, len + 3.2, ang); B.box(M.limestone, (ax + bx) / 2 + Math.cos(ang) * s * 3.08, 0.05, (az + bz) / 2 - Math.sin(ang) * s * 3.08, 0.15, 0.1, len + 3.2, ang); }
     for (let d = 0; d < len; d += 6) for (const s of [-1, 1]) {
       const t = d / len, x = ax + (bx - ax) * t + Math.cos(ang) * s * 3.6, z = az + (bz - az) * t - Math.sin(ang) * s * 3.6;
-      B.box(M.charcoal, x, 0.45, z, 0.16, 0.9, 0.16);
-      led(B, game, { group: 'hdrive', id: 'bollard-' + (bi++), name: 'Drive bollard', pos: [x, 0.78, z], colour: 0xfff0dc, target: 0.55, range: 5, corona: 0.4, glow: [x, 0.78, z, 0.17, 0.12, 0.17] });
+      // a slim bronze bollard: the light comes out of a slot under its cap and only points down
+      B.mesh(G.cyl, M.anthracite, x, 0.4, z, 0.16, 0.8, 0.16); B.mesh(G.cyl, M.anthracite, x, 0.86, z, 0.2, 0.04, 0.2);
+      led(B, game, { group: 'hdrive', id: 'bollard-' + (bi++), name: 'Drive bollard', pos: [x, 0.7, z], colour: 0xffd2a0, target: 0.55, range: 5, corona: 0.2, glow: [x, 0.82, z, 0.17, 0.05, 0.17], glowGeo: 'cyl' });
     }
   }
   /* ---- the forecourt: a paved circle round a round fountain pool, and a side apron to the garage ---- */
-  { const fc = B.mesh(G.cyl, M.paver, 0, 0.005, 30, 28, 0.02, 28); fc.userData.ground = true; }
+  { const fc = B.mesh(G.cyl, M.setts, 0, 0.005, 30, 28, 0.02, 28); fc.userData.ground = true; const band = B.mesh(G.cyl, 'hSoapstone', 0, 0.004, 30, 28.6, 0.02, 28.6); band.userData.ground = true; }
   B.boxE(M.paver, -24, 24, 0, 0.02, 14, 22);
   B.boxE(M.paver, GA.x0, GA.x1, 0, 0.02, 14, 24);
   for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; solid(B, null, Math.sin(a) * 5 - 0.9, Math.sin(a) * 5 + 0.9, 0, 0.5, 30 + Math.cos(a) * 5 - 0.9, 30 + Math.cos(a) * 5 + 0.9, 'fountain basin'); }   // (a ring of stops round the round pool)
-  B.mesh(G.cyl, M.stone, 0, 0.25, 30, 10.4, 0.5, 10.4);
+  B.mesh(G.cyl, M.limestone, 0, 0.25, 30, 10.4, 0.5, 10.4); B.mesh(G.cyl, M.limestone, 0, 0.51, 30, 10.6, 0.04, 10.6);
+  { const lin = B.mesh(G.cyl, phong(0x0e1113, 160, { specular: 0xffffff }), 0, 0.44, 30, 9.7, 0.02, 9.7); }   // (a black lining: the basin reads as a mirror)
   { const fw = B.mesh(G.cyl, 'water', 0, 0.46, 30, 9.6, 0.02, 9.6); fw.userData.dynamic = true; HC.fountainWater = fw; }
   for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; led(B, game, { group: 'hcourt', id: 'fountain-' + i, name: 'Fountain light', pos: [Math.sin(a) * 3.6, 0.42, 30 + Math.cos(a) * 3.6], colour: 0x9fd8ff, target: 0.6, range: 4, corona: 0.3 }); }
   for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2; if (Math.abs(Math.sin(a)) < 0.2 && Math.cos(a) > 0) continue; const x = Math.sin(a) * 13.6, z = 30 + Math.cos(a) * 13.6; led(B, game, { group: 'hcourt', id: 'court-' + i, name: 'Forecourt light', pos: [x, 0.05, z], colour: 0xfff0dc, target: 0.4, range: 4, corona: 0.4, glow: [x, 0.025, z, 0.18, 0.01, 0.18] }); }
 
   /* ---- the lawns: specimen trees, each uplit; low hedges; paths with step lights ---- */
   const tree = (x, z, s, kind) => {
-    const h = 3.2 * s;
-    B.mesh(G.post, 'bark', x, h / 2, z, 0.28 * s, h, 0.28 * s);
-    if (kind === 'round') { B.mesh(G.sphere, 'leaves', x, h + 1.4 * s, z, 2.6 * s, 2.2 * s, 2.6 * s); B.mesh(G.sphere, 'leavesDark', x + 0.6 * s, h + 0.9 * s, z - 0.4 * s, 1.8 * s, 1.5 * s, 1.8 * s); }
-    else { B.mesh(G.cone, 'pine', x, h + 2.6 * s, z, 2.0 * s, 6 * s, 2.0 * s); }
-    P.addWall(x - 0.2 * s, x + 0.2 * s, z - 0.2 * s, z + 0.2 * s, 0, h, { kind: 'tree', occludes: false, tag: 'tree' });
-    led(B, game, { group: 'htrees', id: 'uplight-' + HC.trees.length, name: 'Tree uplight', pos: [x + 0.9, 0.1, z + 0.9], spot: true, dir: [-0.25, 1, -0.25], colour: 0xf0f4ff, target: 1.0, range: 9, corona: 0.2, glow: [x + 0.9, 0.04, z + 0.9, 0.16, 0.04, 0.16] });
+    BM.KIT.tree(B, x, z, s, kind === 'round' ? (HC.trees.length % 3 === 2 ? 'multi' : 'round') : 'pine', HC.trees.length % 5 === 4 ? { leaf: 'hMaple', leaf2: 'leavesDark' } : {});
+    // two uplights to a tree, either side of the trunk and aimed into the crown (3000K: warm, but not orange)
+    for (const [ox, oz, k] of [[0.9, 0.9, ''], [-0.8, 0.7, 'b']]) led(B, game, { group: 'htrees', id: 'uplight-' + HC.trees.length + k, name: 'Tree uplight', pos: [x + ox, 0.1, z + oz], spot: true, dir: [-ox * 0.3, 1, -oz * 0.3], colour: 0xffe2c0, target: k ? 0.6 : 1.0, range: 9, corona: 0.2, glow: [x + ox, 0.04, z + oz, 0.16, 0.04, 0.16] });
     HC.trees.push({ x, z });
   };
   const avoid = (x, z) => (x > 24 && x < 50 && z > -24 && z < 8) || (x > -68 && x < -46 && z > 26 && z < 70) || (x > -48 && x < -30 && z > -40 && z < -22) || (x > 37 && x < 57 && z > 62 && z < 82) || (x > 28 && x < 48 && z > 24 && z < 42) || (Math.abs(x) < 16 && z > 14 && z < 46) || (x > -10 && x < 16 && z > 40 && z < 104) || (x > GA.x0 - 3 && x < H.x1 + 3 && z > H.z0 - 22 && z < 26);
@@ -224,9 +228,11 @@ BM.buildHalcyon = function (B, game) {
     [-58, 60, 1.1, 'pine'], [58, 60, 1.2, 'pine'], [-58, 30, 1.0, 'round'], [58, 30, 1.0, 'round'], [-60, 2, 1.1, 'pine'], [60, 2, 1.0, 'pine'], [-18, 88, 0.9, 'round'], [22, 90, 0.9, 'round'],
     [44, 14, 1.0, 'round'], [-60, -26, 1.0, 'round'], [60, -28, 1.0, 'round'], [46, -20, 0.9, 'pine']]) if (!avoid(x, z)) tree(x, z, s, k);
   // a ring of pines outside the section, dark against the sky
-  for (let i = 0; i < 70; i++) { const a = rnd() * Math.PI * 2, r = 120 + rnd() * 50, x = Math.sin(a) * r, z = 30 + Math.cos(a) * r; if (z < -40) continue; B.mesh(G.cone, 'pineDark', x, 6, z, 4, 12 + rnd() * 6, 4); }
+  for (let i = 0; i < 70; i++) { const a = rnd() * Math.PI * 2, r = 120 + rnd() * 50, x = Math.sin(a) * r, z = 30 + Math.cos(a) * r; if (z < -40) continue; BM.KIT.pine(B, x, z, 1.6 + rnd() * 0.8, { dark: true, noCollide: true }); }
   // hedges along the drive and round the forecourt
   for (const [x, z, w, d] of [[-14, 40, 0.8, 10], [14, 40, 0.8, 10], [-14, 26, 6, 0.8], [14, 26, 6, 0.8]]) B.furniture('hedge', x, z, 0, w, 1.0, d, 'hedge');
+  // clipped box balls and olives in big pots either side of the door
+  for (const s of [-1, 1]) { BM.KIT.plant(B, s * 4.2, H.z1 + 3.4, 0, 'olive', 2.6, { pot: 'hConcrete' }); for (let k = 0; k < 3; k++) B.mesh(G.lowSphere, 'hedge', s * (9 + k * 1.3), 0.45, H.z1 + 1.2, 0.95, 0.85, 0.95); }
   // paths: from the forecourt round the east of the house to the lake, with step lights in the edge
   const PATH = [[16, 22], [30, 18], [50, 12], [52, -20], [48, -38]];   // (round the east of the wellness wing to the lake)
   for (let i = 0; i < PATH.length - 1; i++) {
@@ -279,13 +285,13 @@ BM.buildHalcyon = function (B, game) {
   // the floating stairs: oak treads cantilevered off the atrium wall, a light under each
   B.room = 'atrium';
   P.ramp(ST1.x0, ST1.x1, ST1.z0, ST1.z1, 'z', F1, 0, -0.3, 'floating stairs');
-  { const n = 23; for (let i = 0; i < n; i++) { const z = ST1.z1 - (i + 0.5) * (ST1.z1 - ST1.z0) / n, y = (i + 1) * F1 / n; B.boxE(M.oak, ST1.x0, ST1.x1, y - 0.06, y, z - 0.14, z + 0.14);
-    if (i % 3 === 1) led(B, game, { id: 'stair-' + i, name: 'Stair light', room: 'atrium', pos: [ST1.x1 - 0.7, y - 0.1, z], colour: 0xfff0dc, target: 0.25, range: 2.5, corona: 0, glow: [(ST1.x0 + ST1.x1) / 2, y - 0.065, z, ST1.x1 - ST1.x0 - 0.1, 0.008, 0.2] }); } }
+  { const n = 23; for (let i = 0; i < n; i++) { const z = ST1.z1 - (i + 0.5) * (ST1.z1 - ST1.z0) / n, y = (i + 1) * F1 / n; B.boxE(M.oak, ST1.x0, ST1.x1, y - 0.1, y, z - 0.14, z + 0.14);
+    if (i % 3 === 1) led(B, game, { id: 'stair-' + i, name: 'Stair light', room: 'atrium', pos: [ST1.x1 - 0.7, y - 0.1, z], colour: 0xfff0dc, target: 0.25, range: 2.5, corona: 0, glow: [(ST1.x0 + ST1.x1) / 2, y - 0.105, z + 0.1, ST1.x1 - ST1.x0 - 0.1, 0.008, 0.03] }); } }
   solid(B, M.glass, ST1.x1, ST1.x1 + 0.03, 0, F1 + 1.0, ST1.z0, ST1.z1, 'stair rail');
   // the second flight, to the roof
   B.levelName = 'upper'; B.room = 'landing';
   P.ramp(ST2.x0, ST2.x1, ST2.z0, ST2.z1, 'z', ROOF, F1, F1 - 0.3, 'roof stairs');
-  { const n = 23; for (let i = 0; i < n; i++) { const z = ST2.z1 - (i + 0.5) * (ST2.z1 - ST2.z0) / n, y = F1 + (i + 1) * (ROOF - F1) / n; B.boxE(M.oak, ST2.x0, ST2.x1, y - 0.06, y, z - 0.14, z + 0.14); } }
+  { const n = 23; for (let i = 0; i < n; i++) { const z = ST2.z1 - (i + 0.5) * (ST2.z1 - ST2.z0) / n, y = F1 + (i + 1) * (ROOF - F1) / n; B.boxE(M.oak, ST2.x0, ST2.x1, y - 0.1, y, z - 0.14, z + 0.14); } }
   solid(B, M.glass, ST2.x0 - 0.03, ST2.x0, F1, ROOF + 1.0, ST2.z0, ST2.z1, 'stair rail');
   B.levelName = 'ground';
 
@@ -333,14 +339,22 @@ BM.buildHalcyon = function (B, game) {
 
   /* ---- the facade lights: washers along the front, a glowing strip under the floating roof, and the canopy ---- */
   B.zone = 'exterior'; B.room = 'grounds';
-  for (let x = H.x0 + 2; x < H.x1; x += 4) {
+  // the upper floor clad in vertical cedar battens over the stacked stone; a timber soffit under the floating roof
+  for (const [x0, x1] of [[H.x0, VOID[0]], [VOID[1], H.x1]]) { B.boxE(M.timber, x0, x1, F1, ROOF - 0.3, H.z1, H.z1 + 0.05); B.boxE(M.charcoal, x0, x1, F1 - 0.06, F1, H.z1, H.z1 + 0.08); }
+  B.boxE(M.timber, H.x0 - 1.5, H.x1 + 1.5, ROOF - 0.32, ROOF - 0.3, H.z1, H.z1 + 1.5); B.boxE(M.timber, H.x0 - 1.5, H.x1 + 1.5, ROOF - 0.32, ROOF - 0.3, H.z0 - 1.5, H.z0);
+  // grazing lights: narrow beams set close to the stone and aimed straight up it, so every course throws a shadow
+  for (let x = H.x0 + 1; x < H.x1; x += 2) {
     if (Math.abs(x) < 6.5) continue;
-    led(B, game, { group: 'hfacade', id: 'washer-' + x, name: 'Facade washer', pos: [x, 0.1, H.z1 + 0.5], spot: true, dir: [0, 1, -0.12], colour: 0xffe8cc, target: 1.8, range: 12, corona: 0.3, glow: [x, 0.04, H.z1 + 0.5, 0.3, 0.05, 0.1] });
+    led(B, game, { group: 'hfacade', id: 'washer-' + x, name: 'Stone grazer', pos: [x, 0.1, H.z1 + 0.22], spot: true, dir: [0, 1, 0.04], colour: 0xffd8b0, target: 1.2, range: 9, corona: 0.2, glow: [x, 0.03, H.z1 + 0.22, 0.14, 0.04, 0.14], glowGeo: 'cyl' });
   }
   led(B, game, { group: 'hfacade', id: 'soffit-front', name: 'Roof soffit strip', pos: [0, ROOF - 0.8, H.z1 + 1.2], colour: 0xfff0dc, target: 0.8, range: 12, corona: 0, glow: [0, ROOF - 0.61, H.z1 + 1.4, H.x1 - H.x0 + 2.8, 0.02, 0.06] });
   led(B, game, { group: 'hfacade', id: 'soffit-back', name: 'Roof soffit strip', pos: [0, ROOF - 0.8, H.z0 - 1.2], colour: 0xfff0dc, target: 0.8, range: 12, corona: 0, glow: [0, ROOF - 0.61, H.z0 - 1.4, H.x1 - H.x0 + 2.8, 0.02, 0.06] });
   led(B, game, { group: 'hfacade', id: 'soffit-east', name: 'Roof soffit strip', pos: [H.x1 + 1.2, ROOF - 0.8, -2], colour: 0xfff0dc, target: 0.6, range: 10, corona: 0, glow: [H.x1 + 1.4, ROOF - 0.61, -2, 0.06, 0.02, H.z1 - H.z0 + 2.8] });
-  led(B, game, { group: 'hfacade', id: 'canopy', name: 'Canopy downlights', pos: [0, 3.1, H.z1 + 2.2], colour: 0xfff0dc, target: 1.1, range: 8, corona: 0.2, glow: [0, 3.19, H.z1 + 2.2, 9, 0.01, 0.12] });
+  { const more = []; for (let x = -4.2; x <= 4.21; x += 1.4) for (const z of [H.z1 + 1.4, H.z1 + 3.2]) if (x !== -4.2 || z !== H.z1 + 1.4) more.push(['disc', x, 3.195, z, 0.14, 0.14, 1]);
+    B.boxE(M.timber, -6, 6, 3.19, 3.2, H.z1, H.z1 + 4.5);   // a timber soffit to the canopy
+    const cl = led(B, game, { group: 'hfacade', id: 'canopy', name: 'Canopy downlights', pos: [0, 3.0, H.z1 + 2.2], colour: 0xffd8b0, target: 1.1, range: 8, corona: 0.2, glow: [-4.2, 3.19, H.z1 + 1.4, 0.14, 0.14, 1], glowGeo: 'disc', glowMore: more });
+    for (const k of [cl.bulbBox]) { k.rotation.x = Math.PI / 2; k.updateMatrix(); }
+    B.root.traverse(m => { if (m.material === cl.bulbBox.material && m !== cl.bulbBox) { m.rotation.x = Math.PI / 2; m.updateMatrix(); } }); }
   for (const x of [-40, -31]) led(B, game, { group: 'hfacade', id: 'garage-wash-' + x, name: 'Garage wash', pos: [x, GA.h - 0.2, GA.z1 + 0.4], colour: 0xfff0dc, target: 0.7, range: 7, corona: 0.2, glow: [x, GA.h - 0.15, GA.z1 + 0.35, 2.5, 0.03, 0.06] });
 
   /* ---- the pool terrace: stone from the house to the lake edge ---- */
@@ -364,9 +378,7 @@ BM.buildHalcyon = function (B, game) {
   sw('living room', 'ground', living.concat(cove.id), [H.x0 + 0.02, 1.3, -6], [1, 0]);
   const kitchen = room('kitchen', 'ground', 6, 26, -18, 2, F1 - 0.3, 0, 4);
   B.room = 'kitchen';
-  B.furniture(M.kitchen, 15, -8, 0, 7, 0.92, 1.6, 'kitchen island'); B.boxE(M.marble, 11.4, 18.6, 0.92, 0.96, -8.9, -7.1);
-  const pend = []; for (const x of [12.5, 15, 17.5]) { B.box(M.steel, x, F1 - 0.9, -8, 0.01, 1.2, 0.01); pend.push(led(B, game, { id: 'island-' + x, name: 'Island pendant', room: 'kitchen', pos: [x, F1 - 1.6, -8], colour: 0xffd8a8, target: 0.7, range: 5, corona: 0.4, glow: [x, F1 - 1.55, -8, 0.32, 0.18, 0.32] }).id); }
-  B.furniture(M.kitchen, 22, -0.5, 0, 7, 0.92, 0.7, 'kitchen bench'); B.boxE(M.marble, 18.5, 25.5, 0.92, 0.96, -0.85, -0.15);
+  const pend = []; for (const x of [13.5, 15, 16.5]) { B.box(M.steel, x, (F1 - 0.3 + 1.98) / 2, -8, 0.008, F1 - 0.3 - 1.98, 0.008); B.mesh(G.cyl, M.steel, x, F1 - 0.31, -8, 0.12, 0.02, 0.12); pend.push(led(B, game, { id: 'island-' + x, name: 'Island pendant', room: 'kitchen', pos: [x, 1.72, -8], colour: 0xffc890, target: 0.7, range: 5, corona: 0.4, glow: [x, 1.82, -8, 0.34, 0.34, 0.34], glowGeo: 'sphere' }).id); }
   sw('kitchen', 'ground', kitchen.concat(pend), [20, 1.3, 1.88], [0, -1]);
   const atrium = room('atrium', 'ground', -6, 6, 2, 14, ROOF - 0.35, 0, 4);
   sw('atrium', 'ground', atrium, [-8, 1.3, H.z1 - 0.32], [0, -1]);
@@ -389,15 +401,6 @@ BM.buildHalcyon = function (B, game) {
   sw('dressing room', 'upper', dress, [12, F1 + 1.3, 2.12], [0, 1]);
   B.levelName = 'ground'; B.room = 'house';
 
-  /* a few pieces of furniture, so the rooms read as rooms */
-  B.room = 'living room';
-  B.furniture(M.sofa, -12, -12, 0, 6, 0.75, 1.0, 'sofa'); B.furniture(M.sofa, -15.5, -9.5, 0, 1.0, 0.75, 4, 'sofa');
-  B.boxE(M.rug, -16, -8, 0.02, 0.03, -13.5, -6.5); B.furniture(M.black, -12, -9.5, 0, 2.2, 0.4, 1.1, 'coffee table');
-  B.furniture(M.oak, 2, -12, 0, 2.6, 0.76, 1.1, 'dining table');
-  B.room = 'master suite'; B.levelName = 'upper';
-  B.furniture(M.white, 13, -10, F1, 2.2, 0.55, 2.4, 'bed'); B.boxE(M.charcoal, 11.8, 14.2, F1, F1 + 1.2, -11.3, -11.15);
-  B.room = 'guest room';
-  B.furniture(M.white, -18, -10, F1, 1.9, 0.55, 2.2, 'bed');
   B.levelName = 'ground'; B.room = 'house';
   BM.buildHalcyonSmart(B, game);
   BM.buildHalcyonOutside(B, game);
@@ -405,6 +408,7 @@ BM.buildHalcyon = function (B, game) {
   BM.buildHalcyonTech(B, game);
   BM.buildHalcyonAmenities(B, game);
   BM.buildHalcyonGrounds(B, game);
+  BM.buildHalcyonRooms(B, game);
 };
 BM.halcyonMats = mats;
 BM.halcyonLed = (B, game, o) => led(B, game, o);
@@ -441,6 +445,7 @@ BM.halcyonAfterFx = function (game) {
   const p = game.player, inCinema = HC.cinema && p.x > 14 && p.z > 2 && p.y < 4 && inHouse;
   game.fx.hemi.intensity += (inHouse ? 0.55 : 0.08) * f * HC.bright * (inCinema ? 1 - 0.9 * HC.cinema.dim : 1);
   if (inHouse) game.fx.hemi.color.lerp(HC.tint || (HC.tint = new THREE.Color(0xffe2c0)), 0.5 * f);
+  if (HC.ceilMat) HC.ceilMat.emissive.setHex(0x3a3228).multiplyScalar(f * HC.bright * (inCinema ? 1 - HC.cinema.dim : 1));
   const gl = mats().glazing; gl.emissive.setHex(HC.glow || 0xffd9a8).multiplyScalar(0.11 * f * HC.bright * (1 + 2.5 * (HC.frost || 0)));
 };
 BM.halcyonZone = function (x, y, z) {
@@ -503,5 +508,6 @@ BM.updateHalcyon = function (game, dt) {
   BM.updateHalcyonTech(game, dt);
   BM.updateHalcyonAmenities(game, dt);
   BM.updateHalcyonGrounds(game, dt);
+  BM.updateHalcyonRooms(game, dt);
 };
 })();

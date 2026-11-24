@@ -34,21 +34,35 @@ BM.buildHalcyonGrounds = function (B, game) {
   BM.addRoofBox(PV.x0 - 0.6, PV.x1 + 0.6, PV.z0 - 0.6, PV.z1 + 0.6, PV.h + 0.4);
   // the kitchen: a long counter, the pizza oven's dome glowing, a grill, the bar with stools
   B.room = 'pool pavilion';
-  B.furniture(M.charcoal, -39, PV.z0 + 0.6, 0, 9, 0.92, 0.8, 'outdoor kitchen'); B.boxE(M.stone, -43.5, -34.5, 0.92, 0.97, PV.z0 + 0.2, PV.z0 + 1.0);
-  B.mesh(G.sphere, M.render, -43, 1.25, PV.z0 + 0.6, 1.1, 0.75, 1.0);
+  // a 9 m run in dark honed stone, with stainless doors under it and a lit lip
+  B.furniture('hSoapstone', -39, PV.z0 + 0.6, 0, 9, 0.91, 0.75, 'outdoor kitchen'); B.boxE('hNero', -43.55, -34.45, 0.91, 0.96, PV.z0 + 0.2, PV.z0 + 1.02);
+  for (let x = -42.9; x < -34.6; x += 0.6) if (x < -39.3 || x > -37.7) { B.boxE('hChrome', x, x + 0.56, 0.12, 0.84, PV.z0 + 0.975, PV.z0 + 0.98); B.boxE('hBlackSteel', x + 0.05, x + 0.51, 0.76, 0.78, PV.z0 + 0.98, PV.z0 + 1.0); }
+  led({ group: 'hpav', id: 'pav-lip', name: 'Counter lip light', pos: [-39, 0.85, PV.z0 + 1.2], colour: 0xffc890, target: 0.3, range: 2.5, corona: 0, glow: [-39, 0.9, PV.z0 + 1.01, 8.8, 0.008, 0.01] });
+  // the pizza oven: a domed body on the counter, a flue, an arched mouth
+  B.mesh(G.lowSphere, 'hTerracotta', -43, 1.15, PV.z0 + 0.6, 1.0, 0.85, 0.9); B.box('hBlackSteel', -43, 0.97, PV.z0 + 0.6, 1.05, 0.06, 0.92);
+  B.mesh(G.post, 'hBlackSteel', -43, 1.75, PV.z0 + 0.45, 0.14, 0.7, 0.14); B.mesh(G.cyl, 'hBlackSteel', -43, 2.12, PV.z0 + 0.45, 0.2, 0.05, 0.2);
   const ovenGlow = new THREE.MeshBasicMaterial({ color: 0xff6a20 }); { const m = B.box(ovenGlow, -43, 1.08, PV.z0 + 1.08, 0.42, 0.24, 0.02); m.userData.dynamic = true; }
-  B.box(M.steel, -38.5, 1.0, PV.z0 + 0.6, 1.4, 0.06, 0.7); B.box(M.black, -38.5, 1.25, PV.z0 + 0.25, 1.4, 0.45, 0.08);
-  B.furniture(M.black, -35.5, PV.z0 + 2.4, 0, 2.6, 1.1, 0.6, 'bar'); for (let i = 0; i < 3; i++) { B.mesh(G.cyl, M.steel, -36.6 + i * 1.1, 0.38, PV.z0 + 3.1, 0.07, 0.76, 0.07); B.mesh(G.cyl, M.charcoal, -36.6 + i * 1.1, 0.78, PV.z0 + 3.1, 0.38, 0.05, 0.38); }
+  // the grill: a stainless hood and its grates, control knobs on the front
+  B.box('hChrome', -38.5, 1.0, PV.z0 + 0.6, 1.0, 0.1, 0.62); for (let i = 0; i < 8; i++) B.box('hBlackSteel', -38.95 + i * 0.13, 1.055, PV.z0 + 0.62, 0.02, 0.01, 0.5);
+  { const hood = B.box('hChrome', -38.5, 1.28, PV.z0 + 0.35, 1.0, 0.5, 0.06); hood.rotation.x = -0.2; hood.updateMatrix(); }
+  for (let i = 0; i < 4; i++) { const k = B.mesh(G.cyl, 'hBlackSteel', -38.85 + i * 0.23, 0.86, PV.z0 + 0.99, 0.05, 0.03, 0.05); k.rotation.x = Math.PI / 2; k.updateMatrix(); }
+  B.furniture('hSoapstone', -35.5, PV.z0 + 2.4, 0, 2.6, 1.04, 0.5, 'bar'); B.boxE('hTeak', -36.85, -34.15, 1.04, 1.08, PV.z0 + 2.05, PV.z0 + 2.95);
+  for (let i = 0; i < 3; i++) BM.KIT.barStool(B, -36.6 + i * 1.1, PV.z0 + 3.2, 0, Math.PI, { mat: 'hTeak', h: 0.75 });
   HC.oven = { glow: ovenGlow, light: led({ group: 'hpav', id: 'pizza-oven', name: 'Pizza oven', pos: [-43, 1.0, PV.z0 + 1.6], colour: 0xff7a30, target: 0.9, range: 4, corona: 0.2 }) };
   // the outdoor living room: sofas round a coffee table, a linear fire, a TV over it
-  B.furniture(M.sofa, -39, PV.z1 - 4.5, 0, 6, 0.6, 0.9, 'outdoor sofa'); B.furniture(M.sofa, -43.6, PV.z1 - 2.6, 0, 0.9, 0.6, 3.2, 'outdoor sofa');
-  B.furniture(M.oak, -39, PV.z1 - 2.6, 0, 2.2, 0.38, 1.0, 'coffee table');
-  B.furniture(M.stone, -39, PV.z1 - 0.4, 0, 4.4, 0.9, 0.6, 'fireplace');
+  BM.KIT.rug(B, -39, PV.z1 - 2.8, 0.02, 6, 4, 0, { mat: 'hRugGrey', border: 'hRugCream' });
+  BM.KIT.sofa(B, -39, PV.z1 - 4.6, 0.02, 4.0, Math.PI, { mat: 'hFabricSand', accent: 'hFabricRust', d: 0.95 });
+  BM.KIT.sofa(B, -43.4, PV.z1 - 2.6, 0.02, 3.0, Math.PI / 2, { mat: 'hFabricSand', accent: 'hFabricOlive', d: 0.95 });
+  BM.KIT.loungeChair(B, -34.6, PV.z1 - 2.6, 0.02, -Math.PI / 2 - 0.3, { mat: 'hFabricSand', ottoman: false });
+  BM.KIT.table(B, -39, PV.z1 - 2.6, 0.02, 2.0, 0.9, 0, { top: 'hTeak', h: 0.38, legs: 'slab', t: 0.05, tag: 'coffee table' });
+  // the fireplace: a stone chimney wall, a linear fire low in it, a TV set above
+  B.furniture('hStone', -39, PV.z1 - 0.4, 0, 4.4, 0.9, 0.6, 'fireplace'); B.boxE('hBlackGlass', -40.9, -37.1, 0.9, 0.93, PV.z1 - 0.7, PV.z1 - 0.5);
+  B.solid('hStone', -41.2, -36.8, 0.9, PV.h, PV.z1 - 0.4, PV.z1 - 0.1, { kind: 'wall', tag: 'chimney' });
   const fire = new THREE.MeshBasicMaterial({ color: 0xff8a2a, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
   HC.pfire = []; for (let i = 0; i < 9; i++) { const f = new THREE.Mesh(G.cone, fire); f.position.set(-40.6 + i * 0.4, 1.02, PV.z1 - 0.62); f.scale.set(0.16, 0.25, 0.08); f.userData.dynamic = true; B.root.add(f); HC.pfire.push(f); }
   led({ group: 'hpav', id: 'pav-fire', name: 'Outdoor fireplace', pos: [-39, 1.3, PV.z1 - 1.2], colour: 0xff9a40, target: 1.0, range: 6, corona: 0.2 });
   const tvc = document.createElement('canvas'); tvc.width = 256; tvc.height = 144; const tvt = new THREE.CanvasTexture(tvc);
-  const tvm = B.mesh(G.plane, new THREE.MeshBasicMaterial({ map: tvt }), -39, 2.1, PV.z1 - 0.68, 2.0, 1.12, 1, Math.PI); tvm.userData.dynamic = true;
+  const tvm = B.mesh(G.plane, new THREE.MeshBasicMaterial({ map: tvt }), -39, 2.1, PV.z1 - 0.42, 2.0, 1.12, 1, Math.PI); tvm.userData.dynamic = true;
   HC.ptv = { c: tvc, t: tvt, k: 0 };
   for (const x of [-44, -39, -34]) led({ group: 'hpav', id: 'pav-' + x, name: 'Pavilion downlight', pos: [x, PV.h - 0.1, -31], colour: 0xfff0dc, target: 0.8, range: 6, corona: 0.2, glow: [x, PV.h - 0.02, -31, 0.18, 0.02, 0.18] });
   led({ group: 'hpav', id: 'pav-strip', name: 'Pavilion edge light', pos: [-39, PV.h, PV.z0 - 0.7], colour: 0xffe2c0, target: 0.5, range: 6, corona: 0, glow: [-39, PV.h + 0.02, PV.z0 - 0.62, PV.x1 - PV.x0 + 1.2, 0.03, 0.04] });
@@ -110,9 +124,18 @@ BM.buildHalcyonGrounds = function (B, game) {
   B.levelName = 'upper'; B.floor(M.white, GH.x0 - 1, GH.x1 + 0.3, GH.z0 - 0.3, GH.z1 + 0.3, GH.h + 0.3, 0.3); B.levelName = 'ground';
   B.boxE(M.charcoal, GH.x0 - 1.0, GH.x1 + 0.3, GH.h + 0.3, GH.h + 0.5, GH.z0 - 0.3, GH.z1 + 0.3);
   BM.addRoofBox(GH.x0 - 1, GH.x1 + 0.6, GH.z0 - 0.6, GH.z1 + 0.6, GH.h + 0.6);
-  B.furniture(M.white, 50, 74.5, 0, 2.0, 0.55, 2.2, 'guest bed'); B.boxE(M.charcoal, 48.8, 51.2, 0, 1.1, 75.7, 75.8);
-  B.furniture(M.kitchen, 52.8, 68.5, 0, 1.6, 0.92, 2.6, 'kitchenette'); B.boxE(M.marble, 52.0, 53.6, 0.92, 0.96, 67.2, 69.8);
-  B.furniture(M.sofa, 44, 68.2, 0, 2.6, 0.7, 0.9, 'sofa');
+  // one room: a bed against the back wall facing the glass, a galley kitchenette (a sink, a two-zone hob, a fridge under), a sofa bed
+  BM.KIT.rug(B, 50, 75.6 - 1.5, 0.02, 3.05, 2.45, 0, { mat: 'hRugCream', border: 'hRugGrey' });
+  BM.KIT.bed(B, 50, 76.45, 0.02, Math.PI, { w: 1.55, l: 2.05, headboard: 'hBoucle', throw: 'hFabricOlive' });
+  B.boxE('hBattens', 47.8, 52.2, 0.02, GH.h, 77.64, 77.7);
+  B.furniture('hOak', 52.9, 68.5, 0, 0.62, 0.9, 2.8, 'kitchenette'); B.boxE('hTravertine', 52.55, 53.7, 0.9, 0.94, 67.1, 69.9);
+  for (let z = 67.1; z <= 69.9; z += 0.7) B.boxE('hBlackSteel', 52.585, 52.59, 0.05, 0.88, z - 0.0015, z + 0.0015);
+  B.boxE('hBlackSteel', 52.75, 53.4, 0.92, 0.942, 67.4, 67.9); B.mesh(G.post, 'hBlackSteel', 53.5, 1.1, 67.65, 0.025, 0.35, 0.025);
+  B.boxE('hBlackGlass', 52.7, 53.45, 0.94, 0.945, 68.8, 69.6);
+  B.boxE('hOak', 53.4, 53.7, 1.5, 1.53, 67.1, 69.9); for (let i = 0; i < 5; i++) B.mesh(G.cyl, 'hCeramic', 53.55, 1.58, 67.4 + i * 0.12, 0.08, 0.1, 0.08);
+  BM.KIT.sofa(B, 44, 68.2, 0.02, 2.4, 0, { mat: 'hFabricStone', accent: 'hFabricRust', d: 0.95 });
+  BM.KIT.roundTable(B, 44, 69.6, 0.02, 0.45, 0.4, { top: 'hTravertine' });
+  BM.KIT.plant(B, 41.0, 77.1, 0.02, 'fig', 2.0);
   const ghIds = []; for (let x = GH.x0 + 2; x < GH.x1; x += 4) for (let z = GH.z0 + 2; z < GH.z1; z += 4) ghIds.push(led({ group: 'hguest', id: 'gh-' + x + '-' + z, name: 'Guest house light', pos: [x, GH.h - 0.05, z], colour: 0xffe6c8, target: 0.85, range: 7, corona: 0.2, glow: [x, GH.h - 0.015, z, 0.16, 0.02, 0.16] }).id);
   led({ group: 'hguest', id: 'gh-porch', name: 'Guest house porch', pos: [GH.x0 - 0.6, GH.h - 0.1, 72], colour: 0xfff0dc, target: 0.8, range: 6, corona: 0.3, glow: [GH.x0 - 0.6, GH.h + 0.28, 72, 0.6, 0.02, 3] });
   // a path to it from the drive

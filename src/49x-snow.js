@@ -120,7 +120,7 @@ BM.buildSnow = function (B, game) {
   // (they ride on the rain's own points: the shader wraps them into a box of their own)
   const geo = new THREE.BufferGeometry();   // replaced by the rain's points once the effects exist
   const mat = new THREE.ShaderMaterial({
-    uniforms: { time: { value: 0 }, origin: { value: new THREE.Vector3() }, density: { value: 0 }, scale: { value: 300 }, lit: { value: 0.12 }, manorBoxes: BM.ROOF_BOXES.manor, box1: BM.ROOF_BOXES.box1, box2: BM.ROOF_BOXES.box2, box3: BM.ROOF_BOXES.box3, boxTop: BM.ROOF_BOXES.top },
+    uniforms: { time: { value: 0 }, origin: { value: new THREE.Vector3() }, density: { value: 0 }, scale: { value: 300 }, lit: { value: 0.12 }, manorBoxes: BM.ROOF_BOXES.manor, roofBoxes: BM.ROOF_BOXES.boxes, roofTops: BM.ROOF_BOXES.tops },
     vertexShader: [
       'uniform float time; uniform vec3 origin; uniform float scale; varying vec3 vW; varying float vA;',
       'void main(){ vec3 p = position; float s = fract(p.x * 7.13 + p.z * 3.7);',
@@ -131,10 +131,11 @@ BM.buildSnow = function (B, game) {
       ' gl_PointSize = clamp(scale * (0.35 + 0.45 * s) / -mv.z, 1.0, 9.0); }',
     ].join('\n'),
     fragmentShader: [
-      'uniform float density; uniform float lit; uniform float manorBoxes; uniform vec4 box1; uniform vec4 box2; uniform vec4 box3; uniform vec3 boxTop; varying vec3 vW; varying float vA;',
+      'uniform float density; uniform float lit; uniform float manorBoxes; uniform vec4 roofBoxes[8]; uniform float roofTops[8]; varying vec3 vW; varying float vA;',
       'bool inside(vec4 b, float top){ return vW.x > b.x && vW.x < b.y && vW.z > b.z && vW.z < b.w && vW.y < top; }',
+      'bool underRoof(){ for (int i = 0; i < 8; i++) { if (inside(roofBoxes[i], roofTops[i])) return true; } return false; }',
       'void main(){ if (vA > density) discard;',
-      ' if ((manorBoxes > 0.5 && (inside(vec4(-18.4,18.4,-12.4,12.4), 12.0) || inside(vec4(-17.6,-5.6,79.6,88.4), 5.2) || inside(vec4(33.8,50.2,-6.2,4.2), 8.4) || inside(vec4(-52.2,-37.8,-28.2,-19.8), 5.3) || inside(vec4(-58.2,-39.8,-4.2,2.2), 5.4) || inside(vec4(45.8,52.2,-22.2,-13.8), 4.8) || inside(vec4(50.9,54.3,71.2,77.6), 8.8) || inside(vec4(-50.6,-45.4,-46.6,-38.3), 3.6) || inside(vec4(-32.2,-26.8,-4.2,2.2), 2.8) || inside(vec4(52.8,61.2,30.8,37.2), 7.2) || inside(vec4(31.6,47.2,13.8,25.2), 7.8))) || inside(box1, boxTop.x) || inside(box2, boxTop.y) || inside(box3, boxTop.z)) discard;',
+      ' if ((manorBoxes > 0.5 && (inside(vec4(-18.4,18.4,-12.4,12.4), 12.0) || inside(vec4(-17.6,-5.6,79.6,88.4), 5.2) || inside(vec4(33.8,50.2,-6.2,4.2), 8.4) || inside(vec4(-52.2,-37.8,-28.2,-19.8), 5.3) || inside(vec4(-58.2,-39.8,-4.2,2.2), 5.4) || inside(vec4(45.8,52.2,-22.2,-13.8), 4.8) || inside(vec4(50.9,54.3,71.2,77.6), 8.8) || inside(vec4(-50.6,-45.4,-46.6,-38.3), 3.6) || inside(vec4(-32.2,-26.8,-4.2,2.2), 2.8) || inside(vec4(52.8,61.2,30.8,37.2), 7.2) || inside(vec4(31.6,47.2,13.8,25.2), 7.8))) || underRoof()) discard;',
       ' if (vW.y < -0.5) discard;',
       ' vec2 c = gl_PointCoord - 0.5; float r = dot(c, c); if (r > 0.25) discard;',
       ' gl_FragColor = vec4(vec3(0.88, 0.9, 0.96) * lit, (1.0 - r * 4.0) * 0.85); }',

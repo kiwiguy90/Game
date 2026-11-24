@@ -106,7 +106,7 @@ BM.buildHalcyonAmenities = function (B, game) {
   const spaL = roomLights('spa', 'ground', W.x0, W.x1, W.split, W.z1, W.h, 3.4);
   keypad('spa', spaL, [36, 1.3, W.split + 0.12], [0, 1]);
   // its own rain and snow cover, and its own zone
-  if (BM.ROOF_BOXES.box3) { BM.ROOF_BOXES.box3.value.set(W.x0 - 0.5, W.x1 + 0.9, W.z0 - 0.9, W.z1 + 0.5); BM.ROOF_BOXES.top.value.z = W.h + 0.6; }
+  BM.addRoofBox(W.x0 - 0.5, W.x1 + 0.9, W.z0 - 0.9, W.z1 + 0.5, W.h + 0.6);
   HC.wing = W;
 
   /* ================= THE WINE ROOM ================= */

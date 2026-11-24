@@ -17,7 +17,9 @@ function mulberry32(a) {
 }
 BM.mulberry32 = mulberry32;
 /* where rain and snow must not fall: the manor's roofs (its list is in the shaders), or two boxes for another house */
-BM.ROOF_BOXES = { manor: { value: 1 }, box1: { value: new THREE.Vector4(0, 0, 0, 0) }, box2: { value: new THREE.Vector4(0, 0, 0, 0) }, box3: { value: new THREE.Vector4(0, 0, 0, 0) }, top: { value: new THREE.Vector3(0, 0, 0) } };
+BM.ROOF_BOXES = { manor: { value: 1 }, boxes: { value: Array.from({ length: 8 }, () => new THREE.Vector4(0, 0, 0, 0)) }, tops: { value: new Float32Array(8) } };
+/* a roof over x0..x1, z0..z1 up to `top`: rain and snow stop there (up to eight) */
+BM.addRoofBox = (x0, x1, z0, z1, top) => { const R = BM.ROOF_BOXES, i = R.n = (R.n || 0); if (i >= 8) return; R.boxes.value[i].set(x0, x1, z0, z1); R.tops.value[i] = top; R.n = i + 1; };
 
 /* A tiny event bus shared by every system. */
 class Events {

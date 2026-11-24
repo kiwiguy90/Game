@@ -118,7 +118,7 @@ BM.buildHalcyon = function (B, game) {
   for (const [k] of game.estateGroups) game.estateLights[k] = [];
   BM.ESTATE_PLACES = { LK: { cx: LAKE.cx, cz: -75, rx: 40, rz: 25, y: LAKE.y } };   // (where the fireworks go up)
   BM.ROOF_BOXES.manor.value = 0;
-  BM.ROOF_BOXES.box1.value.set(H.x0 - 0.5, H.x1 + 0.5, H.z0 - 0.5, H.z1 + 0.5); BM.ROOF_BOXES.box2.value.set(GA.x0 - 0.5, GA.x1 + 0.5, GA.z0 - 0.5, GA.z1 + 0.5); BM.ROOF_BOXES.top.value.set(ROOF + 0.2, GA.h + 0.2, 0);
+  BM.addRoofBox(H.x0 - 1.5, H.x1 + 1.5, H.z0 - 1.5, H.z1 + 1.5, ROOF + 0.2); BM.addRoofBox(GA.x0 - 0.5, GA.x1 + 0.5, GA.z0 - 0.5, GA.z1 + 0.5, GA.h + 0.6);
   game.gates = { open: false, t: 0, closing: false, lockedIn: false, escaping: false };
 
   /* ================= THE GROUND ================= */
@@ -219,7 +219,7 @@ BM.buildHalcyon = function (B, game) {
     led(B, game, { group: 'htrees', id: 'uplight-' + HC.trees.length, name: 'Tree uplight', pos: [x + 0.9, 0.1, z + 0.9], spot: true, dir: [-0.25, 1, -0.25], colour: 0xf0f4ff, target: 1.0, range: 9, corona: 0.2, glow: [x + 0.9, 0.04, z + 0.9, 0.16, 0.04, 0.16] });
     HC.trees.push({ x, z });
   };
-  const avoid = (x, z) => (x > 24 && x < 50 && z > -24 && z < 8) || (Math.abs(x) < 16 && z > 14 && z < 46) || (x > -10 && x < 16 && z > 40 && z < 104) || (x > GA.x0 - 3 && x < H.x1 + 3 && z > H.z0 - 22 && z < 26);
+  const avoid = (x, z) => (x > 24 && x < 50 && z > -24 && z < 8) || (x > -68 && x < -46 && z > 26 && z < 70) || (x > -48 && x < -30 && z > -40 && z < -22) || (x > 37 && x < 57 && z > 62 && z < 82) || (x > 28 && x < 48 && z > 24 && z < 42) || (Math.abs(x) < 16 && z > 14 && z < 46) || (x > -10 && x < 16 && z > 40 && z < 104) || (x > GA.x0 - 3 && x < H.x1 + 3 && z > H.z0 - 22 && z < 26);
   for (const [x, z, s, k] of [[-22, 70, 1.1, 'round'], [26, 72, 1.0, 'round'], [-30, 52, 1.2, 'round'], [34, 52, 1.1, 'round'], [-50, 86, 1.0, 'pine'], [52, 86, 1.0, 'pine'],
     [-58, 60, 1.1, 'pine'], [58, 60, 1.2, 'pine'], [-58, 30, 1.0, 'round'], [58, 30, 1.0, 'round'], [-60, 2, 1.1, 'pine'], [60, 2, 1.0, 'pine'], [-18, 88, 0.9, 'round'], [22, 90, 0.9, 'round'],
     [44, 14, 1.0, 'round'], [-60, -26, 1.0, 'round'], [60, -28, 1.0, 'round'], [46, -20, 0.9, 'pine']]) if (!avoid(x, z)) tree(x, z, s, k);
@@ -404,9 +404,11 @@ BM.buildHalcyon = function (B, game) {
   BM.buildHalcyonInside(B, game);
   BM.buildHalcyonTech(B, game);
   BM.buildHalcyonAmenities(B, game);
+  BM.buildHalcyonGrounds(B, game);
 };
 BM.halcyonMats = mats;
 BM.halcyonLed = (B, game, o) => led(B, game, o);
+BM.halcyonSlider = (B, game, o) => slider(B, game, o);
 
 /* ---- once the game is up: the power on, the lights steady, you at the gate ---- */
 BM.afterHalcyonInit = function (game) {
@@ -445,6 +447,7 @@ BM.halcyonZone = function (x, y, z) {
   if (y > -1 && y < ROOF - 0.2 && x > H.x0 && x < H.x1 && z > H.z0 && z < H.z1) return 'house';
   if (y > -1 && y < GA.h && x > GA.x0 && x < GA.x1 && z > GA.z0 && z < GA.z1) return 'house';
   if (y > -1 && y < 3.8 && x > 26 && x < 44 && z > -18 && z < 4) return 'house';   // the wellness wing
+  if (y > -1 && y < 3.4 && x > 40 && x < 54 && z > 66 && z < 78) return 'house';   // the guest house
   return 'exterior';
 };
 BM.halcyonObjective = function (game) {
@@ -499,5 +502,6 @@ BM.updateHalcyon = function (game, dt) {
   BM.updateHalcyonInside(game, dt);
   BM.updateHalcyonTech(game, dt);
   BM.updateHalcyonAmenities(game, dt);
+  BM.updateHalcyonGrounds(game, dt);
 };
 })();

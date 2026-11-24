@@ -1067,7 +1067,7 @@ suite('halcyon', () => {
   const env = H.load({ quiet: true, gameOpts: { world: 'modern' } });
   const { game, BM } = env, g = game.grid, HC = game.halcyon;
   assert(game.world === 'modern' && HC && !game.towerClock && !game.haunt && !game.lift, 'its own world: no manor, no haunting');
-  assert(g.lights.length > 300 && game.estateGroups.length === 10 && game.estateGroups.every(([k]) => game.estateLights[k].length > 0), 'hundreds of lights, ten outdoor groups');
+  assert(g.lights.length > 300 && game.estateGroups.length === 14 && game.estateGroups.every(([k]) => game.estateLights[k].length > 0), 'hundreds of lights, fourteen outdoor groups');
   game.ui.mode = null; BM.beginHalcyon(game);
   const run = s => { for (let i = 0; i < s * 10; i++) game.update(1 / 10); };
   run(2);
@@ -1144,9 +1144,16 @@ suite('halcyon', () => {
   BM.setTimeOfDay(game, 'day'); run(2); assert(HC.energy.solar > 1, 'by day the panels make power: ' + HC.energy.solar.toFixed(1));
   BM.setTimeOfDay(game, 'night'); run(2); assert(HC.energy.solar < 0.1, 'and none at night');
   assert(['k-gym', 'k-spa', 'k-games-room', 'k-dressing-room'].every(id => game.byId[id]), 'keypads for the new rooms');
+  // the grounds: the pavilion, the court, the putting green, the guest house, the yoga deck, the sprinklers
+  game.keyDown('Minus'); run(1); assert(game.estateLights.hsport.every(id => !g.light(id).on), '- switches the court floodlights'); game.keyDown('Minus');
+  game.teleport(36, 0, 72, -Math.PI / 2); run(1.5); game.keys.KeyW = true; run(2.5); game.keys.KeyW = false; assert(p.x > 41 && game.zoneAt(p.x, p.y, p.z) === 'house', 'into the guest house through its sliding door: ' + p.x.toFixed(1));
+  game.lightPanelToggle('smart:putt'); run(3); assert(/putt|hole/i.test(game.ui.el.msg.textContent), 'a putt on the green');
+  game.lightPanelToggle('smart:sprinklers'); run(1); assert(HC.sprinklers.on && HC.sprinklers.pts.visible, 'the sprinklers water the lawns'); game.lightPanelToggle('smart:sprinklers');
+  HC.sprinklers.manual = false; game.timeFlow = true; game.dayHour = 5.6; run(1); assert(HC.sprinklers.on, 'and come on by themselves at dawn'); game.timeFlow = false; BM.halcyonSprinklers(game, false);
+  assert(game.byId['putt'] && HC.court && HC.oven && HC.bowl, 'the court, the pavilion and the yoga deck are there');
   for (let i = 0; i < 200; i++) { const it = game.interactables[i % game.interactables.length]; game.standAt && game.standAt(it); if (it.act) it.act(game); game.update(1 / 10); }
   assert(game.frameErrors === 0, 'no errors');
-  return 'gates, drive, glass house over three floors, ' + g.lights.length + ' lights in ten groups and ' + rows.filter(r => r.section === 'ROOMS').length + ' rooms';
+  return 'gates, drive, glass house over three floors, ' + g.lights.length + ' lights in ' + game.estateGroups.length + ' groups and ' + rows.filter(r => r.section === 'ROOMS').length + ' rooms';
 });
 
 suite('flood', () => {

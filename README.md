@@ -16,7 +16,15 @@ The title screen offers two worlds (your choice is remembered):
   explore and to play with. Every light inside and out can be switched (Tab
   for the panel, 1–0 for the ten groups of outdoor lighting, G for the
   gates), the doors slide open as you walk up, and the weather, the time,
-  snow and fireworks all work there too.
+  snow and fireworks all work there too. Inside: smart scenes, colours and
+  brightness, frosted privacy glass and blinds, a glass lift to the roof, a
+  cinema, a car gallery, a wellness wing (gym, sauna, steam room, cold
+  plunge), a wine room, a games room with a golf simulator, security cameras
+  you can look through, a robot vacuum and a house that talks. Outside: an
+  infinity pool and hot tub, a roof terrace with a fire pit and a helicopter,
+  a fountain show to music, a pool pavilion with an outdoor kitchen, a
+  floodlit sport court, a putting green, a guest house, a yoga deck and
+  sprinklers at dawn. All of it on the side panel (Tab).
 
 ## Play
 

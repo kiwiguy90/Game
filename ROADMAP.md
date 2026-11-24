@@ -51,6 +51,8 @@ The game should not get too hard. For anything we add:
       lights, until the ground floor is dark. Upstairs stays dry and lit. No
       timer and no way to lose: it is an event, not a race. The cellar pumps
       drain it away again afterwards.
+      *Test run built: press F9 inside the house to start the flood, F9 again
+      to pump it out. Still to do: start it by itself on the storm night.*
 - [ ] **Dimmer switches.** Turn the lights up and down in the main rooms,
       not only on and off.
 - [ ] **The storm cuts one part of the house at a time — rarely.** Not every

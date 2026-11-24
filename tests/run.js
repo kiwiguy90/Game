@@ -924,6 +924,31 @@ suite('nights', () => {
   return 'storm, fog and moonlit nights; the help card; the bells; her room; the map';
 });
 
+suite('flood', () => {
+  // the storm-night flood, as a test run on F9: the water rises, the ground floor's lights fail as it reaches them
+  const env = H.load({ quiet: true });
+  const { game, BM } = env, g = game.grid, F = game.flood;
+  game.ui.mode = null; game.intro = null;
+  game.keyDown('F9');
+  assert(F.rising && F.lights.length > 15 && g.live('main'), 'F9 starts it, with the power on and the ground floor lit');
+  F.speed = 4; for (let i = 0; i < 60; i++) game.update(1 / 30);
+  const fit = e => e.l.id, count = F.lights.length;
+  let n = 0; while (F.depth < 0.999 && n++ < 6000) game.update(1 / 10);
+  for (let i = 0; i < 20; i++) game.update(1 / 10);
+  assert(F.lights.every(e => e.state === 2 && e.l.dead), 'every fitting on the ground floor is drowned: ' + F.lights.filter(e => e.state !== 2).map(fit).join(' '));
+  const lamp = F.lights.find(e => e.l.pos.y < 1.7), ceil = F.lights.find(e => e.l.pos.y > 2.8);
+  assert(lamp && ceil && lamp.at < ceil.at, 'lowest first: the lamps before the ceiling lights');
+  assert(g.lights.filter(l => l.zone === 'mansion' && l.level === 'upper' && l.intensity > 0.01).length > 5, 'upstairs stays lit');
+  assert(F.fires.every(e => !e.f.lit), 'the fires are out');
+  assert(F.wade > 0.9 && BM.floodDrag(game) < 0.6, 'waist-deep, and it holds you back');
+  // you can still go out
+  game.teleport(0, 0, 15, Math.PI); game.update(1 / 30); assert(F.wade === 0 && BM.floodDrag(game) === 1, 'outside the house, no water');
+  game.keyDown('F9'); n = 0; while (F.depth > 0 && n++ < 6000) game.update(1 / 10);
+  for (let i = 0; i < 80; i++) game.update(1 / 10);
+  assert(!g.lights.some(l => l.drowned) && !F.water.visible && game.frameErrors === 0, 'F9 again pumps it out, and the lights come back');
+  return 'the water rises to the waist; ' + count + ' fittings fail as it reaches them; F9 drains it';
+});
+
 suite('eleanor', () => {
   // the trail: seven places she went, read in turn; the panel lit end to end brings her to the window
   const env = H.load({ quiet: true });

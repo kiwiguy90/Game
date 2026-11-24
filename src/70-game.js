@@ -269,6 +269,7 @@ class Game {
     BM.buildPond(this.B, this);
     BM.buildDoorbells(this.B, this);
     BM.buildHaunt(this.B, this);
+    BM.buildFlood(this.B, this);
     this.map = new BM.EstateMap(this);
     BM.buildGlimpses(this.B, this);
     this.interactables = this.B.interactables;
@@ -675,6 +676,7 @@ class Game {
     if (code === 'KeyM' && (!ui.mode || ui.mode === 'phone')) { if (ui.mode) ui.close(); ui.mode = 'map'; this.map.open(); return; }
     if (ui.mode === 'help') { if (code === 'KeyH' || code === 'Escape' || code === 'KeyE' || code === 'Enter') ui.close(); return; }
     if (code === 'KeyH' && !ui.mode) { ui.help(); return; }
+    if (code === 'F9' && !ui.mode && !this.intro && !this.outro) { BM.floodToggle(this); return; }   // the flood, a test run
     if (code === 'KeyP') { ui.phone(); return; }
     if (code === 'KeyL') { ui.lightsVisible = !ui.lightsVisible; ui.lightsT = 0; return; }
     if (code === 'KeyO' && !ui.mode) { this.masterOutside(); ui.lightsT = 0; return; }
@@ -766,7 +768,7 @@ class Game {
     const fwd = (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 0.6 : 0);
     const side = (k.KeyD ? 0.8 : 0) - (k.KeyA ? 0.8 : 0);
     const running = (k.ShiftLeft || k.ShiftRight) && fwd > 0;
-    const speed = running ? 5.2 : 2.8;
+    const speed = (running ? 5.2 : 2.8) * BM.floodDrag(this);
     const f = this.forward(), rx = -f.z, rz = f.x;
     const y0 = p.y;
     if (fwd !== 0 || side !== 0) {
@@ -774,7 +776,7 @@ class Game {
       mx = mx / ml * amt; mz = mz / ml * amt;
       const hit = phys.move(p, mx * speed * dt, mz * speed * dt);
       p.bob += dt * (running ? 12 : 8); p.stepAcc += amt * speed * dt;
-      if (p.stepAcc > (running ? 1.1 : 0.75) && p.grounded) { p.stepAcc = 0; this.audio.step(this.surfaceAt(p)); }
+      if (p.stepAcc > (running ? 1.1 : 0.75) && p.grounded) { p.stepAcc = 0; if (this.flood && this.flood.wade) BM.floodSlosh(this); else this.audio.step(this.surfaceAt(p)); }
     }
     // vertical
     const sup = phys.support(p.x, p.z, Math.max(p.y, y0));
@@ -861,6 +863,7 @@ class Game {
     BM.updatePond(this, dt, this.time);
     BM.updateDoorbells(this, dt);
     BM.updateHaunt(this, dt);
+    BM.updateFlood(this, dt);
     BM.updateSave(this, dt);
     BM.updateGlimpses(this, dt);
     BM.updateChapel(this, dt, this.time);

@@ -162,13 +162,14 @@ BM.halcyonPanelRows = function (game) {
     Object.assign(row('glass', 'Privacy glass'), { value: undefined, key: 'X', on: HC.frostTarget > 0, onText: 'FROSTED', offText: 'CLEAR', lit: HC.frostTarget > 0 }),
     Object.assign(row('blinds', 'Blinds'), { value: undefined, key: 'Z', on: HC.blindTarget > 0, onText: 'DOWN', offText: 'UP', lit: HC.blindTarget > 0 }),
     Object.assign(row('voice', 'House voice'), { value: undefined, on: HC.voice !== false, onText: 'ON', offText: 'OFF', lit: HC.voice !== false }),
-  ].concat(BM.halcyonOutsideRows ? BM.halcyonOutsideRows(game) : [], BM.halcyonInsideRows ? BM.halcyonInsideRows(game) : []);
+  ].concat(BM.halcyonOutsideRows ? BM.halcyonOutsideRows(game) : [], BM.halcyonInsideRows ? BM.halcyonInsideRows(game) : [], BM.halcyonTechRows ? BM.halcyonTechRows(game) : []);
 };
 BM.halcyonPanelToggle = function (game, k) {
   if (k.indexOf('smart:') !== 0) return false;
   const id = k.slice(6), HC = game.halcyon;
   if (BM.halcyonOutsideToggle && BM.halcyonOutsideToggle(game, id)) return true;
   if (BM.halcyonInsideToggle && BM.halcyonInsideToggle(game, id)) return true;
+  if (BM.halcyonTechToggle && BM.halcyonTechToggle(game, id)) return true;
   if (id === 'scene') BM.halcyonScene(game, SCENE_ORDER[(SCENE_ORDER.indexOf(HC.scene) + 1) % SCENE_ORDER.length]);
   else if (id === 'colour') BM.halcyonColour(game);
   else if (id === 'bright') BM.halcyonBright(game);

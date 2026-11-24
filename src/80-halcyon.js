@@ -110,7 +110,7 @@ function slider(B, game, o) {
 
 BM.buildHalcyon = function (B, game) {
   const M = mats(), P = B.phys, rnd = BM.mulberry32(2026);
-  M.lawn = 'grass';
+  M.lawn = 'grass'; B.plain = true;
   const HC = game.halcyon = { sliders: [], trees: [], scene: 'evening', colour: 'warm', bright: 1, t: 0 };
   game.estateLights = {};
   game.estateGroups = [['hgate', 'Gates & entry'], ['hdrive', 'Driveway'], ['htrees', 'Tree uplights'], ['hgarden', 'Garden & paths'], ['hfacade', 'House facade'],
@@ -395,6 +395,7 @@ BM.buildHalcyon = function (B, game) {
   BM.buildHalcyonSmart(B, game);
   BM.buildHalcyonOutside(B, game);
   BM.buildHalcyonInside(B, game);
+  BM.buildHalcyonTech(B, game);
 };
 BM.halcyonMats = mats;
 BM.halcyonLed = (B, game, o) => led(B, game, o);
@@ -486,5 +487,6 @@ BM.updateHalcyon = function (game, dt) {
   BM.updateHalcyonSmart(game, dt);
   BM.updateHalcyonOutside(game, dt);
   BM.updateHalcyonInside(game, dt);
+  BM.updateHalcyonTech(game, dt);
 };
 })();

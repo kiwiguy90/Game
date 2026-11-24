@@ -1124,6 +1124,16 @@ suite('halcyon', () => {
   game.lightPanelToggle('smart:cinema'); run(4); assert(HC.cinema.dim === 1 && g.lights.filter(l => l.room === 'cinema' && l.smart).every(l => l.target < 0.2), 'a film: the cinema lights fade down');
   game.lightPanelToggle('smart:cinema'); game.lightPanelToggle('smart:garage'); run(5); assert(HC.gdoors.every(d => d.t === 1 && !d.wall.enabled), 'the garage doors lift');
   const a0 = HC.turntable.a; run(2); assert(HC.turntable.a > a0, 'the turntable turns');
+  // gadgets: the robot vacuum, motion path lights, the cameras
+  const V = HC.vac, v0 = V.g.position.clone(); run(10); assert(V.g.position.distanceTo(v0) > 0.5, 'the vacuum potters about');
+  game.lightPanelToggle('smart:vac'); run(60); assert(Math.hypot(V.g.position.x - V.dock.x, V.g.position.z - V.dock.z) < 0.1, 'and goes home to its dock');
+  const pl = g.light(game.estateLights.hgarden[0]); game.teleport(pl.pos.x + 1, 0, pl.pos.z, 0); run(2); const near = pl.target;
+  game.teleport(0, 0, 60, 0); run(6); assert(near > pl.target * 3, 'path lights brighten as you come up to them, and fade behind you');
+  game.teleport(-20, 0, 6, Math.PI); run(1); const sc = game.interactables.find(it => it.id === 'cctv-console'); sc.act(game);
+  assert(game.ui.mode === 'cctv', 'the console: looking through the cameras');
+  run(0.2); assert(game.camera.position.distanceTo(HC.cams[0].cam.position) < 0.01, 'the view is the gate camera');
+  game.keyDown('ArrowRight'); run(0.2); assert(game.camera.position.distanceTo(HC.cams[1].cam.position) < 0.01, '→ the next camera');
+  game.keyDown('Escape'); assert(game.ui.mode === null, 'Esc: stand up again');
   for (let i = 0; i < 200; i++) { const it = game.interactables[i % game.interactables.length]; game.standAt && game.standAt(it); if (it.act) it.act(game); game.update(1 / 10); }
   assert(game.frameErrors === 0, 'no errors');
   return 'gates, drive, glass house over three floors, ' + g.lights.length + ' lights in ten groups and ' + rows.filter(r => r.section === 'ROOMS').length + ' rooms';

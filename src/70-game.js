@@ -737,6 +737,7 @@ class Game {
       else { const i = BM.ESTATE_KEYS.indexOf(code); if (i >= 0 && this.estateGroups[i]) this.toggleEstate(this.estateGroups[i][0]); }
       return;
     }
+    if (ui.mode === 'cctv') { BM.cctvKey(this, code); return; }
     if (code === 'Tab' && !ui.mode) { ui.openLights(); return; }
     if (code === 'Escape' && !ui.mode && this.menu) { this.menu.pause(); return; }
     if (ui.mode === 'map') { if (code === 'KeyM' || code === 'Escape' || code === 'KeyE' || code === 'Enter') ui.close(); return; }
@@ -800,7 +801,7 @@ class Game {
   update(dt) {
     this.time += dt; this.clock += dt;
     const p = this.player;
-    const frozen = this.ui.mode === 'read' || this.ui.mode === 'fuse' || this.ui.mode === 'estate' || this.ui.mode === 'lights' || this.ui.mode === 'help' || this.ui.mode === 'map' || this.ui.mode === 'title' || this.ui.mode === 'ending';
+    const frozen = this.ui.mode === 'read' || this.ui.mode === 'fuse' || this.ui.mode === 'estate' || this.ui.mode === 'lights' || this.ui.mode === 'help' || this.ui.mode === 'map' || this.ui.mode === 'title' || this.ui.mode === 'ending' || this.ui.mode === 'cctv';
     if (this.intro) this.intro.update(dt);
     else if (this.outro) this.updateOutro(dt);
     else if (this.climbing) this.updateClimb(dt);
@@ -830,6 +831,7 @@ class Game {
     this.audio.update(dt, ctx);
     this.ui.update(dt);
     this.updateCamera();
+    if (this.ui.mode === 'cctv') BM.cctvCamera(this);   // (Halcyon: looking through a security camera)
     // prompt
     if (!frozen && !this.climbing && !this.intro && !this.outro) {
       const it = this.pick();
@@ -1172,6 +1174,7 @@ class Game {
     else BM.cullDetails(this, cp);
     if (this._lastCam.distanceToSquared(cp) > 4) this._lastCam.copy(cp);
     BM.updateDynamicInstances(this);
+    if (this.world === 'modern') BM.halcyonCctvRender(this, r);
     r.render(this.scene, this.camera);
     this.lastDrawCalls = r.info.render.calls;
     return this.lastDrawCalls;

@@ -195,7 +195,7 @@ B.furniture = function (mat, cx, cz, y0, sx, sy, sz, name) {
   const w = this.phys.addWall(cx - sx / 2, cx + sx / 2, cz - sz / 2, cz + sz / 2, y0, y0 + sy, { kind: 'furniture', tag: name || 'furniture' });
   w.room = this.room;
   if (!mat) return w;
-  const piece = pieceOf(name);
+  const piece = this.plain ? null : pieceOf(name);   // (the modern house: clean, plain pieces)
   // which way a case piece faces: away from the nearest wall
   let front = [0, 1];
   if (piece === 'cupboard' || piece === 'drawers' || piece === 'bookcase' || piece === 'chair') {

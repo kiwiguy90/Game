@@ -271,6 +271,7 @@ class Game {
     BM.buildDoorbells(this.B, this);
     BM.buildHaunt(this.B, this);
     BM.buildFlood(this.B, this);
+    BM.buildSnow(this.B, this);
     this.map = new BM.EstateMap(this);
     BM.buildGlimpses(this.B, this);
     this.interactables = this.B.interactables;
@@ -784,6 +785,7 @@ class Game {
     else if (!frozen && !this.busy) this.updatePlayer(dt);
     if (this.ui.mode !== 'title' && !this.intro) BM.updateFlood(this, dt);   // the water does not wait while you read
     BM.updatePanel(this);
+    BM.updateSnow(this, dt);
     this.updateDoors(dt);
     this.updateStorm(dt);
     if (this.clock_) { this.clock_.update(dt); this.clock_.tickHammers(); }
@@ -798,6 +800,7 @@ class Game {
     this.fx.update(dt, ctx);
     BM.updateWild(this, dt, this.time);   // after the effects: weather and time of day add their light on top
     BM.floodAfterFx(this, dt);            // and under the flood, murk
+    BM.snowAfterFx(this);                 // and snow on the ground throws the light back
     this.audio.update(dt, ctx);
     this.ui.update(dt);
     this.updateCamera();
@@ -830,7 +833,7 @@ class Game {
       mx = mx / ml * amt; mz = mz / ml * amt;
       const hit = phys.move(p, mx * speed * dt, mz * speed * dt);
       p.bob += dt * (running ? 12 : 8); p.stepAcc += amt * speed * dt;
-      if (p.stepAcc > (running ? 1.1 : 0.75) && (p.grounded || (this.flood && this.flood.swim))) { p.stepAcc = 0; if (this.flood && (this.flood.wade || this.flood.swim)) BM.floodSlosh(this); else this.audio.step(this.surfaceAt(p)); }
+      if (p.stepAcc > (running ? 1.1 : 0.75) && (p.grounded || (this.flood && this.flood.swim))) { p.stepAcc = 0; if (this.flood && (this.flood.wade || this.flood.swim)) BM.floodSlosh(this); else this.audio.step(BM.snowStep(this, this.surfaceAt(p))); }
     }
     // vertical
     const sup = phys.support(p.x, p.z, Math.max(p.y, y0));

@@ -399,6 +399,12 @@ class Synth {
   }
   quack() { this.tone('sawtooth', 520, 380, 0.08, 0.01, 0.12); this.tone('sawtooth', 500, 360, 0.07, 0.01, 0.1, 0.18); }
   step(surface) {
+    if (surface === 'snow') {   // a crunch: the crust giving, then packing under the boot
+      this.burst(this.white, 'bandpass', 1500 + Math.random() * 700, 1.4, 0.07, 0.01, 0.12);
+      this.burst(this.white, 'highpass', 3500, 1, 0.03, 0.03, 0.1, 0.05);
+      this.burst(this.brown, 'lowpass', 320, 1, 0.08, 0.02, 0.18, 0.02);
+      return;
+    }
     const f = { stone: 1300, wood: 700, grass: 500, gravel: 2200, metal: 3000 }[surface] || 900;
     this.burst(this.white, surface === 'metal' ? 'bandpass' : 'lowpass', f, surface === 'metal' ? 6 : 1, surface === 'grass' ? 0.06 : 0.1, 0.004, 0.09);
     if (surface === 'wood' && Math.random() < 0.15) this.tone('sawtooth', 180, 120, 0.03, 0.05, 0.3, 0.05);

@@ -96,16 +96,54 @@ BM.NIGHTS = {
   clear: { name: 'Moonlit', blurb: 'A clear, still night under a full moon.' },
 };
 /* the weather you can switch to at any time from the pause menu (the title offers the first three as the night) */
-BM.WEATHERS = { storm: 'Storm', rain: 'Rain', fog: 'Fog', clear: 'Clear' };
+BM.WEATHERS = { storm: 'Storm', rain: 'Rain', fog: 'Fog', clear: 'Clear', snow: 'Snow' };
 /* the time of day: the sky and the murk, the light from all round, and the sun (or the moon) */
 const TIMES = {
-  night: { name: 'Night', mix: 0, dens: 1, amb: 0, sun: 0x7f95b5, sunI: 0, dir: [0.55, 0.27, -0.79] },
+  night: { name: 'Night', sky: 0x161c26, cloud: 0x161a20, mix: 0, dens: 1, amb: 0, sun: 0x7f95b5, sunI: 0, dir: [0.55, 0.27, -0.79] },
   dusk: { name: 'Dusk', sky: 0x5c4a64, cloud: 0x3e3a48, mix: 0.8, dens: 0.8, amb: 0.22, sun: 0xff9a60, sunI: 0.4, dir: [-0.85, 0.18, 0.3] },
   dawn: { name: 'Dawn', sky: 0x8a8aa6, cloud: 0x585c68, mix: 0.8, dens: 0.8, amb: 0.3, sun: 0xffc890, sunI: 0.5, dir: [0.85, 0.2, -0.25] },
   day: { name: 'Day', sky: 0x9ab4d2, cloud: 0x7c8690, mix: 0.92, dens: 0.5, amb: 0.75, sun: 0xfff2dc, sunI: 1.0, dir: [0.3, 0.8, 0.35] },
 };
 BM.TIMES = TIMES;
-BM.setTimeOfDay = function (game, t) { game.timeOfDay = TIMES[t] ? t : 'night'; game.story.time = game.timeOfDay; };
+/* Time can also pass by itself (the panel's "Time passes" row): an hour a minute, round the clock, night into
+   dawn into day into dusk. The named times sit at these hours, and the light is blended between them. */
+const HOURS = { night: 0, dawn: 6, day: 12, dusk: 19 };
+const KEYS = [[0, 'night'], [4.6, 'night'], [6, 'dawn'], [7.6, 'day'], [17.2, 'day'], [19, 'dusk'], [20.5, 'night'], [24, 'night']];
+BM.DAY_RATE = 1 / 60;          // game hours per real second
+const BLEND = { name: '', sky: 0, cloud: 0, mix: 0, dens: 1, amb: 0, sun: 0, sunI: 0, dir: [0, 0, 0], day: 0 };
+const cA = new THREE.Color(), cB = new THREE.Color();
+const DAYNESS = { night: 0, dawn: 0.35, dusk: 0.35, day: 1 };
+function blendAt(h) {
+  h = ((h % 24) + 24) % 24;
+  let i = 0; while (i < KEYS.length - 2 && KEYS[i + 1][0] <= h) i++;
+  const [h0, n0] = KEYS[i], [h1, n1] = KEYS[i + 1], k = h1 > h0 ? (h - h0) / (h1 - h0) : 0, s = k * k * (3 - 2 * k);
+  const A = TIMES[n0], B = TIMES[n1], L = (a, b) => a + (b - a) * s;
+  BLEND.name = s < 0.5 ? n0 : n1;
+  BLEND.sky = cA.setHex(A.sky).lerp(cB.setHex(B.sky), s).getHex();
+  BLEND.cloud = cA.setHex(A.cloud).lerp(cB.setHex(B.cloud), s).getHex();
+  BLEND.sun = cA.setHex(A.sun).lerp(cB.setHex(B.sun), s).getHex();
+  BLEND.mix = L(A.mix, B.mix); BLEND.dens = L(A.dens, B.dens); BLEND.amb = L(A.amb, B.amb); BLEND.sunI = L(A.sunI, B.sunI);
+  for (let j = 0; j < 3; j++) BLEND.dir[j] = L(A.dir[j], B.dir[j]);
+  BLEND.day = L(DAYNESS[n0], DAYNESS[n1]);
+  return BLEND;
+}
+/* the light right now: the named time, or the blend when time is passing */
+BM.timeNow = function (game) {
+  if (game.timeFlow) return blendAt(game.dayHour || 0);
+  const T = TIMES[game.timeOfDay] || TIMES.night;
+  BLEND.name = game.timeOfDay; BLEND.sky = T.sky; BLEND.cloud = T.cloud; BLEND.sun = T.sun; BLEND.mix = T.mix; BLEND.dens = T.dens; BLEND.amb = T.amb; BLEND.sunI = T.sunI;
+  for (let j = 0; j < 3; j++) BLEND.dir[j] = T.dir[j];
+  BLEND.day = DAYNESS[game.timeOfDay] || 0;
+  return BLEND;
+};
+BM.setTimeFlow = function (game, on) {
+  game.timeFlow = !!on;
+  if (on && !(game.dayHour >= 0)) game.dayHour = HOURS[game.timeOfDay] !== undefined ? HOURS[game.timeOfDay] : 0;
+};
+BM.setTimeOfDay = function (game, t) {
+  game.timeOfDay = TIMES[t] ? t : 'night'; game.story.time = game.timeOfDay;
+  game.dayHour = HOURS[game.timeOfDay];   // and if time is passing, it carries on from there
+};
 BM.applyNight = function (game, night) {
   const W = game.weather; night = BM.WEATHERS[night] ? night : 'storm';
   game.night = night; game.story.night = night;
@@ -115,6 +153,7 @@ BM.applyNight = function (game, night) {
   if (night === 'rain') { W.noLightning = true; }
   if (night === 'fog') { W.rain = 0; W.noLightning = true; W.fog0.setHex(0x30363e); W.dens0 = 0.05; }
   if (night === 'clear') { W.rain = 0; W.started = true; W.clear = 1; W.said = 2; }
+  if (night === 'snow') { W.rain = 0; W.noLightning = true; game.storm = false; W.said = 2; W.fog0.setHex(0x464e5c); W.dens0 = 0.03; }   // still, and snowing (49x-snow.js)
 };
 
 BM.updateWild = function (game, dt, t) {
@@ -133,12 +172,15 @@ BM.updateWild = function (game, dt, t) {
     if (game.fx && game.fx.rain) { const u = game.fx.rain.material.uniforms; if (u.density) u.density.value = W.rain * (1 - c); }
     BM.FOG.exterior.colour.copy(W.fog0).lerp(new THREE.Color(0x34445c), c);
     BM.FOG.exterior.density = W.dens0 + (0.0102 - W.dens0) * c;
+    // time passing: an hour a minute, and the named time follows it
+    if (game.timeFlow) { game.dayHour = ((game.dayHour || 0) + dt * BM.DAY_RATE) % 24; }
     // the time of day over the weather: a cloudy day is grey and dim, a clear one blue and bright
-    const T = TIMES[game.timeOfDay] || TIMES.night, overcast = (1 - c) * (game.night === 'clear' ? 0 : 1);
-    if (T.mix) { const sky = new THREE.Color(T.sky).lerp(new THREE.Color(T.cloud), overcast * 0.8); BM.FOG.exterior.colour.lerp(sky, T.mix); BM.FOG.exterior.density *= T.dens + (game.night === 'fog' ? 0.6 : 0) * (1 - c); }
-    const outside = game.ctx && game.ctx.zone === 'exterior', show = (outside ? Math.max(0, (c - 0.35) / 0.65) : 0) * (T.mix ? 0 : 1);
+    const T = BM.timeNow(game), overcast = (1 - c) * (game.night === 'clear' ? 0 : 1);
+    if (game.timeFlow && T.name !== game.timeOfDay) { game.timeOfDay = T.name; game.story.time = T.name; }
+    if (T.mix > 0.001) { const sky = new THREE.Color(T.sky).lerp(new THREE.Color(T.cloud), overcast * 0.8); BM.FOG.exterior.colour.lerp(sky, T.mix); BM.FOG.exterior.density *= 1 + (T.dens + (game.night === 'fog' ? 0.6 : 0) * (1 - c) - 1) * Math.min(1, T.mix / 0.8); }
+    const outside = game.ctx && game.ctx.zone === 'exterior', show = (outside ? Math.max(0, (c - 0.35) / 0.65) : 0) * Math.max(0, 1 - T.mix * 2.5);
     // how much day there is: full at midday, a little at dusk and dawn, less under cloud
-    const day = (game.timeOfDay === 'day' ? 1 : T.mix ? 0.35 : 0) * (1 - overcast * 0.3);
+    const day = T.day * (1 - overcast * 0.3);
     game.grid.daylight = day;
     // indoors by day: the windows let the light in, the rooms are no longer black
     const H = BM.FOG.house; if (!W.houseBase) W.houseBase = { colour: H.colour.clone(), density: H.density };
@@ -147,8 +189,11 @@ BM.updateWild = function (game, dt, t) {
     W.stars.position.copy(cam); W.stars.visible = show > 0.01; W.starMat.opacity = show * 0.9;
     if (game.fx && game.fx.moon) {
       const sunI = T.sunI * (1 - overcast * 0.65);
-      if (T.mix) { game.fx.moon.position.set(T.dir[0] * 100, T.dir[1] * 100, T.dir[2] * 100); game.fx.moon.color.setHex(T.sun); game.fx.moon.intensity += (outside ? 1 : 0.25) * sunI; }
-      else { game.fx.moon.position.copy(MOON_DIR).multiplyScalar(100); game.fx.moon.color.setHex(T.sun); game.fx.moon.intensity += (outside ? 0.32 : 0.06) * c; }
+      // the sun by day, the moon by night, and in between a little of each
+      const sw = Math.min(1, T.mix / 0.8);
+      game.fx.moon.position.set(MOON_DIR.x + (T.dir[0] - MOON_DIR.x) * sw, MOON_DIR.y + (T.dir[1] - MOON_DIR.y) * sw, MOON_DIR.z + (T.dir[2] - MOON_DIR.z) * sw).normalize().multiplyScalar(100);
+      game.fx.moon.color.setHex(T.sun);
+      game.fx.moon.intensity += sw * (outside ? 1 : 0.25) * sunI + (1 - sw) * (outside ? 0.32 : 0.06) * c;
       if (game.fx.hemi) game.fx.hemi.intensity += T.amb * (outside ? 1 : 0.3) * (1 - overcast * 0.35) + (outside ? 0 : 0.42 * day);
     }
   }

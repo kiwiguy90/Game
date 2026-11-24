@@ -34,7 +34,8 @@ const dialSwitch = game => game.interactables.find(it => it.switchVisual && (it.
 
 /* the line at the top of the panel */
 BM.panelStatus = function (game) {
-  const mins = Math.floor(game.clock / 60) % 60, hrs = (23 + Math.floor(game.clock / 3600)) % 24;
+  let mins = Math.floor(game.clock / 60) % 60, hrs = (23 + Math.floor(game.clock / 3600)) % 24;
+  if (game.timeFlow) { const h = game.dayHour || 0; hrs = Math.floor(h); mins = Math.floor((h - hrs) * 60); }
   let n = 0, lit = 0;
   for (const l of game.grid.lights) { if (l.kind === 'fire' || l.circuit === 'car') continue; n++; if (l.intensity > 0.02) lit++; }
   const w = (BM.WEATHERS || {})[game.night] || cap(game.night || 'storm'), t = BM.TIMES && BM.TIMES[game.timeOfDay] ? BM.TIMES[game.timeOfDay].name : cap(game.timeOfDay || 'night');
@@ -65,6 +66,7 @@ BM.panelRows = function (game) {
   const W = BM.WEATHERS || {}, TI = BM.TIMES || {}, F9 = game.flood;
   rows.push({ section: 'WEATHER & TIME', supply: '', k: 'more:weather', name: 'Weather', value: (W[game.night] || cap(game.night || 'storm')).toUpperCase(), on: true, lit: false, live: true });
   rows.push({ section: 'WEATHER & TIME', supply: '', k: 'more:time', name: 'Time of day', value: (TI[game.timeOfDay] ? TI[game.timeOfDay].name : cap(game.timeOfDay || 'night')).toUpperCase(), on: true, lit: false, live: true });
+  rows.push({ section: 'WEATHER & TIME', supply: '', k: 'more:flow', name: 'Time passes', on: !!game.timeFlow, onText: 'ON', offText: 'OFF', lit: !!game.timeFlow, warming: false, live: true });
   if (F9) {
     const up = F9.water && F9.water.visible, h = Math.max(0, F9.depth).toFixed(1) + ' M';
     rows.push({ section: 'WEATHER & TIME', supply: '', k: 'more:flood', key: 'F9', name: 'Flood', value: !up ? 'DRY' : F9.rising ? 'RISING ' + h : F9.draining ? 'DRAINING ' + h : 'STANDING ' + h, on: true, lit: !!up, warming: !!(F9.rising || F9.draining), live: true });
@@ -125,18 +127,22 @@ BM.panelToggle = function (game, k) {
   } else if (id === 'weather') {
     const n = next(Object.keys(BM.WEATHERS), game.night || 'storm');
     BM.applyNight(game, n); remember(game, 'night', n);
-    ui.say({ storm: 'The storm comes in: wind, rain, and lightning over the house.', rain: 'Steady rain now, and no thunder.', fog: 'The rain stops, and the fog comes up off the lake.', clear: 'The sky clears. The moon is up.' }[n] || n, 4);
+    ui.say({ storm: 'The storm comes in: wind, rain, and lightning over the house.', rain: 'Steady rain now, and no thunder.', fog: 'The rain stops, and the fog comes up off the lake.', clear: 'The sky clears. The moon is up.', snow: 'It goes still, and very quiet. The first flakes of snow come down out of the dark.' }[n] || n, 4);
   } else if (id === 'time') {
     const n = next(Object.keys(BM.TIMES), game.timeOfDay || 'night');
     BM.setTimeOfDay(game, n); remember(game, 'time', n);
     ui.say({ night: 'Night.', dusk: 'Dusk: the last of the light going.', dawn: 'Dawn: grey light in the east.', day: 'Day.' }[n] || n, 3);
+  } else if (id === 'flow') {
+    BM.setTimeFlow(game, !game.timeFlow); remember(game, 'timeFlow', game.timeFlow);
+    A.click && A.click();
+    ui.say(game.timeFlow ? 'Time passes now: an hour every minute, round the clock — night into dawn, into day, into dusk.' : 'Time stands still where it is.', 4);
   } else if (id === 'flood') BM.floodToggle(game);
   return true;
 };
 
 /* the storm doors bolt themselves once they are down */
 BM.updatePanel = function (game) {
-  if (!game.chimeTunes && game.menu) tunes(game);   // the tunes you chose last time
+  if (!game.chimeTunes && game.menu) { tunes(game); if (game.menu.settings.timeFlow) BM.setTimeFlow(game, true); }   // the tunes you chose last time, and whether time passes
   const sd = game.stormDoors;
   if (sd && sd.boltAfter && !sd.moving && !sd.open) { sd.boltAfter = false; sd.bolted = true; game.audio.stormBolt && game.audio.stormBolt(true); }
 };

@@ -919,7 +919,7 @@ suite('nights', () => {
     g6.teleport(-12, 0, -8, 0); for (const d of g6.B.doors) if (d.open) g6.toggleDoor(d); run(3); g6.haunt.next = 0; run(0.2);
     const ev = g6.haunt.pending[0];
     assert(g6.haunt.events === 1 && ev, 'while you are in the kitchen, somewhere far off is undone');
-    if (ev.kind === 'light') { const it = g6.interactables.find(i => i.switchVisual && Math.abs(i.pos.x - ev.x) < 0.01 && Math.abs(i.pos.z - ev.z) < 0.01); assert(it && !it.leverOn, 'its switch is down'); }
+    if (ev.kind === 'light') { const it = g6.interactables.find(i => i.switchVisual && Math.abs(i.pos.x - ev.x) < 0.01 && Math.abs(i.pos.z - ev.z) < 0.01 && Math.abs(i.pos.y - 1.4 - ev.y) < 0.01); assert(it && !it.leverOn, 'its switch is down'); }
     g6.teleport(ev.x, ev.y, ev.z, 0); run(0.5); assert(/dark|shut/.test(g6.ui.lastSay) && !g6.haunt.pending.length, 'and you find out when you get back'); }
   return 'storm, fog and moonlit nights; the help card; the bells; her room; the map';
 });
@@ -1016,11 +1016,39 @@ suite('panel', () => {
   // weather and time
   const w0 = game.night; tog('more:weather'); assert(game.night !== w0 && row('more:weather').value === BM.WEATHERS[game.night].toUpperCase(), 'the weather changes');
   const t0 = game.timeOfDay; tog('more:time'); assert(game.timeOfDay !== t0, 'the time of day changes');
+  // time passing: an hour a minute
+  BM.setTimeOfDay(game, 'night'); tog('more:flow'); assert(game.timeFlow, 'time passes');
+  const h0 = game.dayHour; run(120); assert(Math.abs(game.dayHour - h0 - 2) < 0.2, 'an hour a minute');
+  game.dayHour = 7.2; run(60); assert(game.timeOfDay === 'day' && g.daylight > 0.3, 'and the day comes up');
+  tog('more:flow'); const h1 = game.dayHour; run(30); assert(!game.timeFlow && game.dayHour === h1, 'and stands still again');
   // the flood
   tog('more:flood'); assert(game.flood.rising && /RISING/.test(row('more:flood').value), 'the flood rises from the panel');
   tog('more:flood'); assert(!game.flood.rising, 'and drains');
   run(60); assert(game.frameErrors === 0, 'no errors');
-  return 'status line; fires, fans, music, storm doors, garage, lift; the tower on and off; 6 tunes on each clock; weather, time, flood';
+  return 'status line; fires, fans, music, storm doors, garage, lift; the tower on and off; 6 tunes on each clock; weather, time, time passing, flood';
+});
+
+suite('snow', () => {
+  // snow: it falls, lies, takes footprints and crunches; when it stops it goes
+  const env = H.load({ quiet: true });
+  const { game, BM } = env, S = game.snow;
+  game.ui.mode = null; game.intro = null; game.teleport(0, 0, 40, 0);
+  const run = s => { for (let i = 0; i < s * 4; i++) game.update(1 / 4); };
+  assert(BM.WEATHERS.snow && S.cover === 0, 'snow is a weather, and none lies yet');
+  BM.applyNight(game, 'snow'); run(20);
+  assert(!game.storm && game.weather.rain === 0 && S.falling > 0.9, 'it falls: no rain, no thunder');
+  assert(S.cover > 0.05 && S.cover < 0.5, 'and settles slowly');
+  run(160); assert(S.cover === 1 && BM.SNOW_UNIFORMS.snAmt.value === 1, 'until it lies white');
+  const steps = []; const step = game.audio.step; game.audio.step = s => steps.push(s);
+  game.keys.KeyW = true; run(5); game.keys.KeyW = false; game.audio.step = step;
+  assert(steps.length > 3 && steps.every(s => s === 'snow'), 'steps crunch in it');
+  assert(S.printMesh.count > 3, 'and leave footprints');
+  game.teleport(0.5, 0, 9, 0); const steps2 = []; game.audio.step = s => steps2.push(s); game.keys.KeyW = true; run(3); game.keys.KeyW = false; game.audio.step = step;
+  assert(steps2.length && steps2.every(s => s !== 'snow'), 'but not indoors');
+  BM.applyNight(game, 'clear'); run(30);
+  assert(S.falling < 0.1 && S.cover < 1 && S.cover > 0.5, 'when it stops, it slowly goes');
+  assert(game.frameErrors === 0, 'no errors');
+  return 'snow falls, settles over a few minutes, takes footprints, crunches outside only, and melts when it stops';
 });
 
 suite('flood', () => {

@@ -1001,13 +1001,15 @@ suite('panel', () => {
   const ck = game.clock_, c0 = ck.chimes; ck.c.time = Math.ceil(ck.c.time / 900) * 900 - 1; run(3);
   assert(ck.chimes === c0 + 1 && !(game.chimeBusyUntil > game.time + 1), 'off: the quarter passes in silence');
   tog('more:tower'); assert(!game.towerOff, 'and on');
-  const seen = new Set(); for (let i = 0; i < 5; i++) { tog('more:towerTune'); seen.add(game.chimeTunes.tower); }
-  assert(seen.size === 5 && game.chimeTunes.tower === 'westminster', 'the tower cycles through all five tunes');
+  const seen = new Set(); for (let i = 0; i < BM.CHIME_ORDER.length; i++) { tog('more:towerTune'); seen.add(game.chimeTunes.tower); }
+  assert(seen.size === 6 && game.chimeTunes.tower === 'westminster', 'the tower cycles through all six tunes');
   tog('more:towerTune'); assert(game.chimeTunes.tower === 'whittington' && row('more:towerTune').value === 'WHITTINGTON', 'Whittington');
   const bells = []; const bell = game.audio.bell; game.audio.bell = (f, gn, w, d) => bells.push(f);
   BM.ringChime(game.audio, 'whittington', 1, 0, {}); assert(bells.length === 8, 'Whittington: eight bells to the quarter');
   bells.length = 0; BM.ringChime(game.audio, 'westminster', 0, 3, {}); assert(bells.length === 16 + 3, 'Westminster: sixteen notes and three strokes at three');
   bells.length = 0; BM.ringChime(game.audio, 'stmichael', 2, 0, {}); assert(bells.length === 16, "St Michael's: two changes at the half");
+  bells.length = 0; BM.ringChime(game.audio, 'avemaria', 1, 0, {}); const q1 = bells.length; bells.length = 0; BM.ringChime(game.audio, 'avemaria', 0, 0, {});
+  assert(q1 === 6 && bells.length === 24, 'Ave Maria: a quarter of the tune at the quarter, all of it at the hour');
   bells.length = 0; BM.ringChime(game.audio, 'hours', 2, 0, {}); BM.ringChime(game.audio, 'off', 0, 5, {}); assert(bells.length === 0, 'hours only and silent');
   game.audio.bell = bell;
   tog('more:longcaseTune'); assert(game.chimeTunes.longcase === 'whittington', 'the grandfather clock has its own tune');
@@ -1018,7 +1020,7 @@ suite('panel', () => {
   tog('more:flood'); assert(game.flood.rising && /RISING/.test(row('more:flood').value), 'the flood rises from the panel');
   tog('more:flood'); assert(!game.flood.rising, 'and drains');
   run(60); assert(game.frameErrors === 0, 'no errors');
-  return 'status line; fires, fans, music, storm doors, garage, lift; the tower on and off; 5 tunes on each clock; weather, time, flood';
+  return 'status line; fires, fans, music, storm doors, garage, lift; the tower on and off; 6 tunes on each clock; weather, time, flood';
 });
 
 suite('flood', () => {

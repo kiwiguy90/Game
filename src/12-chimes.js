@@ -10,6 +10,10 @@
      named for St Mary-le-Bow; the house-clock form on eight rods).
    - St Michael's: eight bells, four changes (the house-clock form of the
      chimes of St Michael's, Charleston).
+   - Ave Maria: built on the opening of Schubert's Ave Maria (1825), the
+     "A - ve Ma - ri - a" phrase, played a quarter of the tune at the
+     quarter, half at the half, and the whole of it at the hour, the way
+     the German and French chiming clocks play it.
    - Hours only: no quarters, the hour bell alone.
    - Silent.
    ========================================================================== */
@@ -43,11 +47,19 @@ const TUNES = {
     quarters: { 1: [0], 2: [1, 2], 3: [3, 0, 1], 0: [0, 1, 2, 3] },
     hour: hz(48), gap: 0.5,
   },
+  avemaria: {
+    name: 'Ave Maria',
+    bells: scale(58, [0, 2, 4, 5, 7, 9, 11, 12, 14, 16, 17]),   // B flat major, eleven bells
+    rows: [[8, 7, 8, 10, 9, 8], [8, 9, 10, 11, 10, 9], [9, 10, 9, 8, 7, 8], [5, 6, 7, 8, 9, 8]],
+    lens: [[2, 0.5, 1, 2, 1, 2], [1, 1, 1, 2, 1, 2], [1, 1, 1, 1, 1, 2], [1, 1, 1, 1, 1.5, 2.5]],   // the long notes: "A——ve Ma——ri-a"
+    quarters: { 1: [0], 2: [0, 1], 3: [0, 1, 2], 0: [0, 1, 2, 3] },
+    hour: hz(46), gap: 0.55,
+  },
   hours: { name: 'Hours only', bells: [], rows: [], quarters: { 1: [], 2: [], 3: [], 0: [] }, hour: hz(52), gap: 0.9 },
   off: { name: 'Silent', bells: [], rows: [], quarters: { 1: [], 2: [], 3: [], 0: [] }, hour: 0, gap: 0.9 },
 };
 BM.CHIMES = TUNES;
-BM.CHIME_ORDER = ['westminster', 'whittington', 'stmichael', 'hours', 'off'];
+BM.CHIME_ORDER = ['westminster', 'whittington', 'stmichael', 'avemaria', 'hours', 'off'];
 
 /* Ring a quarter (0 = the hour) on a clock's voice. Returns how long it takes, in seconds.
    voice: { octave (x2 per step), gain, decay, gapScale, hourGain, hourDecay, hourGap, hourMul, when } */
@@ -57,7 +69,7 @@ BM.ringChime = function (audio, key, quarter, hour, voice) {
   const oct = Math.pow(2, v.octave || 0), gap = T.gap * (v.gapScale || 1);
   let when = v.when || 0.4;
   for (const r of T.quarters[quarter] || []) {
-    for (const b of T.rows[r]) { audio.bell(T.bells[b - 1] * oct, v.gain || 0.5, when, v.decay || 2.6); when += gap; }
+    T.rows[r].forEach((b, i) => { audio.bell(T.bells[b - 1] * oct, v.gain || 0.5, when, v.decay || 2.6); when += gap * (T.lens ? T.lens[r][i] : 1); });
     when += gap * 0.55;
   }
   if (quarter === 0 && hour > 0 && T.hour) {

@@ -1114,6 +1114,16 @@ suite('halcyon', () => {
   BM.halcyonScene(game, 'party', true); run(4); assert(HC.show && HC.jets.some(J => J.h > 2), 'party: the fountain show plays');
   BM.halcyonScene(game, 'evening', true); assert(!HC.show, 'and stops for the evening');
   game.teleport(0, 0, -22, 0); game.keys.KeyW = true; run(3); game.keys.KeyW = false; assert(p.z > -24.2, 'you cannot walk into the pool');
+  // inside: the glass lift (hall, gallery, roof), the cinema, the car gallery
+  const lf = HC.lift; game.teleport(6.6, 0, 11.3, Math.PI / 2); run(1); game.keys.KeyW = true; run(1.2); game.keys.KeyW = false;
+  assert(BM.halcyonInLift(game), 'you step into the lift');
+  BM.halcyonLiftUse(game, 0); run(6); assert(lf.at === 1 && Math.abs(p.y - 4.2) < 0.01, 'it carries you up to the gallery');
+  p.yaw = -Math.PI / 2; game.keys.KeyW = true; run(1.5); game.keys.KeyW = false; assert(p.x > 6.5 && Math.abs(p.y - 4.2) < 0.01, 'and you step out onto the gallery: ' + p.x.toFixed(2));
+  game.teleport(4.7, 4.2, 11.3, 0); BM.halcyonLiftUse(game, 1); run(7); assert(lf.at === 2 && Math.abs(p.y - 8.4) < 0.01, 'and on up through the roof');
+  assert(lf.gates[2].t === 1 && lf.gates[0].wall.enabled && lf.gates[1].wall.enabled, 'its gates open only where the car is');
+  game.lightPanelToggle('smart:cinema'); run(4); assert(HC.cinema.dim === 1 && g.lights.filter(l => l.room === 'cinema' && l.smart).every(l => l.target < 0.2), 'a film: the cinema lights fade down');
+  game.lightPanelToggle('smart:cinema'); game.lightPanelToggle('smart:garage'); run(5); assert(HC.gdoors.every(d => d.t === 1 && !d.wall.enabled), 'the garage doors lift');
+  const a0 = HC.turntable.a; run(2); assert(HC.turntable.a > a0, 'the turntable turns');
   for (let i = 0; i < 200; i++) { const it = game.interactables[i % game.interactables.length]; game.standAt && game.standAt(it); if (it.act) it.act(game); game.update(1 / 10); }
   assert(game.frameErrors === 0, 'no errors');
   return 'gates, drive, glass house over three floors, ' + g.lights.length + ' lights in ten groups and ' + rows.filter(r => r.section === 'ROOMS').length + ' rooms';

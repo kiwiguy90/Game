@@ -24,10 +24,11 @@ const VOID = [-6, 6, 2, 14];                              // the atrium, open to
 const ST1 = { x0: -6, x1: -4.5, z0: 2, z1: 8.4 };         // the floating stairs, ground to first floor
 const ST2 = { x0: 6.2, x1: 7.7, z0: -4, z1: 2.4 };         // and on up to the roof, off the landing
 const SECTION = { x0: -70, x1: 70, z0: -40, z1: 100 };
+const LIFT = { x0: 3.8, x1: 5.6, z0: 10.4, z1: 12.2 };       // the glass lift, in the atrium (83-halcyon-inside.js)
 const START = { x: 0, y: 0, z: 107, yaw: 0 };
 const LAKE = { cx: 0, cz: -110, y: -0.45 };
 
-BM.HALCYON = { H, GA, F1, ROOF, START, LAKE, SECTION };
+BM.HALCYON = { H, GA, F1, ROOF, START, LAKE, SECTION, LIFT, VOID };
 BM.storedWorld = () => { try { return window.localStorage.getItem('bm-world') || 'manor'; } catch (e) { return 'manor'; } };
 BM.chooseWorld = w => { try { window.localStorage.setItem('bm-world', w); } catch (e) { /* only this visit */ } };
 
@@ -244,7 +245,7 @@ BM.buildHalcyon = function (B, game) {
   B.floor(M.concrete, H.x0, H.x1, H.z0, H.z1, F1, 0.3, [VOID]);
   B.boxE(M.oak, H.x0, VOID[0], F1 - 0.005, F1 + 0.01, H.z0, H.z1); B.boxE(M.oak, VOID[1], H.x1, F1 - 0.005, F1 + 0.01, H.z0, H.z1); B.boxE(M.oak, VOID[0], VOID[1], F1 - 0.005, F1 + 0.01, H.z0, VOID[2]);
   B.levelName = 'attic';
-  B.floor(M.deck, H.x0 - 1.5, H.x1 + 1.5, H.z0 - 1.5, H.z1 + 1.5, ROOF, 0.3, [[ST2.x0, ST2.x1, ST2.z0, ST2.z1]]);
+  B.floor(M.deck, H.x0 - 1.5, H.x1 + 1.5, H.z0 - 1.5, H.z1 + 1.5, ROOF, 0.3, [[ST2.x0, ST2.x1, ST2.z0, ST2.z1], [LIFT.x0, LIFT.x1, LIFT.z0, LIFT.z1]]);
   // the deep fascia round the overhang: the roof seems to float
   for (const [x0, x1, z0, z1] of [[H.x0 - 1.5, H.x1 + 1.5, H.z1, H.z1 + 1.5], [H.x0 - 1.5, H.x1 + 1.5, H.z0 - 1.5, H.z0], [H.x1, H.x1 + 1.5, H.z0, H.z1], [H.x0 - 1.5, H.x0, H.z0, H.z1]]) B.boxE(M.charcoal, x0, x1, ROOF - 0.6, ROOF - 0.3, z0, z1);
   B.levelName = 'ground';
@@ -290,7 +291,7 @@ BM.buildHalcyon = function (B, game) {
   glassWall(B, 'x', H.z0, H.x0, H.x1, F1, ROOF - 0.3);
   // the gallery round the atrium: a glass balustrade
   solid(B, M.glass, ST1.x1, VOID[1], F1, F1 + 1.05, VOID[2] - 0.02, VOID[2] + 0.02, 'balustrade');
-  solid(B, M.glass, VOID[1] - 0.02, VOID[1] + 0.02, F1, F1 + 1.05, VOID[2], H.z1 - 0.3, 'balustrade');
+  solid(B, M.glass, VOID[1] - 0.02, VOID[1] + 0.02, F1, F1 + 1.05, VOID[2], LIFT.z0, 'balustrade'); solid(B, M.glass, VOID[1] - 0.02, VOID[1] + 0.02, F1, F1 + 1.05, LIFT.z1, H.z1 - 0.3, 'balustrade');   // (open where the lift's bridge meets it)
   solid(B, M.glass, VOID[0] - 0.02, VOID[0] + 0.02, F1, F1 + 1.05, ST1.z1, H.z1 - 0.3, 'balustrade');
   // bedrooms on the lake side, a study and a bathroom at the front
   B.room = 'master suite';
@@ -393,6 +394,7 @@ BM.buildHalcyon = function (B, game) {
   B.levelName = 'ground'; B.room = 'house';
   BM.buildHalcyonSmart(B, game);
   BM.buildHalcyonOutside(B, game);
+  BM.buildHalcyonInside(B, game);
 };
 BM.halcyonMats = mats;
 BM.halcyonLed = (B, game, o) => led(B, game, o);
@@ -425,7 +427,8 @@ BM.halcyonAfterFx = function (game) {
   let n = 0, on = 0; const k = HC.inside || (HC.inside = game.grid.lights.filter(l => l.smart));
   for (const l of k) { n++; if (l.intensity > 0.05) on += Math.min(1, l.intensity / Math.max(0.01, l.target || 1)); }
   const f = n ? on / n : 0, inHouse = game.ctx && game.ctx.zone === 'house';
-  game.fx.hemi.intensity += (inHouse ? 0.55 : 0.08) * f * HC.bright;
+  const p = game.player, inCinema = HC.cinema && p.x > 14 && p.z > 2 && p.y < 4 && inHouse;
+  game.fx.hemi.intensity += (inHouse ? 0.55 : 0.08) * f * HC.bright * (inCinema ? 1 - 0.9 * HC.cinema.dim : 1);
   if (inHouse) game.fx.hemi.color.lerp(HC.tint || (HC.tint = new THREE.Color(0xffe2c0)), 0.5 * f);
   const gl = mats().glazing; gl.emissive.setHex(HC.glow || 0xffd9a8).multiplyScalar(0.11 * f * HC.bright * (1 + 2.5 * (HC.frost || 0)));
 };
@@ -482,5 +485,6 @@ BM.updateHalcyon = function (game, dt) {
   if (HC.fountainWater) HC.fountainWater.position.y = 0.46 + Math.sin(HC.t * 2) * 0.004;
   BM.updateHalcyonSmart(game, dt);
   BM.updateHalcyonOutside(game, dt);
+  BM.updateHalcyonInside(game, dt);
 };
 })();

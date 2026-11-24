@@ -25,6 +25,10 @@ requests. There is no build step.
 | P | Phone (objective and documents) |
 | L | Show / hide the lighting panel |
 | O / I | Master switches: all outside supply (the lodge), all inside supply (MAIN) |
+| G | Open or close the main gates from anywhere (needs the lodge supply) |
+| K | Lock or unlock the side gate from anywhere (needs the lodge supply) |
+| V / X / Z | Every door / every window / every pair of curtains in the house, open or closed, from anywhere |
+| F9 | The flood (a test run); F9 again runs the pumps. Swimming: Space up, C down |
 | 1 – 0 | Switch an estate lighting group from anywhere (while no panel is open) |
 | Esc | Pause: mouse sensitivity, invert, volume, field of view, graphics, objective, start again |
 

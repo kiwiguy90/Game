@@ -25,7 +25,7 @@
   #lights .hd { display: flex; justify-content: space-between; color: #e8c070; font-weight: bold; letter-spacing: .06em; margin: 6px 2px 4px; cursor: pointer; }
   #lights .hd:first-child { margin-top: 0; }
   #lights .sup { font-weight: normal; font-size: 11px; color: #9a8a68; }
-  #lights .r { display: grid; grid-template-columns: 14px 16px 1fr 30px; align-items: center; gap: 3px; padding: 2px 3px; border-radius: 3px; cursor: pointer; }
+  #lights .r { display: grid; grid-template-columns: 14px 16px 1fr 58px; align-items: center; gap: 3px; padding: 2px 3px; border-radius: 3px; cursor: pointer; }
   #lights .r:hover { background: rgba(255,210,140,.10); }
   #lights.active { border-color: #c8a060; box-shadow: 0 0 22px rgba(232,192,112,.35); }
   #lights .r.sel { background: rgba(255,210,140,.22); outline: 1px solid rgba(232,192,112,.6); }
@@ -12412,7 +12412,7 @@ class UI {
       row('← → R F', 'turn, look up and down without a mouse') + row('E', 'use, open, read, climb, row') +
       row('T', 'torch on and off') + row('P', 'your phone: notes, photos of documents, Eleanor\'s trail') + row('M', 'the estate plan: where you are, where you have been, what is lit') +
       row('L', 'show or hide the lighting panel') + row('Tab', 'free the mouse to click the lighting panel (↑ ↓ Enter work too)') +
-      row('O / I', 'outside and inside master switches') + `<div class="hint" style="margin:6px 0 4px">Estate lights, from anywhere once the lodge supply is on:<br>${estate}</div>` +
+      row('O / I', 'outside and inside master switches') + row('G', 'open or close the main gates, from anywhere') + row('K', 'lock or unlock the side gate, from anywhere') + row('V / X / Z', 'every door, every window, every pair of curtains in the house: open or closed, from anywhere') + row('F9', 'the flood (a test run): F9 again runs the pumps · Space / C swim up and down') + `<div class="hint" style="margin:6px 0 4px">Estate lights, from anywhere once the lodge supply is on:<br>${estate}</div>` +
       row('Esc', 'pause and settings: weather, time of day, brightness') + row('H', 'this card') +
       '<div class="hint">H, Esc or E to close</div>';
   }
@@ -12470,10 +12470,10 @@ class UI {
         html += `<div class="hd"><span>${section}</span><span class="sup">${r.supply}</span></div>`;
       }
       const dot = r.lit ? 'lit' : r.warming ? 'warm' : '';
-      html += `<div class="r${r.live ? '' : ' dead'}${active && i === this.lightsSel ? ' sel' : ''}" data-k="${r.k}"><span class="dot ${dot}"></span><span class="k">${r.key || ''}</span><span>${r.name}</span><span class="st ${r.on ? 'on' : 'off'}">${r.on ? 'ON' : 'OFF'}</span></div>`;
+      html += `<div class="r${r.live ? '' : ' dead'}${active && i === this.lightsSel ? ' sel' : ''}" data-k="${r.k}"><span class="dot ${dot}"></span><span class="k">${r.key || ''}</span><span>${r.name}</span><span class="st ${r.on ? 'on' : 'off'}">${r.on ? r.onText || 'ON' : r.offText || 'OFF'}</span></div>`;
     }
     html += active ? '<div class="hint">Click a row to switch it · ↑ ↓ and Enter · Tab or Esc to look around again</div>'
-      : '<div class="hint">Tab to use the mouse here · O / I masters · 1–0 - = [ ] estate · L hide</div>';
+      : '<div class="hint">Tab to use the mouse here · O / I masters · 1–0 - = [ ] estate · G gates · K side gate · V doors · X windows · Z curtains · L hide</div>';
     if (html !== this.lightsHtml) { el.innerHTML = html; this.lightsHtml = html; }
   }
   update(dt) {
@@ -12689,6 +12689,16 @@ class Game {
     });
     const allOn = this.estateGroups.every(([k]) => this.estateGroupOn(k));
     rows.push({ section: 'ESTATE', supply: g.lodge ? 'lodge supply ●' : 'no supply ○', k: 'estate-all', key: '', name: allOn ? 'All estate lights off' : 'All estate lights on', on: allOn, lit: false, live: g.lodge });
+    const gs = this.gates, gl = g.lodge && !gs.lockedIn, moving = gs.closing || (gs.open && gs.t < 1);
+    rows.push({ section: 'GATES', supply: g.lodge ? 'lodge supply ●' : 'no supply ○', k: 'gate:main', key: 'G', name: 'Main gates', on: gs.open && !gs.closing, onText: 'OPEN', offText: gs.lockedIn ? 'BOLTED' : 'CLOSED', lit: gs.open && gs.t >= 1 && !gs.closing, warming: moving, live: gl });
+    if (this.sideGate) rows.push({ section: 'GATES', supply: g.lodge ? 'lodge supply ●' : 'no supply ○', k: 'gate:side', key: 'K', name: 'Side gate', on: !this.sideGate.locked, onText: 'UNLOCKED', offText: 'LOCKED', lit: !this.sideGate.locked, warming: false, live: gl });
+    {
+      const ds = this.houseDoors(), ws = this.houseWindows(), cs = this.houseCurtains();
+      const nOpen = ds.filter(d => d.moving ? d.target : d.open).length, wOpen = ws.filter(w => w.open).length, cDrawn = cs.filter(w => w.curtains.drawn).length;
+      rows.push({ section: 'HOUSE', supply: '', k: 'house:doors', key: 'V', name: 'All doors', on: nOpen > 0, onText: 'OPEN', offText: 'CLOSED', lit: nOpen > 0, warming: false, live: true });
+      rows.push({ section: 'HOUSE', supply: '', k: 'house:windows', key: 'X', name: 'All windows', on: wOpen > 0, onText: 'OPEN', offText: 'CLOSED', lit: wOpen > 0, warming: false, live: true });
+      rows.push({ section: 'HOUSE', supply: '', k: 'house:curtains', key: 'Z', name: 'All curtains', on: cDrawn === 0, onText: 'OPEN', offText: 'CLOSED', lit: cDrawn === 0, warming: false, live: true });
+    }
     const houseSupply = g.live('main') ? 'house supply ●' : 'no supply ○';
     for (const it of this.interactables) {
       if (!it.switchVisual) continue;
@@ -12702,6 +12712,8 @@ class Game {
     const [kind, id] = k.split(':');
     if (kind === 'master') return id === 'outside' ? this.masterOutside() : this.masterInside();
     if (kind === 'estate') return this.toggleEstate(id);
+    if (kind === 'gate') return id === 'main' ? this.gateRemote() : this.sideGateRemote();
+    if (kind === 'house') return id === 'doors' ? this.allDoors() : id === 'windows' ? this.allWindows() : this.allCurtains();
     if (kind === 'room' && this.byId[id]) return this.byId[id].act(this);
   }
   estateGroupOn(k) { return this.estateLights[k].some(id => { const l = this.grid.light(id); return l && !l.dead && l.on; }); }
@@ -12765,6 +12777,32 @@ class Game {
       return;
     }
     this.audio.click(); this.ui.say('The gates are still moving.');
+  }
+  /* The gates from anywhere (G), like the estate lights: the lodge's gate motor on its own switch.
+     It needs the lodge supply, and once the gates have bolted behind you, it can do nothing. */
+  gateRemote() {
+    const gates = this.gates;
+    if (!this.grid.lodge) { this.audio.click(); this.ui.say('The gate control clicks. Nothing: there is no power at the lodge.'); return; }
+    if (gates.lockedIn) { this.audio.click(); this.ui.say('The gate control clicks. Out at the lane, nothing moves: the bolt is on the house side now.'); return; }
+    if (gates.escaping && gates.t < 1 && gates.open) { this.ui.say('The motor has them. Leave it.'); return; }
+    if (!gates.open && !gates.closing) { this.openGates(); return; }
+    if (gates.open && gates.t >= 1 && !gates.closing) {
+      gates.closing = true; gates.closeT = 0; gates.closeWait = 0; gates.lodgeLocked = true;
+      this.audio.lever();
+      const p = this.player; this.audio.gateCreak(0.6, GATE.close, Math.max(0.4, 1 - Math.hypot(p.x, p.z - 88) / 40));
+      this.ui.say('Out at the lane the gates begin to swing shut.', 4);
+      return;
+    }
+    this.audio.click(); this.ui.say('The gates are still moving.');
+  }
+  /* the side gate for people (K): locked or unlocked from anywhere, on the same supply */
+  sideGateRemote() {
+    const s = this.sideGate; if (!s) return;
+    if (!this.grid.lodge) { this.audio.click(); this.ui.say('The side gate control clicks. Nothing: there is no power at the lodge.'); return; }
+    if (this.gates.lockedIn) { this.audio.click(); this.ui.say('The side gate control clicks. Along the wall, nothing: it is bolted from the house side too.', 5); return; }
+    BM.lockSideGate(this, !s.locked);
+    this.audio.clunk(0.6);
+    this.ui.say(s.locked ? 'Along the wall, the side gate\'s bolt shoots home: locked.' : 'Along the wall by the gates, the side gate\'s bolt draws back with a clack: unlocked.', 4);
   }
   openGates() {
     if (this.gates.open) return;
@@ -12953,6 +12991,11 @@ class Game {
       else if (code === 'Enter' || code === 'Space' || code === 'KeyE') ui.toggleLightsSel();
       else if (code === 'KeyO') { this.masterOutside(); ui.lightsT = 0; }
       else if (code === 'KeyI') { this.masterInside(); ui.lightsT = 0; }
+      else if (code === 'KeyG') { this.gateRemote(); ui.lightsT = 0; }
+      else if (code === 'KeyK') { this.sideGateRemote(); ui.lightsT = 0; }
+      else if (code === 'KeyV') { this.allDoors(); ui.lightsT = 0; }
+      else if (code === 'KeyX') { this.allWindows(); ui.lightsT = 0; }
+      else if (code === 'KeyZ') { this.allCurtains(); ui.lightsT = 0; }
       else { const i = BM.ESTATE_KEYS.indexOf(code); if (i >= 0 && this.estateGroups[i]) this.toggleEstate(this.estateGroups[i][0]); }
       return;
     }
@@ -12967,6 +13010,11 @@ class Game {
     if (code === 'KeyL') { ui.lightsVisible = !ui.lightsVisible; ui.lightsT = 0; return; }
     if (code === 'KeyO' && !ui.mode) { this.masterOutside(); ui.lightsT = 0; return; }
     if (code === 'KeyI' && !ui.mode) { this.masterInside(); ui.lightsT = 0; return; }
+    if (code === 'KeyG' && !ui.mode && !this.intro && !this.outro) { this.gateRemote(); ui.lightsT = 0; return; }
+    if (code === 'KeyK' && !ui.mode && !this.intro && !this.outro) { this.sideGateRemote(); ui.lightsT = 0; return; }
+    if (code === 'KeyV' && !ui.mode && !this.intro && !this.outro) { this.allDoors(); ui.lightsT = 0; return; }
+    if (code === 'KeyX' && !ui.mode && !this.intro && !this.outro) { this.allWindows(); ui.lightsT = 0; return; }
+    if (code === 'KeyZ' && !ui.mode && !this.intro && !this.outro) { this.allCurtains(); ui.lightsT = 0; return; }
     { const i = BM.ESTATE_KEYS.indexOf(code);
       if (i >= 0 && !ui.mode && this.estateGroups[i]) { this.toggleEstate(this.estateGroups[i][0]); ui.lightsT = 0; return; } }
     if (ui.mode === 'phone' && (code === 'Escape' || code === 'KeyE')) { ui.close(); return; }
@@ -13191,6 +13239,33 @@ class Game {
     c.drawn = !c.drawn; c.target = c.drawn ? 1 : 0;
     this.audio.curtains && this.audio.curtains();
     this.ui.say(c.drawn ? 'The rings chatter along the pole and the room goes dim.' : 'The curtains come back in two heavy sweeps, and dust comes off them. The window is a black mirror.', 3);
+  }
+  /* The whole house at once, from anywhere, like the lights: every door (V), every window (X), every
+     pair of curtains (Z). If any are open they all close; if none are, they all open. One sound, not fifty. */
+  houseDoors() { return this.B.doors.filter(d => !(this.sideGate && d === this.sideGate.door)); }
+  houseWindows() { return this.B.windows.filter(w => w.sash && this.byId['win:' + w.id]); }
+  houseCurtains() { return this.B.windows.filter(w => w.curtains); }
+  allDoors() {
+    const ds = this.houseDoors(), open = !ds.some(d => d.moving ? d.target : d.open);
+    const A = this.audio, creak = A.doorCreak, groan = A.groan; A.doorCreak = A.groan = () => {};
+    let skipped = 0;
+    try { for (const d of ds) { if ((d.moving ? !!d.target : d.open) === open) continue; if (!open && this.inDoorway(d)) { skipped++; continue; } if (d.moving) d.target = open ? 1 : 0; else this.toggleDoor(d); } }
+    finally { A.doorCreak = creak; A.groan = groan; }
+    A.doorCreak && A.doorCreak(1.4, 0.6);
+    this.ui.say(open ? 'All through the house, door after door swings open on its hinges.' : 'All through the house, door after door swings shut — the latches click home, one after another, further and further away.' + (skipped ? ' Not the one you are standing in.' : ''), 4);
+  }
+  allWindows() {
+    const ws = this.houseWindows(), open = !ws.some(w => w.open);
+    for (const w of ws) w.open = open;
+    this.openWindows = open ? ws.slice() : [];
+    this.audio.sash && this.audio.sash(open);
+    this.ui.say(open ? 'All over the house the sashes go up. The rain is suddenly loud everywhere, and the cold comes in.' : 'All over the house the sashes come down. The rain goes quiet again behind the glass.', 4);
+  }
+  allCurtains() {
+    const cs = this.houseCurtains(), draw = !cs.some(w => w.curtains.drawn);
+    for (const w of cs) { w.curtains.drawn = draw; w.curtains.target = draw ? 1 : 0; }
+    this.audio.curtains && this.audio.curtains();
+    this.ui.say(draw ? 'In every room the curtains sweep across, and the house closes its eyes.' : 'In every room the curtains sweep back. Every window is a black mirror now.', 4);
   }
   /* The spare goes on: the jack, the nuts, the wheel. */
   changeWheel() {

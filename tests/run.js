@@ -924,6 +924,47 @@ suite('nights', () => {
   return 'storm, fog and moonlit nights; the help card; the bells; her room; the map';
 });
 
+suite('gate keys', () => {
+  // G and K work the gates from anywhere, like the estate lights: on the lodge supply, and never once you are bolted in
+  const env = H.load({ quiet: true });
+  const { game } = env, g = game.grid, gs = game.gates;
+  game.ui.mode = null; game.intro = null; game.teleport(-11, 0, 82, 0);
+  const run = s => { for (let i = 0; i < s * 10; i++) game.update(1 / 10); };
+  if (g.lodge) g.setLodge(false);
+  game.keyDown('KeyG'); assert(!gs.open && /no power/.test(game.ui.el.msg.textContent), 'no lodge supply, no gates');
+  g.setLodge(true);
+  game.keyDown('KeyG'); assert(gs.open, 'G opens the gates'); run(30); assert(gs.t >= 1, 'and they swing right open');
+  let rows = game.lightPanelRows(), main = rows.find(r => r.k === 'gate:main');
+  assert(main && main.on && main.onText === 'OPEN' && main.key === 'G', 'the lighting panel shows them open');
+  game.keyDown('KeyG'); assert(gs.closing, 'G again shuts them'); run(30); assert(!gs.open && !gs.lockedIn, 'shut, and you are not locked in by it');
+  game.lightPanelToggle('gate:main'); assert(gs.open, 'clicking the row works too'); run(30);
+  const side = game.sideGate, was = side.locked;
+  game.keyDown('KeyK'); assert(side.locked === !was, 'K locks or unlocks the side gate');
+  game.keyDown('KeyK'); assert(side.locked === was, 'and back');
+  assert(game.lightPanelRows().some(r => r.k === 'gate:side' && r.key === 'K'), 'the side gate is on the panel');
+  gs.open = false; gs.closing = false; gs.lockedIn = true;
+  game.keyDown('KeyG'); assert(!gs.open && /house side/.test(game.ui.el.msg.textContent), 'bolted in: G can do nothing');
+  game.keyDown('KeyK'); assert(game.frameErrors === 0, 'no errors');
+  // V, X, Z: every door, window and pair of curtains in the house
+  game.teleport(0, 0, 40, 0);
+  const ds = game.houseDoors(), ws = game.houseWindows(), cs = game.houseCurtains();
+  assert(ds.length > 20 && ws.length > 20 && cs.length > 10, 'doors, windows and curtains to work');
+  const anyOpen = () => ds.some(d => d.moving ? d.target : d.open);
+  if (!anyOpen()) game.keyDown('KeyV');
+  game.keyDown('KeyV'); run(4); assert(!anyOpen() && ds.every(d => !d.open), 'V shuts every door');
+  game.keyDown('KeyV'); run(4); assert(ds.every(d => d.open), 'V again opens every one');
+  if (ws.some(w => w.open)) game.keyDown('KeyX');
+  game.keyDown('KeyX'); run(2); assert(ws.every(w => w.open && w.sashT === 1) && game.openWindows.length === ws.length, 'X opens every window');
+  game.keyDown('KeyX'); run(2); assert(ws.every(w => !w.open) && !game.openWindows.length, 'X again shuts them');
+  if (cs.some(w => w.curtains.drawn)) game.keyDown('KeyZ');
+  game.keyDown('KeyZ'); run(2); assert(cs.every(w => w.curtains.drawn && w.curtains.t === 1), 'Z draws every pair of curtains');
+  game.keyDown('KeyZ'); run(2); assert(cs.every(w => !w.curtains.drawn && w.curtains.t === 0), 'Z again opens them');
+  assert(['house:doors', 'house:windows', 'house:curtains'].every(k => game.lightPanelRows().some(r => r.k === k)), 'all three on the panel');
+  game.lightPanelToggle('house:curtains'); assert(cs.every(w => w.curtains.drawn), 'and the rows work');
+  assert(game.frameErrors === 0, 'no errors');
+  return 'G gates, K side gate (not once you are bolted in); V every door, X every window, Z every pair of curtains; from anywhere and from the panel';
+});
+
 suite('flood', () => {
   // the flood, as a test run on F9: up from the cellar, over the whole estate, to the top of the roof
   const env = H.load({ quiet: true });

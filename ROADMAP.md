@@ -39,6 +39,16 @@ The game should not get too hard. For anything we add:
       slowly, until you can walk down there. Things the water carried are
       left on the floor as it goes down (letters, a doll, a chair), and some
       can be picked up and read.
+- [ ] **The house floods on the storm night.** Only on the storm night, while
+      you are inside: water comes in under the doors and up from the cellar
+      and rises slowly across the ground floor to waist height. You can still
+      wade through it, slowly; furniture floats and papers drift. As the water
+      climbs, it gets into the wiring and the fittings: the lights flicker,
+      fizz, crackle and zap, some pop with a bang and a flash, and they go out
+      — the lowest first (floor lamps, table lamps, sockets), then the wall
+      lights, until the ground floor is dark. Upstairs stays dry and lit. No
+      timer and no way to lose: it is an event, not a race. The cellar pumps
+      drain it away again afterwards.
 - [ ] **Dimmer switches.** Turn the lights up and down in the main rooms,
       not only on and off.
 - [ ] **The storm cuts one part of the house at a time — rarely.** Not every

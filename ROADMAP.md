@@ -32,6 +32,13 @@ The game should not get too hard. For anything we add:
       find what opens the doors and the way back out to the grounds. (Our
       own house and story, not copied from any film or book. The house
       changing and growing is under "Maybe later".)
+- [ ] **The cellar is flooded.** The storm has flooded the cellar, and the
+      gate switch you need to get out is down there. You go down the steps
+      with the torch and stop at the water's edge. To get in, you turn on the
+      power to the pumps; they thump into life and the water drains away
+      slowly, until you can walk down there. Things the water carried are
+      left on the floor as it goes down (letters, a doll, a chair), and some
+      can be picked up and read.
 - [ ] **Dimmer switches.** Turn the lights up and down in the main rooms,
       not only on and off.
 - [ ] **The storm cuts one part of the house at a time — rarely.** Not every

@@ -1022,6 +1022,11 @@ suite('panel', () => {
   tog('more:poolpumps'); tog('more:cascade'); tog('more:fountain'); run(8);
   assert(!game.fountainFx.on && !game.poolFx.on && !game.pond.fallOn && game.waterFx.jets.every(j => !j.visible), 'switched off, it all stops');
   tog('more:poolpumps'); tog('more:cascade'); tog('more:fountain'); run(8); assert(game.fountainFx.on && game.pond.fallOn && game.poolFx.on, 'and on again');
+  // fireworks over the lake: a minute's show, then quiet
+  tog('more:fireworks'); assert(game.fireworks.on && row('more:fireworks').on, 'the show starts');
+  let most = 0, flashes = 0, lf = 0; for (let i = 0; i < 700; i++) { game.update(1 / 10); most = Math.max(most, game.fireworks.P.length); if (game.fireworks.flash > lf + 0.5) flashes++; lf = game.fireworks.flash; }
+  assert(most > 300 && flashes > 20, 'rockets burst: ' + flashes + ' bursts, up to ' + most + ' sparks');
+  assert(!game.fireworks.on && game.fireworks.P.length === 0 && game.fireworks.light.intensity === 0, 'then it is over, and dark again');
   // time passing: an hour a minute
   BM.setTimeOfDay(game, 'night'); tog('more:flow'); assert(game.timeFlow, 'time passes');
   const h0 = game.dayHour; run(120); assert(Math.abs(game.dayHour - h0 - 2) < 0.2, 'an hour a minute');
@@ -1031,7 +1036,7 @@ suite('panel', () => {
   tog('more:flood'); assert(game.flood.rising && /RISING/.test(row('more:flood').value), 'the flood rises from the panel');
   tog('more:flood'); assert(!game.flood.rising, 'and drains');
   run(60); assert(game.frameErrors === 0, 'no errors');
-  return 'status line; fires, fans, music, storm doors, garage, lift; the tower on and off; 6 tunes on each clock; the water; weather, time, time passing, flood';
+  return 'status line; fires, fans, music, storm doors, garage, lift; the tower on and off; 6 tunes on each clock; the water; fireworks; weather, time, time passing, flood';
 });
 
 suite('snow', () => {

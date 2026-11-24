@@ -273,6 +273,7 @@ class Game {
     BM.buildFlood(this.B, this);
     BM.buildSnow(this.B, this);
     BM.buildWaterSwitches(this.B, this);
+    BM.buildFireworks(this.B, this);
     this.map = new BM.EstateMap(this);
     BM.buildGlimpses(this.B, this);
     this.interactables = this.B.interactables;
@@ -788,6 +789,7 @@ class Game {
     BM.updatePanel(this);
     BM.updateSnow(this, dt);
     BM.updateWaterSwitches(this, dt, this.time);
+    BM.updateFireworks(this, dt);
     this.updateDoors(dt);
     this.updateStorm(dt);
     if (this.clock_) { this.clock_.update(dt); this.clock_.tickHammers(); }
@@ -803,6 +805,7 @@ class Game {
     BM.updateWild(this, dt, this.time);   // after the effects: weather and time of day add their light on top
     BM.floodAfterFx(this, dt);            // and under the flood, murk
     BM.snowAfterFx(this);                 // and snow on the ground throws the light back
+    BM.fireworksAfterFx(this);            // and a big burst colours the sky
     this.audio.update(dt, ctx);
     this.ui.update(dt);
     this.updateCamera();

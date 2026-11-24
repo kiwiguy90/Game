@@ -62,6 +62,8 @@ BM.panelRows = function (game) {
     const live = g.lodge, wr = (k, name, which) => rows.push({ section: 'WATER', supply: live ? 'lodge supply ●' : 'no supply ○', k: 'more:' + k, name, on: !!game.waterSw[which], onText: 'ON', offText: 'OFF', lit: BM.waterRunning(game, which), warming: false, live });
     wr('fountain', 'Garden fountain', 'fountain'); wr('cascade', 'Pond waterfall', 'cascade'); wr('poolpumps', 'Pool pumps & jets', 'pool');
   }
+  // the show
+  if (game.fireworks) { const fw = game.fireworks; rows.push({ section: 'SHOW', supply: '', k: 'more:fireworks', name: 'Fireworks over the lake', on: fw.on, onText: 'ON', offText: 'READY', lit: fw.on, warming: false, live: true }); }
   // the clocks
   const ck = game.clock_;
   rows.push({ section: 'CLOCKS', supply: '', k: 'more:tower', name: 'Clock tower', on: !game.towerOff, onText: 'ON', offText: 'OFF', lit: !game.towerOff && !!(ck && ck.powered), warming: false, live: !!(ck && ck.powered) });
@@ -139,6 +141,8 @@ BM.panelToggle = function (game, k) {
     ui.say({ night: 'Night.', dusk: 'Dusk: the last of the light going.', dawn: 'Dawn: grey light in the east.', day: 'Day.' }[n] || n, 3);
   } else if (id === 'fountain' || id === 'cascade' || id === 'poolpumps') {
     BM.toggleWater(game, id === 'poolpumps' ? 'pool' : id);
+  } else if (id === 'fireworks') {
+    BM.fireworksToggle(game);
   } else if (id === 'flow') {
     BM.setTimeFlow(game, !game.timeFlow); remember(game, 'timeFlow', game.timeFlow);
     A.click && A.click();

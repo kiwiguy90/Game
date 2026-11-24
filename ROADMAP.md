@@ -73,15 +73,20 @@ The game should not get too hard. For anything we add:
 - [ ] **A plan of the house** in the study, showing where things are kept,
       with Eleanor's notes in the margins about what is hidden.
 
-- [ ] **Snow.** A new weather: snow falls and settles white on the lawns, roofs
+- [x] **Snow.** A new weather: snow falls and settles white on the lawns, roofs
       and drive; your footprints follow you; lit windows glow on the snow.
-- [ ] **Time passes by itself.** Night slowly turns to dawn, day, dusk and back
+- [x] **Time passes by itself.** Night slowly turns to dawn, day, dusk and back
       to night; the outside lights fade as the sun comes up.
-- [ ] **Fountains and water features on the panel.** The garden fountain, the
+- [x] **Fountains and water features on the panel.** The garden fountain, the
       pond waterfall and the pool jets on and off, with their sound. And the
       pool water should flow and move better.
-- [ ] **Fireworks over the lake**, from the panel, lighting the water, the house
+- [x] **Fireworks over the lake**, from the panel, lighting the water, the house
       and the towers in colour.
+
+- [ ] **A second game: the ultra-modern high-tech mansion.** Chosen on the title
+      screen instead of the haunted house. Just for exploring: no scares, no
+      escape — playing with the lights and the high-tech features of a modern
+      glass house. (To plan together: the house, the grounds, the features.)
 
 ## Maybe later
 

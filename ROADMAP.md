@@ -31,3 +31,22 @@ the garage.
       you have not been to.
 - [ ] **The hall phone rings at 3 a.m.** Nobody should be calling, and the
       line is supposed to be dead.
+- [ ] **Keys hidden around the house.** Some doors start locked; their keys
+      are in drawers, coat pockets and on hooks, each with a tag saying
+      which door it opens.
+- [ ] **A jack and a wheel brace to find.** Changing the tyre needs both, and
+      they are kept in different places (the garage, the stables). At the
+      moment the jack is in your car's boot; this changes that.
+- [ ] **The garage is locked.** Its key is somewhere in the house, so you
+      have to find it before you can get the tyre and the battery.
+- [ ] **A plan of the house** in the study, showing where things are kept,
+      with Eleanor's notes in the margins about what is hidden.
+
+## Maybe later
+
+Ideas to look at further down the track, not now.
+
+- The house changes: doors that lead somewhere different, a corridor that
+  grows, a room that was not there before, stairs that bring you back to
+  the same floor, windows that show the wrong view, a map that stops
+  matching, and lighting rooms to calm the house.

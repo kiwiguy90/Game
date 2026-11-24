@@ -73,9 +73,22 @@ The game should not get too hard. For anything we add:
 - [ ] **A plan of the house** in the study, showing where things are kept,
       with Eleanor's notes in the margins about what is hidden.
 
+- [ ] **Snow.** A new weather: snow falls and settles white on the lawns, roofs
+      and drive; your footprints follow you; lit windows glow on the snow.
+- [ ] **Time passes by itself.** Night slowly turns to dawn, day, dusk and back
+      to night; the outside lights fade as the sun comes up.
+- [ ] **Fountains and water features on the panel.** The garden fountain, the
+      pond waterfall and the pool jets on and off, with their sound. And the
+      pool water should flow and move better.
+- [ ] **Fireworks over the lake**, from the panel, lighting the water, the house
+      and the towers in colour.
+
 ## Maybe later
 
 Ideas to look at further down the track, not now.
+
+- Coloured floodlights: a panel row to change the house and tower floodlights
+  to red, blue, green, purple or warm white.
 
 - The house changes: doors that lead somewhere different, a corridor that
   grows, a room that was not there before, stairs that bring you back to

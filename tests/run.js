@@ -1016,6 +1016,12 @@ suite('panel', () => {
   // weather and time
   const w0 = game.night; tog('more:weather'); assert(game.night !== w0 && row('more:weather').value === BM.WEATHERS[game.night].toUpperCase(), 'the weather changes');
   const t0 = game.timeOfDay; tog('more:time'); assert(game.timeOfDay !== t0, 'the time of day changes');
+  // the water: fountain, waterfall, pool pumps and jets, each on its own switch
+  for (const k of ['fountain', 'cascade', 'poolpumps']) assert(row('more:' + k), 'a row for ' + k);
+  run(8); assert(game.fountainFx.on && game.poolFx.on && game.pond.fallOn && game.waterFx.jets.every(j => j.visible), 'with the lodge on, all the water runs, and the pool jets leap');
+  tog('more:poolpumps'); tog('more:cascade'); tog('more:fountain'); run(8);
+  assert(!game.fountainFx.on && !game.poolFx.on && !game.pond.fallOn && game.waterFx.jets.every(j => !j.visible), 'switched off, it all stops');
+  tog('more:poolpumps'); tog('more:cascade'); tog('more:fountain'); run(8); assert(game.fountainFx.on && game.pond.fallOn && game.poolFx.on, 'and on again');
   // time passing: an hour a minute
   BM.setTimeOfDay(game, 'night'); tog('more:flow'); assert(game.timeFlow, 'time passes');
   const h0 = game.dayHour; run(120); assert(Math.abs(game.dayHour - h0 - 2) < 0.2, 'an hour a minute');
@@ -1025,7 +1031,7 @@ suite('panel', () => {
   tog('more:flood'); assert(game.flood.rising && /RISING/.test(row('more:flood').value), 'the flood rises from the panel');
   tog('more:flood'); assert(!game.flood.rising, 'and drains');
   run(60); assert(game.frameErrors === 0, 'no errors');
-  return 'status line; fires, fans, music, storm doors, garage, lift; the tower on and off; 6 tunes on each clock; weather, time, time passing, flood';
+  return 'status line; fires, fans, music, storm doors, garage, lift; the tower on and off; 6 tunes on each clock; the water; weather, time, time passing, flood';
 });
 
 suite('snow', () => {

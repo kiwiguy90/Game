@@ -553,8 +553,10 @@ class Synth {
     const fp = { x: 0, y: 1, z: 24 };
     // the fountain, or the pool's weir, whichever is nearer and running
     const pf = game.poolFx && game.poolFx.on ? game.poolFx.pos : null;
-    const fv = game.fountainFx && game.fountainFx.on ? near(fp, 22) * 0.22 : 0, pv = pf ? near(pf, 24) * 0.26 : 0;
-    this.set('fountain', Math.max(fv, pv), pan(pv > fv ? pf : fp));
+    const fv = game.fountainFx && game.fountainFx.on ? near(fp, 22) * 0.22 : 0, pv = pf ? near(pf, 24) * 0.3 : 0;
+    const pd = game.pond, cv = pd && pd.fallOn && pd.fallPos ? near(pd.fallPos, 20) * 0.24 * pd.fallLevel : 0;   // and the pond's waterfall
+    const loud = Math.max(fv, pv, cv);
+    this.set('fountain', loud, pan(loud === cv && cv > 0 ? pd.fallPos : pv > fv ? pf : fp));
     // the lake: water slapping at the shore, the jetty and the boathouse, rising and falling
     const LK = BM.ESTATE_PLACES && BM.ESTATE_PLACES.LK;
     if (LK) {

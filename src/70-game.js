@@ -272,6 +272,7 @@ class Game {
     BM.buildHaunt(this.B, this);
     BM.buildFlood(this.B, this);
     BM.buildSnow(this.B, this);
+    BM.buildWaterSwitches(this.B, this);
     this.map = new BM.EstateMap(this);
     BM.buildGlimpses(this.B, this);
     this.interactables = this.B.interactables;
@@ -786,6 +787,7 @@ class Game {
     if (this.ui.mode !== 'title' && !this.intro) BM.updateFlood(this, dt);   // the water does not wait while you read
     BM.updatePanel(this);
     BM.updateSnow(this, dt);
+    BM.updateWaterSwitches(this, dt, this.time);
     this.updateDoors(dt);
     this.updateStorm(dt);
     if (this.clock_) { this.clock_.update(dt); this.clock_.tickHammers(); }

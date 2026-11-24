@@ -47,6 +47,8 @@ function rippleNormals() {
   return t;
 }
 
+BM.rippleNormals = rippleNormals;   // (the pools use it too)
+
 BM.buildFlood = function (B, game) {
   const scene = B.zones.mansion.parent, root = B.zones.mansion;
   const F = game.flood = { depth: BASE, rising: false, draining: false, said: {}, lights: [], fires: [], appliances: [], sparks: [], t: 0, swim: false, wade: 0, under: false };

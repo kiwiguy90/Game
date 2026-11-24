@@ -212,7 +212,7 @@ BM.buildFountain = function (B, game, cx, cz) {
 /* Per frame: the water runs while the garden circuit is live, and dies away slowly when it isn't. */
 BM.updateFountain = function (game, dt, t) {
   const f = game.fountainFx; if (!f || !f.rings) return false;
-  const on = game.grid.live('lodge') && game.estateGroupOn('garden');
+  const on = BM.waterRunning ? BM.waterRunning(game, 'fountain') : game.grid.live('lodge') && game.estateGroupOn('garden');   // its own switch on the panel (49y-water.js)
   f.on = on;
   f.level += ((on ? 1 : 0) - f.level) * Math.min(1, dt * (on ? 1.5 : 2));
   const u = f.mat.uniforms; u.time.value = t; u.level.value = f.level;

@@ -167,7 +167,7 @@ BM.updatePoolGarden = function (game, dt, t) {
   let k = 0;
   for (const id of ['pool-under-34', 'pool-under-30', 'pool-under-up']) { const l = game.grid.light(id); if (l && l.target > 0) k = Math.max(k, Math.min(1.2, l.intensity / l.target)); }
   for (const m of f.caustics) { m.uniforms.time.value = t; m.uniforms.level.value = k; }
-  f.on = game.grid.live('lodge') && game.estateGroupOn('pool');
+  f.on = BM.waterRunning ? BM.waterRunning(game, 'pool') : game.grid.live('lodge') && game.estateGroupOn('pool');   // the pumps have their own switch (49y-water.js)
   f.level += ((f.on ? 1 : 0) - f.level) * Math.min(1, dt * (f.on ? 0.8 : 1.5));
   if (f.flow.uniforms) { f.flow.uniforms.time.value = t; f.flow.uniforms.level.value = f.level; }
   const vis = f.level > 0.01;

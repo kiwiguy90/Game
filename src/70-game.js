@@ -119,7 +119,7 @@ class UI {
     this.mode = 'help'; this.el.panel.style.display = 'block';
     this.el.panelTitle.textContent = 'CONTROLS';
     const g = this.game, row = (k, t) => `<div style="display:flex;gap:12px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.06)"><span class="key" style="flex:0 0 5.2em">${k}</span><span>${t}</span></div>`;
-    const estate = g.estateGroups.map(([k], i) => `${BM.ESTATE_KEY_LABELS[i]} ${({ street: 'Street', gate: 'Gate', flood: 'Floodlights', drive: 'Drive', garden: 'Garden', pool: 'Pool', pond: 'Pond', garage: 'Coach house', shed: 'Shed', cemetery: 'Chapel', glasshouse: 'Glass house', lake: 'Lake', stables: 'Stables', folly: 'Folly' })[k] || k}`).join(' · ');
+    const estate = g.estateGroups.map(([k], i) => `${BM.ESTATE_KEY_LABELS[i]} ${({ street: 'Street', gate: 'Gate', flood: 'Floodlights', drive: 'Drive', garden: 'Garden', pool: 'Pool', pond: 'Pond', garage: 'Coach house', shed: 'Shed', cemetery: 'Chapel', glasshouse: 'Glass house', lake: 'Lake', stables: 'Stables', folly: 'Folly' })[k] || (g.estateGroups[i] || [])[1] || k}`).join(' · ');
     this.el.panelBody.style.fontSize = '13px';
     this.el.panelBody.innerHTML =
       row('Mouse', 'look round (click the view to capture the mouse)') + row('W A S D', 'move · Shift to run · Space to jump') +
@@ -235,7 +235,40 @@ class Game {
     this.clock = 41 * 60;
     this.frameErrors = 0;
     this.time = 0;
+    // which world: the haunted manor, or Halcyon House (the modern one, just for exploring)
+    this.world = this.opts.world || (BM.storedWorld ? BM.storedWorld() : 'manor');
+    if (this.world === 'modern') this.buildModern(); else this.buildManor();
+    this.interactables = this.B.interactables;
+    this.byId = {};
+    for (const it of this.interactables) this.byId[it.id] = it;
 
+    this.audio = new BM.Synth(this);
+    this.fx = new BM.FX(this);
+    this.fx.look = new BM.LightLook(this.fx, this);
+    this.clock_ = this.towerClock ? new BM.TowerClock(this) : null;
+    this.ui = new UI(this);
+    this.optStats = BM.optimize(this);
+    this.quality = new BM.Quality(s => this.applyQuality(s), this.opts.quality !== undefined ? this.opts.quality : 2);
+    this.applyQuality(this.quality.settings);
+    this.menu = BM.Menu ? new BM.Menu(this) : null; // pause, settings, mouse look
+    if (this.menu) this.menu.apply();
+    this.wireEvents();
+    this.stormTimer = -1;
+    this.climbing = null;
+    this.outro = null;
+    if (this.world === 'modern') BM.afterHalcyonInit(this);
+    this.updateCamera();
+    return this;
+  }
+  /* Halcyon House: its own grounds and house (80-halcyon.js), with the weather, the sky, snow and fireworks */
+  buildModern() {
+    BM.buildHalcyon(this.B, this);
+    BM.buildWild(this.B, this);
+    BM.buildSnow(this.B, this);
+    BM.buildFireworks(this.B, this);
+    this.map = null;
+  }
+  buildManor() {
     BM.buildGrounds(this.B, this);
     BM.buildCar(this.B, this);
     BM.buildMansion(this.B, this);
@@ -276,26 +309,6 @@ class Game {
     BM.buildFireworks(this.B, this);
     this.map = new BM.EstateMap(this);
     BM.buildGlimpses(this.B, this);
-    this.interactables = this.B.interactables;
-    this.byId = {};
-    for (const it of this.interactables) this.byId[it.id] = it;
-
-    this.audio = new BM.Synth(this);
-    this.fx = new BM.FX(this);
-    this.fx.look = new BM.LightLook(this.fx, this);
-    this.clock_ = this.towerClock ? new BM.TowerClock(this) : null;
-    this.ui = new UI(this);
-    this.optStats = BM.optimize(this);
-    this.quality = new BM.Quality(s => this.applyQuality(s), this.opts.quality !== undefined ? this.opts.quality : 2);
-    this.applyQuality(this.quality.settings);
-    this.menu = BM.Menu ? new BM.Menu(this) : null; // pause, settings, mouse look
-    if (this.menu) this.menu.apply();
-    this.wireEvents();
-    this.stormTimer = -1;
-    this.climbing = null;
-    this.outro = null;
-    this.updateCamera();
-    return this;
   }
 
   applyQuality(s) {
@@ -347,11 +360,13 @@ class Game {
 
   /* --------------------------------------------------- state queries ---- */
   zoneAt(x, y, z) {
+    if (this.world === 'modern') return BM.halcyonZone(x, y, z);
     if (y < -1) return 'house';
     if (x > -18.2 && x < 18.2 && z > -12.2 && z < 12.2) return 'house';
     return 'exterior';
   }
   visibleZones(y, zone) {
+    if (this.world === 'modern') return { exterior: true, mansion: true, estate: true };   // a glass house: you see out from everywhere
     if (y < -1) return { exterior: false, mansion: true, estate: false };
     return { exterior: true, mansion: true, estate: zone !== 'house' };
   }
@@ -360,6 +375,7 @@ class Game {
     return null;
   }
   objective() {
+    if (this.world === 'modern') return BM.halcyonObjective(this);
     const g = this.grid, s = this.story;
     const gates = this.gates;
     if (s.ended) return 'You are out.';
@@ -403,7 +419,7 @@ class Game {
     const short = { street: 'Street (lane)', gate: 'Gate', flood: 'Floodlights', drive: 'Drive lamps', garden: 'Garden', pool: 'Pool', pond: 'Pond', garage: 'Coach house', shed: 'Shed', cemetery: 'Cemetery & chapel', glasshouse: 'Glass house', lake: 'Lake & boathouse', stables: 'Stables', folly: 'Folly tower' };
     this.estateGroups.forEach(([k], i) => {
       const st = state(this.estateLights[k]);
-      rows.push(Object.assign({ section: 'ESTATE', supply: g.lodge ? 'lodge supply ●' : 'no supply ○', k: 'estate:' + k, key: BM.ESTATE_KEY_LABELS[i] || '', name: short[k] || k }, st, { live: g.lodge && st.live }));
+      rows.push(Object.assign({ section: 'ESTATE', supply: g.lodge ? 'lodge supply ●' : 'no supply ○', k: 'estate:' + k, key: BM.ESTATE_KEY_LABELS[i] || '', name: short[k] || (this.estateGroups[i] || [])[1] || k }, st, { live: g.lodge && st.live }));
     });
     const allOn = this.estateGroups.every(([k]) => this.estateGroupOn(k));
     rows.push({ section: 'ESTATE', supply: g.lodge ? 'lodge supply ●' : 'no supply ○', k: 'estate-all', key: '', name: allOn ? 'All estate lights off' : 'All estate lights on', on: allOn, lit: false, live: g.lodge });
@@ -501,6 +517,7 @@ class Game {
   /* The gates from anywhere (G), like the estate lights: the lodge's gate motor on its own switch.
      It needs the lodge supply, and once the gates have bolted behind you, it can do nothing. */
   gateRemote() {
+    if (this.world === 'modern') return BM.halcyonGate(this);
     const gates = this.gates;
     if (!this.grid.lodge) { this.audio.click(); this.ui.say('The gate control clicks. Nothing: there is no power at the lodge.'); return; }
     if (gates.lockedIn) { this.audio.click(); this.ui.say('The gate control clicks. Out at the lane, nothing moves: the bolt is on the house side now.'); return; }
@@ -680,7 +697,7 @@ class Game {
     if (ui.mode === 'title') {
       { const i = ['Digit1', 'Digit2', 'Digit3'].indexOf(code); if (i >= 0) { this.chooseNight(['storm', 'fog', 'clear'][i]); this.audio.start(); this.audio.theme(0.55); return; } }
       // with a night saved, only a deliberate key starts again: Enter or C continues, N begins a new night
-      if (BM.Save && BM.Save.has()) { if (code === 'Enter' || code === 'KeyC') this.continueGame(); else if (code === 'KeyN') this.begin(); return; }
+      if (this.world !== 'modern' && BM.Save && BM.Save.has()) { if (code === 'Enter' || code === 'KeyC') this.continueGame(); else if (code === 'KeyN') this.begin(); return; }
       this.begin(); return;
     }
     if (ui.mode === 'pause') { if (code === 'Escape' || code === 'KeyP') this.menu.resume(); return; }
@@ -722,6 +739,7 @@ class Game {
     if (code === 'Tab' && !ui.mode) { ui.openLights(); return; }
     if (code === 'Escape' && !ui.mode && this.menu) { this.menu.pause(); return; }
     if (ui.mode === 'map') { if (code === 'KeyM' || code === 'Escape' || code === 'KeyE' || code === 'Enter') ui.close(); return; }
+    if (code === 'KeyM' && !this.map) { this.ui.say('There is no map of Halcyon House: just explore.', 3); return; }
     if (code === 'KeyM' && (!ui.mode || ui.mode === 'phone')) { if (ui.mode) ui.close(); ui.mode = 'map'; this.map.open(); return; }
     if (ui.mode === 'help') { if (code === 'KeyH' || code === 'Escape' || code === 'KeyE' || code === 'Enter') ui.close(); return; }
     if (code === 'KeyH' && !ui.mode) { ui.help(); return; }
@@ -751,6 +769,7 @@ class Game {
     const d = typeof document !== 'undefined' && document.getElementById('night-blurb'); if (d) d.textContent = BM.NIGHTS[n].blurb;
   }
   begin() {
+    if (this.world === 'modern') { BM.beginHalcyon(this); return; }
     if (BM.Save) BM.Save.clear();
     this.audio.stopTheme && this.audio.stopTheme(5);
     this.ui.mode = null;
@@ -806,6 +825,7 @@ class Game {
     BM.floodAfterFx(this, dt);            // and under the flood, murk
     BM.snowAfterFx(this);                 // and snow on the ground throws the light back
     BM.fireworksAfterFx(this);            // and a big burst colours the sky
+    if (this.world === 'modern') BM.halcyonAfterFx(this);
     this.audio.update(dt, ctx);
     this.ui.update(dt);
     this.updateCamera();
@@ -874,6 +894,7 @@ class Game {
     if (c.t >= dur) { this.climbing = null; this.ui.fade(0); }
   }
   updateDoors(dt) {
+    if (this.world === 'modern') { this.updateHingedDoors(dt); BM.updateHalcyon(this, dt); return; }
     const g = this.gates, p = this.player;
     if (g.open && g.t < 1) {
       // bolts first, then a slow inward swing that drags and catches on the hinges
@@ -988,6 +1009,7 @@ class Game {
     this.ui.say(open ? 'All over the house the sashes go up. The rain is suddenly loud everywhere, and the cold comes in.' : 'All over the house the sashes come down. The rain goes quiet again behind the glass.', 4);
   }
   allCurtains() {
+    if (this.world === 'modern') return BM.halcyonBlinds(this);
     const cs = this.houseCurtains(), draw = !cs.some(w => w.curtains.drawn);
     for (const w of cs) { w.curtains.drawn = draw; w.curtains.target = draw ? 1 : 0; }
     this.audio.curtains && this.audio.curtains();
@@ -1207,10 +1229,22 @@ BM.boot = function (opts) {
   const title = document.getElementById('title');
   if (title) {
     // a saved night: Continue, or a new one; otherwise a click anywhere begins
-    const keys = title.querySelector('.keys'), saved = BM.Save && BM.Save.has();
+    const keys = title.querySelector('.keys'), modern = game.world === 'modern', saved = !modern && BM.Save && BM.Save.has();
+    // two worlds: the haunted manor, or Halcyon House; choosing the other reloads into it
+    const wb = document.createElement('div'); wb.className = 'worlds';
+    wb.innerHTML = '<button data-w="manor">Blackthorn Manor<small>the haunted house</small></button><button data-w="modern">Halcyon House<small>the modern house, to explore</small></button>';
+    title.insertBefore(wb, title.firstChild);
+    for (const b of wb.querySelectorAll('button')) { b.classList.toggle('on', b.dataset.w === game.world); b.addEventListener('click', e => { e.stopPropagation(); if (b.dataset.w !== game.world) { BM.chooseWorld(b.dataset.w); window.location.reload(); } }); }
+    wb.addEventListener('click', e => e.stopPropagation());
+    if (modern) {
+      const h1 = title.querySelector('h1'), p0 = title.querySelector('p');
+      if (h1) h1.textContent = 'HALCYON HOUSE';
+      if (p0) p0.textContent = 'A glass house on a lake, at the top of a long lit drive. Nothing here is haunted. Everything here is yours to switch on: every light, inside and out, and everything the house can do.';
+      if (keys) keys.innerHTML = 'Mouse look · W A S D move · Shift run · E use<br>Tab lighting panel · 1–0 the grounds · G gates · V X Z doors, windows, blinds · H all the controls<br><br>Click to begin';
+    }
     // which night: the storm, fog, or a clear moonlit one
     const nb = document.createElement('div'); nb.className = 'night';
-    nb.innerHTML = '<span>Choose the night:</span>' + Object.keys(BM.NIGHTS).map((n, i) => `<button data-n="${n}">${i + 1} · ${BM.NIGHTS[n].name}</button>`).join('') + '<div id="night-blurb"></div>';
+    nb.innerHTML = '<span>' + (modern ? 'Choose the weather:' : 'Choose the night:') + '</span>' + Object.keys(BM.NIGHTS).map((n, i) => `<button data-n="${n}">${i + 1} · ${BM.NIGHTS[n].name}</button>`).join('') + '<div id="night-blurb"></div>';
     title.insertBefore(nb, keys);
     for (const b of nb.querySelectorAll('button')) b.addEventListener('click', e => { e.stopPropagation(); game.chooseNight(b.dataset.n); game.audio.start(); game.audio.theme(0.55); });
     nb.addEventListener('click', e => e.stopPropagation());

@@ -6,6 +6,18 @@ is finding electrical power and switching it on, and every light you restore
 shows you more of what the family did to their daughter. The gates shut and
 bolt behind you on the way in; getting them open again is the way out.
 
+## Two houses
+
+The title screen offers two worlds (your choice is remembered):
+
+- **Blackthorn Manor**: the haunted house, described below.
+- **Halcyon House**: a modern glass house on a lake, at the top of a long lit
+  drive behind automatic gates. Nothing in it is haunted; it is there to
+  explore and to play with. Every light inside and out can be switched (Tab
+  for the panel, 1–0 for the ten groups of outdoor lighting, G for the
+  gates), the doors slide open as you walk up, and the weather, the time,
+  snow and fireworks all work there too.
+
 ## Play
 
 Open `blackthorn-manor.html` in a browser. It is one self-contained file

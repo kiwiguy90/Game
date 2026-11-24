@@ -15,6 +15,7 @@ const HUM = {
   fluorescent: { freq: 100, filter: 1300, gain: 0.03, reach: 8 },
   sodium: { freq: 100, filter: 420, gain: 0.03, reach: 12 },
   emergency: { freq: 100, filter: 700, gain: 0.012, reach: 6 },
+  led: { freq: 100, filter: 200, gain: 0, reach: 1 },   // modern fittings are silent
 };
 BM.HUM = HUM;
 

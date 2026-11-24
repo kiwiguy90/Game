@@ -66,8 +66,8 @@ BM.panelRows = function (game) {
   if (game.fireworks) { const fw = game.fireworks; rows.push({ section: 'SHOW', supply: '', k: 'more:fireworks', name: 'Fireworks over the lake', on: fw.on, onText: 'ON', offText: 'READY', lit: fw.on, warming: false, live: true }); }
   // the clocks
   const ck = game.clock_;
-  rows.push({ section: 'CLOCKS', supply: '', k: 'more:tower', name: 'Clock tower', on: !game.towerOff, onText: 'ON', offText: 'OFF', lit: !game.towerOff && !!(ck && ck.powered), warming: false, live: !!(ck && ck.powered) });
-  rows.push({ section: 'CLOCKS', supply: '', k: 'more:towerTune', name: 'Tower chimes', value: BM.CHIMES[T.tower].name.toUpperCase(), on: true, lit: false, live: !game.towerOff });
+  if (game.towerClock) rows.push({ section: 'CLOCKS', supply: '', k: 'more:tower', name: 'Clock tower', on: !game.towerOff, onText: 'ON', offText: 'OFF', lit: !game.towerOff && !!(ck && ck.powered), warming: false, live: !!(ck && ck.powered) });
+  if (game.towerClock) rows.push({ section: 'CLOCKS', supply: '', k: 'more:towerTune', name: 'Tower chimes', value: BM.CHIMES[T.tower].name.toUpperCase(), on: true, lit: false, live: !game.towerOff });
   if (game.longcase) rows.push({ section: 'CLOCKS', supply: '', k: 'more:longcaseTune', name: 'Grandfather clock', value: BM.CHIMES[T.longcase].name.toUpperCase(), on: true, lit: false, live: true });
   // the world
   const W = BM.WEATHERS || {}, TI = BM.TIMES || {}, F9 = game.flood;

@@ -16,6 +16,8 @@ function mulberry32(a) {
   };
 }
 BM.mulberry32 = mulberry32;
+/* where rain and snow must not fall: the manor's roofs (its list is in the shaders), or two boxes for another house */
+BM.ROOF_BOXES = { manor: { value: 1 }, box1: { value: new THREE.Vector4(0, 0, 0, 0) }, box2: { value: new THREE.Vector4(0, 0, 0, 0) }, top: { value: new THREE.Vector2(0, 0) } };
 
 /* A tiny event bus shared by every system. */
 class Events {

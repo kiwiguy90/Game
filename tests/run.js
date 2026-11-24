@@ -1062,6 +1062,43 @@ suite('snow', () => {
   return 'snow falls, settles over a few minutes, takes footprints, crunches outside only, and melts when it stops';
 });
 
+suite('halcyon', () => {
+  // the second world: Halcyon House, the modern one, just for exploring
+  const env = H.load({ quiet: true, gameOpts: { world: 'modern' } });
+  const { game, BM } = env, g = game.grid, HC = game.halcyon;
+  assert(game.world === 'modern' && HC && !game.towerClock && !game.haunt && !game.lift, 'its own world: no manor, no haunting');
+  assert(g.lights.length > 300 && game.estateGroups.length === 10 && game.estateGroups.every(([k]) => game.estateLights[k].length > 0), 'hundreds of lights, ten outdoor groups');
+  game.ui.mode = null; BM.beginHalcyon(game);
+  const run = s => { for (let i = 0; i < s * 10; i++) game.update(1 / 10); };
+  run(2);
+  assert(g.live('lodge') && g.live('main') && g.lights.filter(l => l.intensity > 0.01).length > 250, 'everything is on, steady');
+  assert(g.lights.every(l => !l.dead && !l.flicker), 'and nothing flickers or blows: it is new');
+  // the gate opens as you walk up, and closes behind you
+  const p = game.player; assert(p.z > 100 && HC.gate.t === 0, 'you start on the road, at a shut gate');
+  game.keys.KeyW = true; run(10); game.keys.KeyW = false;
+  assert(p.z < 95, 'you walk in through the gate: ' + p.z.toFixed(1));
+  run(8); assert(HC.gate.t < 0.1, 'and it slides shut behind you');
+  game.keyDown('KeyG'); run(7); assert(HC.gate.t === 1, 'G opens it'); game.keyDown('KeyG'); run(7); assert(HC.gate.t === 0, 'and shuts it');
+  // the front door slides open as you come up to it
+  game.teleport(0, 0, 16.2, 0); run(1.5); const fd = HC.sliders.find(d => d.id === 'front-door');
+  assert(fd.t === 1 && !fd.wall.enabled, 'the front doors open for you');
+  game.keys.KeyW = true; run(3); game.keys.KeyW = false; assert(game.zoneAt(p.x, p.y, p.z) === 'house', 'and you are inside');
+  run(3); assert(fd.t === 0, 'and they close behind you');
+  // up the floating stairs, and on up to the roof
+  game.teleport(-5.2, 0, 9.5, 0); game.keys.KeyW = true; run(5); game.keys.KeyW = false; assert(Math.abs(p.y - 4.2) < 0.05, 'the floating stairs go up to the first floor: ' + p.y.toFixed(2));
+  game.teleport(6.95, 4.2, 3.2, 0); game.keys.KeyW = true; run(5); game.keys.KeyW = false; assert(Math.abs(p.y - 8.4) < 0.05, 'and the second flight to the roof: ' + p.y.toFixed(2));
+  // the panel: the grounds by name, the rooms, and they switch
+  const rows = game.lightPanelRows();
+  assert(rows.some(r => r.k === 'estate:hdrive' && r.name === 'Driveway') && rows.filter(r => r.section === 'ROOMS').length >= 8, 'the panel lists the grounds and the rooms');
+  game.keyDown('Digit2'); run(1); assert(game.estateLights.hdrive.every(id => !g.light(id).on), '2 switches the drive lights off');
+  game.keyDown('Digit2'); run(3); assert(game.estateLights.hdrive.every(id => g.light(id).on), 'and on');
+  const k = game.interactables.find(it => it.id === 'k-living-room'); k.act(game); run(1);
+  assert(k.controls.every(id => !g.light(id).on), 'a room keypad switches its lights');
+  for (let i = 0; i < 200; i++) { const it = game.interactables[i % game.interactables.length]; game.standAt && game.standAt(it); if (it.act) it.act(game); game.update(1 / 10); }
+  assert(game.frameErrors === 0, 'no errors');
+  return 'gates, drive, glass house over three floors, ' + g.lights.length + ' lights in ten groups and ' + rows.filter(r => r.section === 'ROOMS').length + ' rooms';
+});
+
 suite('flood', () => {
   // the flood, as a test run on F9: up from the cellar, over the whole estate, to the top of the roof
   const env = H.load({ quiet: true });

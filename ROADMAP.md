@@ -14,12 +14,11 @@ the garage.
 
 ## To do
 
-- [ ] **The house is alive: it traps you, changes and grows.** Once you are
-      inside, the front doors shut and lock behind you, and the house does
-      not want you to leave. It rearranges itself and grows new rooms while
-      you are not looking. You have to find what opens the doors and the
-      way back out to the grounds. (Our own house and story — inspired by
-      the living-house idea, not copied from any film or book.)
+- [ ] **The house traps you.** Once you are inside, the front doors shut and
+      lock behind you, and the house does not want you to leave. You have to
+      find what opens the doors and the way back out to the grounds. (Our
+      own house and story, not copied from any film or book. The house
+      changing and growing is under "Maybe later".)
 - [ ] **Dimmer switches.** Turn the lights up and down in the main rooms,
       not only on and off.
 - [ ] **The storm cuts one part of the house at a time — rarely.** Not every

@@ -109,7 +109,10 @@ BM.buildHalcyonRooms = function (B, game) {
   const tall = (x0, x1) => { B.boxE('hWalnut', x0, x1, 0, C, BZ - D, BZ); for (let x = x0; x <= x1 + 0.01; x += (x1 - x0) / Math.max(1, Math.round((x1 - x0) / 0.6))) B.boxE('hBlackSteel', x - 0.0015, x + 0.0015, 0.1, C, BZ - D - 0.002, BZ - D); B.boxE('hBlackSteel', x0, x1, 2.29, 2.293, BZ - D - 0.002, BZ - D); B.boxE('hBlackSteel', x0, x1, 0, 0.1, BZ - D + 0.05, BZ - D + 0.06); P.addWall(x0, x1, BZ - D, BZ, 0, C, { kind: 'furniture', tag: 'kitchen cabinets' }); };
   tall(14.2, 17.8);
   for (const y of [0.95, 1.6]) { B.boxE('hBlackGlass', 16.65, 17.75, y, y + 0.6, BZ - D - 0.01, BZ - D); B.boxE('hChrome', 16.75, 17.65, y + 0.5, y + 0.52, BZ - D - 0.02, BZ - D - 0.01); }   // two ovens, flush in the tall run
-  tall(20.8, 25.8);
+  tall(20.8, 22.4); tall(23.6, 25.8);
+  // (a gap in the tall run for the kitchen's home tablet: a stone counter below it, a cabinet above)
+  B.boxE('hWalnut', 22.4, 23.6, 0, 0.86, BZ - D, BZ); B.boxE('hMarble', 22.4, 23.6, 0.86, 0.9, BZ - D - 0.02, BZ); B.boxE('hWalnut', 22.4, 23.6, 2.2, C, BZ - 0.4, BZ);
+  P.addWall(22.4, 23.6, BZ - D, BZ, 0, 0.9, { kind: 'furniture', tag: 'kitchen bench' });
   // the run between: base cabinets, the stone carried up the wall, a ledge, wall cabinets with a light under them
   B.boxE('hWalnut', 17.8, 19.3, 0, 0.86, BZ - D, BZ); B.boxE('hMarble', 17.8, 19.3, 0.86, 0.9, BZ - D - 0.02, BZ);
   B.boxE('hMarble', 17.8, 19.3, 0.9, 1.55, BZ - 0.02, BZ); B.boxE('hMarble', 17.8, 19.3, 1.55, 1.59, BZ - 0.2, BZ);

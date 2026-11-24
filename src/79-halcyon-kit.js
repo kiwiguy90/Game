@@ -157,7 +157,7 @@ Object.assign(BM.MAT_EXTRA, {
   hBottleAmber: [0x3a2010, null, 0, 150, { specular: 0x888888 }],
   hBottleClear: [0xc8d0c8, null, 0, 150, { specular: 0xffffff, transparent: true, opacity: 0.6 }],
   hFoil: [0xb8a060, null, 0, 90],
-  hCloth: [0x2e5e8c, 'linenWeave', 3, 2],
+  hCloth: [0x1c4670, 'linenWeave', 3, 2],
   hBrass: [0xc8a058, null, 0, 120, { specular: 0x9a7a3a }],
   hBlackSteel: [0x161616, null, 0, 70, { specular: 0x444444 }],
   hChrome: [0xd8dcdf, null, 0, 160, { specular: 0xffffff }],
@@ -180,10 +180,12 @@ function frame(B, x, z, y0, ry) {
     at,
     box(mat, lx, ly, lz, sx, sy, sz, rx, rz) { const [wx, wz] = at(lx, lz); const m = B.box(mat, wx, y0 + ly, wz, sx, sy, sz, ry || 0); if (rx || rz) { m.rotation.set(rx || 0, ry || 0, rz || 0, 'YXZ'); m.updateMatrix(); } return m; },
     mesh(geo, mat, lx, ly, lz, sx, sy, sz, rx, rz) { const [wx, wz] = at(lx, lz); const m = B.mesh(geo, mat, wx, y0 + ly, wz, sx, sy, sz, ry || 0); if (rx || rz) { m.rotation.set(rx || 0, ry || 0, rz || 0, 'YXZ'); m.updateMatrix(); } return m; },
+    rect(lx0, lx1, lz0, lz1, h, tag) { const c = [at(lx0, lz0), at(lx1, lz0), at(lx0, lz1), at(lx1, lz1)], xs = c.map(v => v[0]), zs = c.map(v => v[1]); return B.phys.addWall(Math.min(...xs), Math.max(...xs), Math.min(...zs), Math.max(...zs), y0, y0 + h, { kind: 'furniture', tag: tag || 'furniture' }); },
     collide(w, d, h, tag) { const sw = Math.abs(Math.cos(ry || 0)) > 0.7; const ex = sw ? w : d, ez = sw ? d : w; return B.phys.addWall(x - ex / 2, x + ex / 2, z - ez / 2, z + ez / 2, y0, y0 + h, { kind: 'furniture', tag: tag || 'furniture' }); },
   };
 }
 const K = BM.KIT = {};
+K.frame = frame;
 
 /* A sofa: frame, arms, seat and back cushions, throw pillows. Seats face +z in its own frame. */
 K.sofa = (B, x, z, y0, w, ry, o) => {

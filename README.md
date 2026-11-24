@@ -32,7 +32,10 @@ The title screen offers two worlds (your choice is remembered):
   parts (sofas with cushions, beds with pillows and throws, a waterfall
   island over a fluted base, cinema recliners, a 9 ft pool table, a power
   rack, wine on pegs), and layered warm light (2700K downlights, coves,
-  lamps, grazers on the stone, a cascade of globes in the atrium). Sources
+  lamps, grazers on the stone, a cascade of globes in the atrium). Every
+  room is lived-in: a grand piano you can play, the table laid for ten, two
+  arcade cabinets you can play, table football, a jukebox, a breakfast
+  table, a shoe wall, a TV that rises from a cabinet, towels and robes. Sources
   for the sizes and finishes: Minotti and B&B Italia (sofas), Victoria +
   Albert and Hansgrohe (bath, shower), Savaria (glass lift), Trackman and
   Harvia (golf bay, sauna), Rogue and Technogym (gym), Visual Comfort

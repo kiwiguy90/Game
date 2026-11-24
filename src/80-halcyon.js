@@ -409,6 +409,7 @@ BM.buildHalcyon = function (B, game) {
   BM.buildHalcyonAmenities(B, game);
   BM.buildHalcyonGrounds(B, game);
   BM.buildHalcyonRooms(B, game);
+  BM.buildHalcyonDetail(B, game);
 };
 BM.halcyonMats = mats;
 BM.halcyonLed = (B, game, o) => led(B, game, o);
@@ -509,5 +510,6 @@ BM.updateHalcyon = function (game, dt) {
   BM.updateHalcyonAmenities(game, dt);
   BM.updateHalcyonGrounds(game, dt);
   BM.updateHalcyonRooms(game, dt);
+  BM.updateHalcyonDetail(game, dt);
 };
 })();

@@ -42,7 +42,9 @@ The game should not get too hard. For anything we add:
 - [ ] **The house floods on the storm night.** Only on the storm night, while
       you are inside: water comes in under the doors and up from the cellar
       and rises slowly across the ground floor to waist height. You can still
-      wade through it, slowly; furniture floats and papers drift. As the water
+      wade through it, slowly; furniture floats and papers drift. You can
+      still go in and out of the house while it floods (water pours out of
+      the doors as you open them). As the water
       climbs, it gets into the wiring and the fittings: the lights flicker,
       fizz, crackle and zap, some pop with a bang and a flash, and they go out
       — the lowest first (floor lamps, table lamps, sockets), then the wall

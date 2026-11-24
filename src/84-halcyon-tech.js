@@ -128,7 +128,7 @@ BM.updateHalcyonTech = function (game, dt) {
     if (A.ctx && Math.hypot(p.x - g.x, p.z - g.z) < 6 && p.y < 2 && Math.random() < dt * 3) A.tone('sawtooth', 180, 175, 0.004, 0.05, 0.4);
   } else {
     const dx = V.dock.x - g.x, dz = V.dock.z - g.z, d = Math.hypot(dx, dz);
-    if (d > 0.05) { g.x += dx / d * Math.min(d, 0.4 * dt); g.z += dz / d * Math.min(d, 0.4 * dt); V.heading = Math.atan2(dx, dz); }
+    if (d > 0.05) { g.x += dx / d * Math.min(d, 0.6 * dt); g.z += dz / d * Math.min(d, 0.6 * dt); V.heading = Math.atan2(dx, dz); }
     V.led.color.setHex(d > 0.05 ? 0xffb030 : 0x30ff60);
   }
   V.g.rotation.y = V.heading;

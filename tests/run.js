@@ -1080,8 +1080,9 @@ suite('halcyon', () => {
   run(8); assert(HC.gate.t < 0.1, 'and it slides shut behind you');
   game.keyDown('KeyG'); run(7); assert(HC.gate.t === 1, 'G opens it'); game.keyDown('KeyG'); run(7); assert(HC.gate.t === 0, 'and shuts it');
   // the front door slides open as you come up to it
-  game.teleport(0, 0, 16.2, 0); run(1.5); const fd = HC.sliders.find(d => d.id === 'front-door');
-  assert(fd.t === 1 && !fd.wall.enabled, 'the front doors open for you');
+  game.teleport(0, 0, 16.2, 0); run(0.6); const fd = HC.sliders.find(d => d.id === 'front-door');
+  assert(fd.t === 0, 'the front door waits while the scanner looks at you');
+  run(2.5); assert(fd.t === 1 && !fd.wall.enabled && HC.faceOK > 0 && /recognised/.test(game.ui.el.msg.textContent), 'it knows your face, and the doors open');
   game.keys.KeyW = true; run(3); game.keys.KeyW = false; assert(game.zoneAt(p.x, p.y, p.z) === 'house', 'and you are inside');
   run(3); assert(fd.t === 0, 'and they close behind you');
   // up the floating stairs, and on up to the roof
@@ -1126,14 +1127,23 @@ suite('halcyon', () => {
   const a0 = HC.turntable.a; run(2); assert(HC.turntable.a > a0, 'the turntable turns');
   // gadgets: the robot vacuum, motion path lights, the cameras
   const V = HC.vac, v0 = V.g.position.clone(); run(10); assert(V.g.position.distanceTo(v0) > 0.5, 'the vacuum potters about');
-  game.lightPanelToggle('smart:vac'); run(60); assert(Math.hypot(V.g.position.x - V.dock.x, V.g.position.z - V.dock.z) < 0.1, 'and goes home to its dock');
+  game.lightPanelToggle('smart:vac'); run(110); assert(Math.hypot(V.g.position.x - V.dock.x, V.g.position.z - V.dock.z) < 0.1, 'and goes home to its dock');
   const pl = g.light(game.estateLights.hgarden[0]); game.teleport(pl.pos.x + 1, 0, pl.pos.z, 0); run(2); const near = pl.target;
   game.teleport(0, 0, 60, 0); run(6); assert(near > pl.target * 3, 'path lights brighten as you come up to them, and fade behind you');
   game.teleport(-20, 0, 6, Math.PI); run(1); const sc = game.interactables.find(it => it.id === 'cctv-console'); sc.act(game);
   assert(game.ui.mode === 'cctv', 'the console: looking through the cameras');
   run(0.2); assert(game.camera.position.distanceTo(HC.cams[0].cam.position) < 0.01, 'the view is the gate camera');
-  game.keyDown('ArrowRight'); run(0.2); assert(game.camera.position.distanceTo(HC.cams[1].cam.position) < 0.01, '→ the next camera');
+  game.keyDown('ArrowRight'); game.keyUp('ArrowRight'); run(0.2); assert(game.camera.position.distanceTo(HC.cams[1].cam.position) < 0.01, '→ the next camera');
   game.keyDown('Escape'); assert(game.ui.mode === null, 'Esc: stand up again');
+  // the amenities: the wellness wing, the wine room, the games room, music, energy
+  game.teleport(25, 0, -6, -Math.PI / 2); game.keys.KeyW = true; run(2); game.keys.KeyW = false; assert(p.x > 27 && game.zoneAt(p.x, p.y, p.z) === 'house', 'through the glass door into the wellness wing ' + [p.x.toFixed(2), p.z.toFixed(2), game.ui.mode, HC.sliders.find(d => d.id === 'wing-door').t].join(','));
+  game.lightPanelToggle('smart:sauna'); run(120); assert(HC.sauna.temp > 70 && HC.sauna.light.intensity > 0.1, 'the sauna heats up and glows');
+  game.lightPanelToggle('smart:sauna'); game.lightPanelToggle('smart:steam'); run(3); assert(HC.steam2.mat.opacity > 0.15, 'the steam room fills');
+  game.lightPanelToggle('smart:golf'); run(3); assert(HC.golf.shot === 1 && /metres/.test(game.ui.el.msg.textContent), 'the golf simulator: a drive');
+  game.lightPanelToggle('smart:music'); assert(HC.music.on, 'music on');
+  BM.setTimeOfDay(game, 'day'); run(2); assert(HC.energy.solar > 1, 'by day the panels make power: ' + HC.energy.solar.toFixed(1));
+  BM.setTimeOfDay(game, 'night'); run(2); assert(HC.energy.solar < 0.1, 'and none at night');
+  assert(['k-gym', 'k-spa', 'k-games-room', 'k-dressing-room'].every(id => game.byId[id]), 'keypads for the new rooms');
   for (let i = 0; i < 200; i++) { const it = game.interactables[i % game.interactables.length]; game.standAt && game.standAt(it); if (it.act) it.act(game); game.update(1 / 10); }
   assert(game.frameErrors === 0, 'no errors');
   return 'gates, drive, glass house over three floors, ' + g.lights.length + ' lights in ten groups and ' + rows.filter(r => r.section === 'ROOMS').length + ' rooms';

@@ -118,7 +118,7 @@ BM.buildHalcyon = function (B, game) {
   for (const [k] of game.estateGroups) game.estateLights[k] = [];
   BM.ESTATE_PLACES = { LK: { cx: LAKE.cx, cz: -75, rx: 40, rz: 25, y: LAKE.y } };   // (where the fireworks go up)
   BM.ROOF_BOXES.manor.value = 0;
-  BM.ROOF_BOXES.box1.value.set(H.x0 - 0.5, H.x1 + 0.5, H.z0 - 0.5, H.z1 + 0.5); BM.ROOF_BOXES.box2.value.set(GA.x0 - 0.5, GA.x1 + 0.5, GA.z0 - 0.5, GA.z1 + 0.5); BM.ROOF_BOXES.top.value.set(ROOF + 0.2, GA.h + 0.2);
+  BM.ROOF_BOXES.box1.value.set(H.x0 - 0.5, H.x1 + 0.5, H.z0 - 0.5, H.z1 + 0.5); BM.ROOF_BOXES.box2.value.set(GA.x0 - 0.5, GA.x1 + 0.5, GA.z0 - 0.5, GA.z1 + 0.5); BM.ROOF_BOXES.top.value.set(ROOF + 0.2, GA.h + 0.2, 0);
   game.gates = { open: false, t: 0, closing: false, lockedIn: false, escaping: false };
 
   /* ================= THE GROUND ================= */
@@ -219,7 +219,7 @@ BM.buildHalcyon = function (B, game) {
     led(B, game, { group: 'htrees', id: 'uplight-' + HC.trees.length, name: 'Tree uplight', pos: [x + 0.9, 0.1, z + 0.9], spot: true, dir: [-0.25, 1, -0.25], colour: 0xf0f4ff, target: 1.0, range: 9, corona: 0.2, glow: [x + 0.9, 0.04, z + 0.9, 0.16, 0.04, 0.16] });
     HC.trees.push({ x, z });
   };
-  const avoid = (x, z) => (Math.abs(x) < 16 && z > 14 && z < 46) || (x > -10 && x < 16 && z > 40 && z < 104) || (x > GA.x0 - 3 && x < H.x1 + 3 && z > H.z0 - 22 && z < 26);
+  const avoid = (x, z) => (x > 24 && x < 50 && z > -24 && z < 8) || (Math.abs(x) < 16 && z > 14 && z < 46) || (x > -10 && x < 16 && z > 40 && z < 104) || (x > GA.x0 - 3 && x < H.x1 + 3 && z > H.z0 - 22 && z < 26);
   for (const [x, z, s, k] of [[-22, 70, 1.1, 'round'], [26, 72, 1.0, 'round'], [-30, 52, 1.2, 'round'], [34, 52, 1.1, 'round'], [-50, 86, 1.0, 'pine'], [52, 86, 1.0, 'pine'],
     [-58, 60, 1.1, 'pine'], [58, 60, 1.2, 'pine'], [-58, 30, 1.0, 'round'], [58, 30, 1.0, 'round'], [-60, 2, 1.1, 'pine'], [60, 2, 1.0, 'pine'], [-18, 88, 0.9, 'round'], [22, 90, 0.9, 'round'],
     [44, 14, 1.0, 'round'], [-60, -26, 1.0, 'round'], [60, -28, 1.0, 'round'], [46, -20, 0.9, 'pine']]) if (!avoid(x, z)) tree(x, z, s, k);
@@ -228,7 +228,7 @@ BM.buildHalcyon = function (B, game) {
   // hedges along the drive and round the forecourt
   for (const [x, z, w, d] of [[-14, 40, 0.8, 10], [14, 40, 0.8, 10], [-14, 26, 6, 0.8], [14, 26, 6, 0.8]]) B.furniture('hedge', x, z, 0, w, 1.0, d, 'hedge');
   // paths: from the forecourt round the east of the house to the lake, with step lights in the edge
-  const PATH = [[16, 22], [30, 18], [32, 0], [32, -20], [34, -38]];
+  const PATH = [[16, 22], [30, 18], [50, 12], [52, -20], [48, -38]];   // (round the east of the wellness wing to the lake)
   for (let i = 0; i < PATH.length - 1; i++) {
     const [ax, az] = PATH[i], [bx, bz] = PATH[i + 1], len = Math.hypot(bx - ax, bz - az), ang = Math.atan2(bx - ax, bz - az);
     B.box(M.paver, (ax + bx) / 2, 0.008, (az + bz) / 2, 1.6, 0.016, len + 1.6, ang);
@@ -265,7 +265,10 @@ BM.buildHalcyon = function (B, game) {
   B.boxE(M.charcoal, -6, 6, 3.2, 3.45, H.z1, H.z1 + 4.5);
   // the sides
   solid(B, M.stone, H.x0 - 0.3, H.x0, 0, ROOF - 0.3, H.z0, 6.5, 'west wall'); solid(B, M.stone, H.x0 - 0.3, H.x0, 0, ROOF - 0.3, 8.1, H.z1, 'west wall'); solid(B, M.stone, H.x0 - 0.3, H.x0, 2.4, ROOF - 0.3, 6.5, 8.1, 'west wall');
-  glassWall(B, 'z', H.x1, H.z0, 2, 0, ROOF - 0.3); solid(B, M.stone, H.x1, H.x1 + 0.3, 0, ROOF - 0.3, 2, H.z1, 'east wall');
+  // the east glass: a sliding door through it on the ground floor, into the wellness wing
+  glassWall(B, 'z', H.x1, H.z0, -7.6, 0, F1 - 0.3); glassWall(B, 'z', H.x1, -4.4, 2, 0, F1 - 0.3); glassWall(B, 'z', H.x1, H.z0, 2, F1, ROOF - 0.3);
+  slider(B, game, { id: 'wing-door', axis: 'z', at: -6, c: H.x1, w: 3.2, h: F1 - 0.3, y0: 0 });
+  solid(B, M.stone, H.x1, H.x1 + 0.3, 0, ROOF - 0.3, 2, H.z1, 'east wall');
   // inner rooms: the security room by the front door, the cinema across the hall
   B.room = 'security room';
   solid(B, M.render, -14.15, -13.95, 0, F1 - 0.3, 2, 9.9); solid(B, M.render, -14.15, -13.95, 0, F1 - 0.3, 11.1, H.z1 - 0.3); solid(B, M.render, -14.15, -13.95, 2.3, F1 - 0.3, 9.9, 11.1);
@@ -296,7 +299,9 @@ BM.buildHalcyon = function (B, game) {
   // bedrooms on the lake side, a study and a bathroom at the front
   B.room = 'master suite';
   solid(B, M.render, 7.9, 8.1, F1, ROOF - 0.3, H.z0, -4.6); solid(B, M.render, 7.9, 8.1, F1, ROOF - 0.3, -3.4, 1.9); solid(B, M.render, 7.9, 8.1, F1 + 2.3, ROOF - 0.3, -4.6, -3.4);
-  solid(B, M.render, 8.1, H.x1, F1, ROOF - 0.3, 1.9, 2.1);
+  solid(B, M.render, 8.1, 20, F1, ROOF - 0.3, 1.9, 2.1); solid(B, M.render, 21.2, H.x1, F1, ROOF - 0.3, 1.9, 2.1); solid(B, M.render, 20, 21.2, F1 + 2.3, ROOF - 0.3, 1.9, 2.1);   // (a door through to the dressing room)
+  // the bathroom: across the lake end of the suite, behind a wall with a wide opening
+  solid(B, M.render, 17.9, 18.1, F1, ROOF - 0.3, H.z0, -5.2); solid(B, M.render, 17.9, 18.1, F1, ROOF - 0.3, -3.6, 1.9); solid(B, M.render, 17.9, 18.1, F1 + 2.4, ROOF - 0.3, -5.2, -3.6);
   B.room = 'guest room';
   solid(B, M.render, -8.1, -7.9, F1, ROOF - 0.3, H.z0, -4.6); solid(B, M.render, -8.1, -7.9, F1, ROOF - 0.3, -3.4, 1.9); solid(B, M.render, -8.1, -7.9, F1 + 2.3, ROOF - 0.3, -4.6, -3.4);
   solid(B, M.render, H.x0, -8.1, F1, ROOF - 0.3, 1.9, 2.1);
@@ -378,8 +383,10 @@ BM.buildHalcyon = function (B, game) {
   sw('guest room', 'upper', guest, [-8.12, F1 + 1.3, -2.8], [-1, 0]);
   const land = room('landing', 'upper', -8, 8, -18, 2, ROOF - 0.3, 0, 4);
   sw('landing', 'upper', land, [7.88, F1 + 1.3, -8], [-1, 0]);
-  const front1 = room('study and bath', 'upper', -26, -6, 2, 14, ROOF - 0.3, 0, 4).concat(room('study and bath', 'upper', 6, 26, 2, 14, ROOF - 0.3, 0, 4));
-  sw('study and bath', 'upper', front1, [12, F1 + 1.3, 2.12], [0, 1]);
+  const games = room('games room', 'upper', -26, -6, 2, 14, ROOF - 0.3, 0, 4);
+  sw('games room', 'upper', games, [-12, F1 + 1.3, 2.12], [0, 1]);
+  const dress = room('dressing room', 'upper', 6, 26, 2, 14, ROOF - 0.3, 0, 4);
+  sw('dressing room', 'upper', dress, [12, F1 + 1.3, 2.12], [0, 1]);
   B.levelName = 'ground'; B.room = 'house';
 
   /* a few pieces of furniture, so the rooms read as rooms */
@@ -388,7 +395,7 @@ BM.buildHalcyon = function (B, game) {
   B.boxE(M.rug, -16, -8, 0.02, 0.03, -13.5, -6.5); B.furniture(M.black, -12, -9.5, 0, 2.2, 0.4, 1.1, 'coffee table');
   B.furniture(M.oak, 2, -12, 0, 2.6, 0.76, 1.1, 'dining table');
   B.room = 'master suite'; B.levelName = 'upper';
-  B.furniture(M.white, 18, -10, F1, 2.2, 0.55, 2.4, 'bed'); B.boxE(M.charcoal, 16.8, 19.2, F1, F1 + 1.2, -11.3, -11.15);
+  B.furniture(M.white, 13, -10, F1, 2.2, 0.55, 2.4, 'bed'); B.boxE(M.charcoal, 11.8, 14.2, F1, F1 + 1.2, -11.3, -11.15);
   B.room = 'guest room';
   B.furniture(M.white, -18, -10, F1, 1.9, 0.55, 2.2, 'bed');
   B.levelName = 'ground'; B.room = 'house';
@@ -396,6 +403,7 @@ BM.buildHalcyon = function (B, game) {
   BM.buildHalcyonOutside(B, game);
   BM.buildHalcyonInside(B, game);
   BM.buildHalcyonTech(B, game);
+  BM.buildHalcyonAmenities(B, game);
 };
 BM.halcyonMats = mats;
 BM.halcyonLed = (B, game, o) => led(B, game, o);
@@ -436,6 +444,7 @@ BM.halcyonAfterFx = function (game) {
 BM.halcyonZone = function (x, y, z) {
   if (y > -1 && y < ROOF - 0.2 && x > H.x0 && x < H.x1 && z > H.z0 && z < H.z1) return 'house';
   if (y > -1 && y < GA.h && x > GA.x0 && x < GA.x1 && z > GA.z0 && z < GA.z1) return 'house';
+  if (y > -1 && y < 3.8 && x > 26 && x < 44 && z > -18 && z < 4) return 'house';   // the wellness wing
   return 'exterior';
 };
 BM.halcyonObjective = function (game) {
@@ -472,7 +481,8 @@ BM.updateHalcyon = function (game, dt) {
   // the sliding doors: they open as you come up to them, at their own level
   for (const d of HC.sliders) {
     const dx = d.axis === 'x' ? p.x - d.at : p.z - d.at, dc = d.axis === 'x' ? p.z - d.c : p.x - d.c;
-    const want = HC.doorsHeld || (Math.abs(dx) < d.w / 2 + 1.0 && Math.abs(dc) < 3.0 && Math.abs(p.y - d.y0) < 1.5) ? 1 : 0;
+    // (the front door opens from outside only for a face it knows: the scanner beside it, 85-halcyon-amenities.js)
+    const want = HC.doorsHeld || (Math.abs(dx) < d.w / 2 + 1.0 && Math.abs(dc) < 3.0 && Math.abs(p.y - d.y0) < 1.5 && (d.id !== 'front-door' || dc < 0 || HC.faceOK > 0)) ? 1 : 0;
     const before = d.t;
     d.t += Math.sign(want - d.t) * Math.min(Math.abs(want - d.t), dt / 0.9);
     if (before === 0 && d.t > 0 && game.audio.ctx) game.audio.burst(game.audio.white, 'bandpass', 900, 1, 0.05, 0.05, 0.5);
@@ -488,5 +498,6 @@ BM.updateHalcyon = function (game, dt) {
   BM.updateHalcyonOutside(game, dt);
   BM.updateHalcyonInside(game, dt);
   BM.updateHalcyonTech(game, dt);
+  BM.updateHalcyonAmenities(game, dt);
 };
 })();

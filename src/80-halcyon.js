@@ -41,6 +41,7 @@ function mats() {
     concrete: phong(0xb9b5ac, 6), render: phong(0xe8e5de, 6), charcoal: phong(0x26282c, 30), timber: phong(0x8a5a36, 14),
     oak: phong(0xa07a52, 30), floor: phong(0x8e8b86, 70, { specular: 0x555555 }), steel: phong(0x141618, 90, { specular: 0x666666 }),
     glass: phong(0x9cc0d0, 140, { transparent: true, opacity: 0.16, depthWrite: false, specular: 0xffffff }),
+    glazing: phong(0x9cc0d0, 140, { transparent: true, opacity: 0.16, depthWrite: false, specular: 0xffffff }),   // the house's own windows: these can frost
     paver: phong(0xc8c2b4, 6), deck: phong(0x5e4430, 12), white: phong(0xf2f0ec, 20), sofa: phong(0x5a5e66, 4), rug: phong(0xb0a690, 2),
     black: phong(0x0c0c0e, 60), stone: phong(0x8c8780, 8), kitchen: phong(0x2e2a26, 50), marble: phong(0xe6e2da, 90, { specular: 0x888888 }),
     asphalt: phong(0x2c2c2e, 4), line: phong(0xd8d4c8, 4), lawn: null,
@@ -80,7 +81,7 @@ const solid = (B, mat, x0, x1, y0, y1, z0, z1, tag) => B.solid(mat, x0, x1, y0, 
 function glassWall(B, axis, c, a0, a1, y0, y1, step) {
   // full-height glazing between slim black mullions
   const M = mats(), t = 0.04;
-  if (axis === 'x') solid(B, M.glass, a0, a1, y0, y1, c - t, c + t, 'glass'); else solid(B, M.glass, c - t, c + t, y0, y1, a0, a1, 'glass');
+  if (axis === 'x') solid(B, M.glazing, a0, a1, y0, y1, c - t, c + t, 'glass'); else solid(B, M.glazing, c - t, c + t, y0, y1, a0, a1, 'glass');
   for (let a = a0; a <= a1 + 0.01; a += step || 3.25) {
     if (axis === 'x') B.boxE(M.steel, a - 0.04, a + 0.04, y0, y1, c - 0.07, c + 0.07); else B.boxE(M.steel, c - 0.07, c + 0.07, y0, y1, a - 0.04, a + 0.04);
   }
@@ -385,7 +386,9 @@ BM.buildHalcyon = function (B, game) {
   B.room = 'guest room';
   B.furniture(M.white, -18, -10, F1, 1.9, 0.55, 2.2, 'bed');
   B.levelName = 'ground'; B.room = 'house';
+  BM.buildHalcyonSmart(B, game);
 };
+BM.halcyonMats = mats;
 
 /* ---- once the game is up: the power on, the lights steady, you at the gate ---- */
 BM.afterHalcyonInit = function (game) {
@@ -395,6 +398,7 @@ BM.afterHalcyonInit = function (game) {
   for (const l of g.lights) { l.noFail = true; if (l.base) l.on = true; }
   const p = game.player; p.x = START.x; p.y = START.y; p.z = START.z; p.yaw = START.yaw; p.safe = { x: START.x, y: START.y, z: START.z };
   game.clock = 20 * 60 + 3600 * -3;   // (the phone's clock reads about eight in the evening)
+  BM.halcyonScene(game, 'evening', true);
 };
 
 BM.beginHalcyon = function (game) {
@@ -416,7 +420,7 @@ BM.halcyonAfterFx = function (game) {
   const f = n ? on / n : 0, inHouse = game.ctx && game.ctx.zone === 'house';
   game.fx.hemi.intensity += (inHouse ? 0.55 : 0.08) * f * HC.bright;
   if (inHouse) game.fx.hemi.color.lerp(HC.tint || (HC.tint = new THREE.Color(0xffe2c0)), 0.5 * f);
-  const gl = mats().glass; gl.emissive.setHex(HC.glow || 0xffd9a8).multiplyScalar(0.11 * f * HC.bright);
+  const gl = mats().glazing; gl.emissive.setHex(HC.glow || 0xffd9a8).multiplyScalar(0.11 * f * HC.bright * (1 + 2.5 * (HC.frost || 0)));
 };
 BM.halcyonZone = function (x, y, z) {
   if (y > -1 && y < ROOF - 0.2 && x > H.x0 && x < H.x1 && z > H.z0 && z < H.z1) return 'house';
@@ -436,7 +440,10 @@ BM.halcyonGate = function (game) {
   game.audio.clunk && game.audio.clunk(0.4);
   game.ui.say(G0.target ? 'The gate slides open on its motor, its light strip running ahead of it.' : 'The gate slides shut. (It will stay shut until you open it again.)', 4);
 };
-BM.halcyonBlinds = function (game) { game.ui.say('The smart glass and the blinds are on their way.', 3); };
+BM.halcyonDoors = function (game) {
+  const HC = game.halcyon; HC.doorsHeld = !HC.doorsHeld;
+  BM.halcyonSay(game, HC.doorsHeld ? 'Holding the doors open.' : 'Doors back on automatic.', 3);
+};
 
 BM.updateHalcyon = function (game, dt) {
   const HC = game.halcyon, p = game.player; if (!HC) return;
@@ -454,7 +461,7 @@ BM.updateHalcyon = function (game, dt) {
   // the sliding doors: they open as you come up to them, at their own level
   for (const d of HC.sliders) {
     const dx = d.axis === 'x' ? p.x - d.at : p.z - d.at, dc = d.axis === 'x' ? p.z - d.c : p.x - d.c;
-    const want = Math.abs(dx) < d.w / 2 + 1.0 && Math.abs(dc) < 3.0 && Math.abs(p.y - d.y0) < 1.5 ? 1 : 0;
+    const want = HC.doorsHeld || (Math.abs(dx) < d.w / 2 + 1.0 && Math.abs(dc) < 3.0 && Math.abs(p.y - d.y0) < 1.5) ? 1 : 0;
     const before = d.t;
     d.t += Math.sign(want - d.t) * Math.min(Math.abs(want - d.t), dt / 0.9);
     if (before === 0 && d.t > 0 && game.audio.ctx) game.audio.burst(game.audio.white, 'bandpass', 900, 1, 0.05, 0.05, 0.5);
@@ -466,5 +473,6 @@ BM.updateHalcyon = function (game, dt) {
   const FE = BM.FOG.exterior, FH = BM.FOG.house; FH.colour.copy(FE.colour); FH.density = FE.density * 0.6;
   // the fountain's water shimmers
   if (HC.fountainWater) HC.fountainWater.position.y = 0.46 + Math.sin(HC.t * 2) * 0.004;
+  BM.updateHalcyonSmart(game, dt);
 };
 })();

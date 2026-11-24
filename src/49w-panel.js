@@ -82,6 +82,7 @@ BM.panelRows = function (game) {
 };
 
 BM.panelToggle = function (game, k) {
+  if (k.indexOf('smart:') === 0 && BM.halcyonPanelToggle) return BM.halcyonPanelToggle(game, k);
   if (k.indexOf('more:') !== 0) return false;
   const id = k.slice(5), A = game.audio, ui = game.ui, g = game.grid;
   if (id === 'fires') {

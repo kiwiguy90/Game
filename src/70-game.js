@@ -426,7 +426,8 @@ class Game {
     const gs = this.gates, gl = g.lodge && !gs.lockedIn, moving = gs.closing || (gs.open && gs.t < 1);
     rows.push({ section: 'GATES', supply: g.lodge ? 'lodge supply ●' : 'no supply ○', k: 'gate:main', key: 'G', name: 'Main gates', on: gs.open && !gs.closing, onText: 'OPEN', offText: gs.lockedIn ? 'BOLTED' : 'CLOSED', lit: gs.open && gs.t >= 1 && !gs.closing, warming: moving, live: gl });
     if (this.sideGate) rows.push({ section: 'GATES', supply: g.lodge ? 'lodge supply ●' : 'no supply ○', k: 'gate:side', key: 'K', name: 'Side gate', on: !this.sideGate.locked, onText: 'UNLOCKED', offText: 'LOCKED', lit: !this.sideGate.locked, warming: false, live: gl });
-    {
+    if (this.world === 'modern') { for (const r of BM.halcyonPanelRows(this)) rows.push(r); }
+    else {
       const ds = this.houseDoors(), ws = this.houseWindows(), cs = this.houseCurtains();
       const nOpen = ds.filter(d => d.moving ? d.target : d.open).length, wOpen = ws.filter(w => w.open).length, cDrawn = cs.filter(w => w.curtains.drawn).length;
       rows.push({ section: 'HOUSE', supply: '', k: 'house:doors', key: 'V', name: 'All doors', on: nOpen > 0, onText: 'OPEN', offText: 'CLOSED', lit: nOpen > 0, warming: false, live: true });
@@ -993,6 +994,7 @@ class Game {
   houseWindows() { return this.B.windows.filter(w => w.sash && this.byId['win:' + w.id]); }
   houseCurtains() { return this.B.windows.filter(w => w.curtains); }
   allDoors() {
+    if (this.world === 'modern') return BM.halcyonDoors(this);
     const ds = this.houseDoors(), open = !ds.some(d => d.moving ? d.target : d.open);
     const A = this.audio, creak = A.doorCreak, groan = A.groan; A.doorCreak = A.groan = () => {};
     let skipped = 0;
@@ -1002,6 +1004,7 @@ class Game {
     this.ui.say(open ? 'All through the house, door after door swings open on its hinges.' : 'All through the house, door after door swings shut — the latches click home, one after another, further and further away.' + (skipped ? ' Not the one you are standing in.' : ''), 4);
   }
   allWindows() {
+    if (this.world === 'modern') return BM.halcyonGlass(this);
     const ws = this.houseWindows(), open = !ws.some(w => w.open);
     for (const w of ws) w.open = open;
     this.openWindows = open ? ws.slice() : [];
